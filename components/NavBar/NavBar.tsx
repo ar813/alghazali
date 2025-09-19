@@ -1,0 +1,81 @@
+"use client";
+
+import { BookOpen, Menu, X } from 'lucide-react';
+import { useState } from 'react'
+
+const NavBar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  return (
+    <header className="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 text-white shadow-2xl sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center py-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
+              <BookOpen className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">Al Ghazali High School</h1>
+              <p className="text-xs text-blue-200">Excellence in Education Since 1993</p>
+            </div>
+          </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex space-x-8">
+            <a href="/" className="hover:text-amber-300 transition-colors font-medium">Home</a>
+            <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
+            <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
+          </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-controls="mobile-drawer"
+            aria-expanded={isMenuOpen ? 'true' : 'false'}
+          >
+            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+
+        {/* Mobile Slide-over Drawer (right side) */}
+        {isMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ease-in-out"
+              onClick={() => setIsMenuOpen(false)}
+            />
+
+            {/* Drawer */}
+            <aside id="mobile-drawer" className="fixed top-0 right-0 h-full w-72 bg-white text-slate-900 z-50 transform transition-all duration-300 ease-in-out translate-x-0 animate-in slide-in-from-right">
+              <div className="p-6 flex flex-col h-full">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
+                      <BookOpen className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="font-semibold">Menu</h2>
+                  </div>
+                  <button onClick={() => setIsMenuOpen(false)} aria-label="Close menu">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <nav className="mt-8 flex flex-col gap-4">
+                  <a href="/" className="hover:text-amber-300 transition-colors font-medium">Home</a>
+                  <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
+                  <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
+                </nav>
+
+                <div className="mt-auto text-sm text-gray-500">Al Ghazali High School</div>
+              </div>
+            </aside>
+          </>
+        )}
+      </div>
+    </header>
+  )
+}
+
+export default NavBar
