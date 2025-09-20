@@ -141,8 +141,8 @@ const AdminStudents = () => {
       delete body.photoFile
 
       const res = await fetch('/api/students', {
-        method: 'PUT',
-        body: JSON.stringify(body),
+        method: 'PATCH',
+        body: JSON.stringify({ id: editingStudent._id, patch: body }),
         headers: { 'Content-Type': 'application/json' }
       })
       const json = await res.json()
@@ -688,6 +688,10 @@ const AdminStudents = () => {
                 <input value={newStudent.fatherName} onChange={(e) => setNewStudent({ ...newStudent, fatherName: e.target.value })} className="w-full border rounded px-3 py-2" />
               </div>
               <div>
+                <label className="block text-sm font-medium mb-1">Date of Birth</label>
+                <input type="date" value={newStudent.dob} onChange={(e) => setNewStudent({ ...newStudent, dob: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-1">GR Number</label>
                 <input value={newStudent.grNumber} onChange={(e) => setNewStudent({ ...newStudent, grNumber: e.target.value })} className="w-full border rounded px-3 py-2" />
               </div>
@@ -697,7 +701,96 @@ const AdminStudents = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Class</label>
-                <input value={newStudent.admissionFor} onChange={(e) => setNewStudent({ ...newStudent, admissionFor: e.target.value })} className="w-full border rounded px-3 py-2" />
+                <select value={newStudent.admissionFor} onChange={(e) => setNewStudent({ ...newStudent, admissionFor: e.target.value })} className="w-full border rounded px-3 py-2">
+                  {['1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Gender</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2"><input type="radio" name="genderAdd" checked={newStudent.gender === 'male'} onChange={() => setNewStudent({ ...newStudent, gender: 'male' })} /> Male</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="genderAdd" checked={newStudent.gender === 'female'} onChange={() => setNewStudent({ ...newStudent, gender: 'female' })} /> Female</label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Nationality</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2"><input type="radio" name="nationalityAdd" checked={newStudent.nationality === 'pakistani'} onChange={() => setNewStudent({ ...newStudent, nationality: 'pakistani' })} /> Pakistani</label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Any Medical Condition</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2"><input type="radio" name="medicalAdd" checked={newStudent.medicalCondition === 'yes'} onChange={() => setNewStudent({ ...newStudent, medicalCondition: 'yes' })} /> Yes</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="medicalAdd" checked={newStudent.medicalCondition === 'no'} onChange={() => setNewStudent({ ...newStudent, medicalCondition: 'no' })} /> No</label>
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">CNIC / B-Form Number</label>
+                <input value={newStudent.cnicOrBform} onChange={(e) => setNewStudent({ ...newStudent, cnicOrBform: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+
+              {/* Contact */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <input type="email" value={newStudent.email} onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Phone Number</label>
+                <input value={newStudent.phoneNumber} onChange={(e) => setNewStudent({ ...newStudent, phoneNumber: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">WhatsApp Number</label>
+                <input value={newStudent.whatsappNumber} onChange={(e) => setNewStudent({ ...newStudent, whatsappNumber: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Address</label>
+                <textarea value={newStudent.address} onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })} className="w-full border rounded px-3 py-2" rows={2} />
+              </div>
+
+              {/* Academic */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Former Education</label>
+                <select value={newStudent.formerEducation} onChange={(e) => setNewStudent({ ...newStudent, formerEducation: e.target.value })} className="w-full border rounded px-3 py-2">
+                  <option value="">Select</option>
+                  {['1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Previous Institute</label>
+                <input value={newStudent.previousInstitute} onChange={(e) => setNewStudent({ ...newStudent, previousInstitute: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Last Exam Percentage</label>
+                <input value={newStudent.lastExamPercentage} onChange={(e) => setNewStudent({ ...newStudent, lastExamPercentage: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+
+              {/* Guardian */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Guardian Name</label>
+                <input value={newStudent.guardianName} onChange={(e) => setNewStudent({ ...newStudent, guardianName: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Guardian Contact</label>
+                <input value={newStudent.guardianContact} onChange={(e) => setNewStudent({ ...newStudent, guardianContact: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Guardian CNIC</label>
+                <input value={newStudent.guardianCnic} onChange={(e) => setNewStudent({ ...newStudent, guardianCnic: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Guardian Relation</label>
+                <div className="flex flex-wrap items-center gap-4">
+                  {['son','daughter','brother','sister','other'].map(rel => (
+                    <label key={rel} className="flex items-center gap-2"><input type="radio" name="guardianRelAdd" checked={newStudent.guardianRelation === rel} onChange={() => setNewStudent({ ...newStudent, guardianRelation: rel })} /> {rel[0].toUpperCase()+rel.slice(1)}</label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Photo */}
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Student Photo</label>
+                <input type="file" accept="image/*" onChange={(e) => setNewStudent({ ...newStudent, photoFile: e.target.files?.[0] || null })} className="w-full border rounded px-3 py-2" />
               </div>
             </div>
             <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2">
@@ -726,6 +819,10 @@ const AdminStudents = () => {
                 <input value={editingStudent.fatherName || ''} onChange={(e) => setEditingStudent({ ...editingStudent, fatherName: e.target.value })} className="w-full border rounded px-3 py-2" />
               </div>
               <div>
+                <label className="block text-sm font-medium mb-1">Date of Birth</label>
+                <input type="date" value={editingStudent.dob || ''} onChange={(e) => setEditingStudent({ ...editingStudent, dob: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-1">GR Number</label>
                 <input value={editingStudent.grNumber || ''} onChange={(e) => setEditingStudent({ ...editingStudent, grNumber: e.target.value })} className="w-full border rounded px-3 py-2" />
               </div>
@@ -735,7 +832,96 @@ const AdminStudents = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Class</label>
-                <input value={editingStudent.admissionFor || ''} onChange={(e) => setEditingStudent({ ...editingStudent, admissionFor: e.target.value })} className="w-full border rounded px-3 py-2" />
+                <select value={editingStudent.admissionFor || ''} onChange={(e) => setEditingStudent({ ...editingStudent, admissionFor: e.target.value })} className="w-full border rounded px-3 py-2">
+                  {['1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Gender</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2"><input type="radio" name="genderEdit" checked={editingStudent.gender === 'male'} onChange={() => setEditingStudent({ ...editingStudent, gender: 'male' })} /> Male</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="genderEdit" checked={editingStudent.gender === 'female'} onChange={() => setEditingStudent({ ...editingStudent, gender: 'female' })} /> Female</label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Nationality</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2"><input type="radio" name="nationalityEdit" checked={editingStudent.nationality === 'pakistani'} onChange={() => setEditingStudent({ ...editingStudent, nationality: 'pakistani' })} /> Pakistani</label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Any Medical Condition</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2"><input type="radio" name="medicalEdit" checked={editingStudent.medicalCondition === 'yes'} onChange={() => setEditingStudent({ ...editingStudent, medicalCondition: 'yes' })} /> Yes</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="medicalEdit" checked={editingStudent.medicalCondition === 'no'} onChange={() => setEditingStudent({ ...editingStudent, medicalCondition: 'no' })} /> No</label>
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">CNIC / B-Form Number</label>
+                <input value={editingStudent.cnicOrBform || ''} onChange={(e) => setEditingStudent({ ...editingStudent, cnicOrBform: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+
+              {/* Contact */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <input type="email" value={editingStudent.email || ''} onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Phone Number</label>
+                <input value={editingStudent.phoneNumber || ''} onChange={(e) => setEditingStudent({ ...editingStudent, phoneNumber: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">WhatsApp Number</label>
+                <input value={editingStudent.whatsappNumber || ''} onChange={(e) => setEditingStudent({ ...editingStudent, whatsappNumber: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Address</label>
+                <textarea value={editingStudent.address || ''} onChange={(e) => setEditingStudent({ ...editingStudent, address: e.target.value })} className="w-full border rounded px-3 py-2" rows={2} />
+              </div>
+
+              {/* Academic */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Former Education</label>
+                <select value={editingStudent.formerEducation || ''} onChange={(e) => setEditingStudent({ ...editingStudent, formerEducation: e.target.value })} className="w-full border rounded px-3 py-2">
+                  <option value="">Select</option>
+                  {['1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Previous Institute</label>
+                <input value={editingStudent.previousInstitute || ''} onChange={(e) => setEditingStudent({ ...editingStudent, previousInstitute: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Last Exam Percentage</label>
+                <input value={editingStudent.lastExamPercentage || ''} onChange={(e) => setEditingStudent({ ...editingStudent, lastExamPercentage: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+
+              {/* Guardian */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Guardian Name</label>
+                <input value={editingStudent.guardianName || ''} onChange={(e) => setEditingStudent({ ...editingStudent, guardianName: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Guardian Contact</label>
+                <input value={editingStudent.guardianContact || ''} onChange={(e) => setEditingStudent({ ...editingStudent, guardianContact: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Guardian CNIC</label>
+                <input value={editingStudent.guardianCnic || ''} onChange={(e) => setEditingStudent({ ...editingStudent, guardianCnic: e.target.value })} className="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Guardian Relation</label>
+                <div className="flex flex-wrap items-center gap-4">
+                  {['son','daughter','brother','sister','other'].map(rel => (
+                    <label key={rel} className="flex items-center gap-2"><input type="radio" name="guardianRelEdit" checked={editingStudent.guardianRelation === rel} onChange={() => setEditingStudent({ ...editingStudent, guardianRelation: rel })} /> {rel[0].toUpperCase()+rel.slice(1)}</label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Photo */}
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Student Photo</label>
+                <input type="file" accept="image/*" onChange={(e) => setEditingPhotoFile(e.target.files?.[0] || null)} className="w-full border rounded px-3 py-2" />
               </div>
             </div>
             <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2">
@@ -839,7 +1025,6 @@ const AdminStudents = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">B-Form</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roll No</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date of Birth</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -847,7 +1032,7 @@ const AdminStudents = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {(loading || importLoading) ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={8}>
                     <div className="flex flex-col items-center justify-center py-16">
                       <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
                       <div className="text-blue-600 font-semibold text-lg tracking-wide">
@@ -859,7 +1044,11 @@ const AdminStudents = () => {
               ) : (
                 sortedStudents
                   .map((student, index) => (
-                    <tr key={student.grNumber} className="hover:bg-gray-50">
+                    <tr
+                      key={student.grNumber}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => { setSelectedStudent(student) }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -884,11 +1073,9 @@ const AdminStudents = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{renderText(student.cnicOrBform)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{renderText(student.admissionFor)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{renderText(student.rollNumber)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{renderText(student.dob)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <button onClick={() => { console.log('View clicked', student); setSelectedStudent(student) }} className="text-blue-600 mr-3">View</button>
-                        <button onClick={() => { console.log('Edit clicked', student); setEditingStudent(student); setShowEditModal(true); }} className="text-yellow-600 mr-3">Edit</button>
-                        <button onClick={() => { console.log('Delete clicked', (student as any)._id); setConfirmDeleteId((student as any)._id) }} className="text-red-600">{deleteLoadingId === (student as any)._id ? 'Deleting...' : 'Delete'}</button>
+                        <button onClick={(e) => { e.stopPropagation(); console.log('Edit clicked', student); setEditingStudent(student); setShowEditModal(true); }} className="text-yellow-600 mr-3">Edit</button>
+                        <button onClick={(e) => { e.stopPropagation(); console.log('Delete clicked', (student as any)._id); setConfirmDeleteId((student as any)._id) }} className="text-red-600">{deleteLoadingId === (student as any)._id ? 'Deleting...' : 'Delete'}</button>
                       </td>
                     </tr>
                   ))
@@ -909,7 +1096,11 @@ const AdminStudents = () => {
           <div className="bg-white rounded-2xl shadow p-6 text-center text-gray-500">No students found</div>
         ) : (
           sortedStudents.map((student, index) => (
-            <div key={student.grNumber} className="bg-white rounded-2xl shadow border p-4">
+            <div
+              key={student.grNumber}
+              className="bg-white rounded-2xl shadow border p-4 cursor-pointer"
+              onClick={() => setSelectedStudent(student)}
+            >
               <div className="flex items-center gap-3">
                 {student.photoUrl ? (
                   <img src={student.photoUrl} alt={student.fullName} className="w-12 h-12 rounded-full object-cover" />
@@ -927,12 +1118,10 @@ const AdminStudents = () => {
                 <div><span className="text-gray-500">Father:</span> {student.fatherName}</div>
                 <div><span className="text-gray-500">B-Form:</span> {student.cnicOrBform}</div>
                 <div><span className="text-gray-500">Roll No:</span> {student.rollNumber}</div>
-                <div><span className="text-gray-500">DOB:</span> {student.dob}</div>
               </div>
               <div className="mt-3 flex justify-end gap-3 text-sm">
-                <button onClick={() => setSelectedStudent(student)} className="text-blue-600">View</button>
-                <button onClick={() => { setEditingStudent(student); setShowEditModal(true); }} className="text-yellow-600">Edit</button>
-                <button onClick={() => setConfirmDeleteId((student as any)._id)} className="text-red-600">{deleteLoadingId === (student as any)._id ? 'Deleting...' : 'Delete'}</button>
+                <button onClick={(e) => { e.stopPropagation(); setEditingStudent(student); setShowEditModal(true); }} className="text-yellow-600">Edit</button>
+                <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId((student as any)._id) }} className="text-red-600">{deleteLoadingId === (student as any)._id ? 'Deleting...' : 'Delete'}</button>
               </div>
             </div>
           ))
