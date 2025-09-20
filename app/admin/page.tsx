@@ -108,21 +108,21 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="relative bg-white rounded-2xl shadow-xl p-8 w-[90%] max-w-md">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Admin Login">
+      <div className="relative bg-white sm:rounded-2xl rounded-none shadow-xl p-6 sm:p-8 w-full sm:w-[90%] sm:max-w-md h-full sm:h-auto">
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition"
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition p-2 rounded-full focus:outline-none focus:ring"
           aria-label="Close popup"
         >
-          <X size={20} />
+          <X size={22} />
         </button>
 
         <h2 className="text-xl font-bold mb-4 text-gray-800 text-center">
           Admin Login
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-1">
               Username
@@ -131,7 +131,7 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-4 py-3 sm:py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
               placeholder="Enter username"
               required
             />
@@ -145,7 +145,7 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-4 py-3 sm:py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
               placeholder="Enter email"
               required
             />
@@ -159,7 +159,7 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-4 py-3 sm:py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
               placeholder="Enter password"
               required
             />
@@ -167,7 +167,7 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 sm:py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
           >
             Login
           </button>
