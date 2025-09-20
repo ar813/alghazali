@@ -26,6 +26,11 @@ const Faculty = () => {
         }
     ];
 
+    const getInitial = (name: string) => {
+        const n = name?.trim()
+        return n ? n.charAt(0).toUpperCase() : 'A'
+    }
+
     return (
         <section id="faculty" className="py-12 sm:py-20 bg-gradient-to-b from-slate-50 to-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -39,11 +44,9 @@ const Faculty = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                     {faculty.map((member, index) => (
                         <div key={index} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 sm:p-8 text-center hover:scale-[1.02]">
-                            <img
-                                src={member.image}
-                                alt={member.name}
-                                className="w-20 sm:w-24 h-20 sm:h-24 rounded-full mx-auto mb-4 sm:mb-6 object-cover ring-2 ring-indigo-50"
-                            />
+                            <div className="w-20 sm:w-24 h-20 sm:h-24 rounded-full mx-auto mb-4 sm:mb-6 ring-2 ring-indigo-50 bg-indigo-600 text-white flex items-center justify-center text-2xl sm:text-3xl font-bold">
+                                {getInitial(member.name)}
+                            </div>
                             <h3 className="text-lg sm:text-xl font-bold mb-2">{member.name}</h3>
                             <p className="text-indigo-600 font-semibold mb-2 text-sm sm:text-base">{member.role}</p>
                             <p className="text-gray-600 mb-1 text-sm sm:text-base">{member.qualification}</p>

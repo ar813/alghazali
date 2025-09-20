@@ -1,12 +1,11 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import { Filter, Search, RotateCw, Upload, Download } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import type { ChangeEvent } from 'react'
+import { Search, RotateCw, Upload, Download, ArrowUpDown, Filter } from 'lucide-react'
 import { client } from "@/sanity/lib/client";
 import { getAllStudentsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
- 
-
 
 const AdminStudents = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,6 +44,16 @@ const AdminStudents = () => {
   const [editLoading, setEditLoading] = useState(false)
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [importLoading, setImportLoading] = useState(false)
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
+  const [deleteAllInput, setDeleteAllInput] = useState('')
+  const [showSortMenu, setShowSortMenu] = useState(false)
+  const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'class' | 'gr' | 'roll'>('roll')
+  const [showFilterMenu, setShowFilterMenu] = useState(false)
+  const [searchField, setSearchField] = useState<'fullName' | 'fatherName' | 'grNumber' | 'admissionFor' | 'rollNumber'>('rollNumber')
+  const [importResultOpen, setImportResultOpen] = useState(false)
+  const [importResultMessage, setImportResultMessage] = useState('')
+  const [deleteAllMessage, setDeleteAllMessage] = useState('')
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -72,6 +81,13 @@ const AdminStudents = () => {
     if (!json.ok) throw new Error(json.error || 'Upload failed')
     // return Sanity image reference object
     return { _type: 'image', asset: { _type: 'reference', _ref: json.assetId } }
+  }
+
+  // helper to render avatar initial
+  const getInitial = (name?: string) => {
+    if (!name) return 'A'
+    const first = name.trim().charAt(0).toUpperCase()
+    return first || 'A'
   }
 
   const handleCreateStudent = async () => {
@@ -145,6 +161,61 @@ const AdminStudents = () => {
       console.error('Failed to load ExcelJS:', error)
       throw new Error('ExcelJS library could not be loaded. Please make sure it is installed.')
     }
+  }
+
+  // Flexible date parser to normalize different date formats to YYYY-MM-DD
+  // Supports:
+  // - d/m/yyyy or dd/mm/yyyy
+  // - d-m-yyyy or dd-mm-yyyy
+  // - Excel date serial numbers
+  // - Already normalized yyyy-mm-dd (returns as-is)
+  const parseDateFlexible = (value: any): string => {
+    if (!value) return ''
+    try {
+      // If it's already in ISO-like yyyy-mm-dd
+      if (typeof value === 'string' && /^\d{4}-\d{1,2}-\d{1,2}$/.test(value)) {
+        const [y, m, d] = value.split('-').map(Number)
+        const mm = String(m).padStart(2, '0')
+        const dd = String(d).padStart(2, '0')
+        return `${y}-${mm}-${dd}`
+      }
+
+      // Handle d/m/yyyy or d-m-yyyy
+      if (typeof value === 'string' && /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.test(value.trim())) {
+        const match = value.trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+        if (match) {
+          const d = Number(match[1])
+          const m = Number(match[2])
+          const y = Number(match[3])
+          const mm = String(m).padStart(2, '0')
+          const dd = String(d).padStart(2, '0')
+          return `${y}-${mm}-${dd}`
+        }
+      }
+
+      // Handle Excel serial date numbers
+      if (typeof value === 'number') {
+        // Excel serial date: days since 1899-12-30
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30))
+        const ms = value * 24 * 60 * 60 * 1000
+        const date = new Date(excelEpoch.getTime() + ms)
+        const y = date.getUTCFullYear()
+        const m = String(date.getUTCMonth() + 1).padStart(2, '0')
+        const d = String(date.getUTCDate()).padStart(2, '0')
+        return `${y}-${m}-${d}`
+      }
+
+      // Fallback: try Date.parse
+      const parsed = new Date(value)
+      if (!isNaN(parsed.getTime())) {
+        const y = parsed.getFullYear()
+        const m = String(parsed.getMonth() + 1).padStart(2, '0')
+        const d = String(parsed.getDate()).padStart(2, '0')
+        return `${y}-${m}-${d}`
+      }
+    } catch {}
+    // If nothing worked, return original string (or empty)
+    return typeof value === 'string' ? value : ''
   }
 
   const handleExportExcel = async () => {
@@ -257,11 +328,12 @@ const AdminStudents = () => {
     const el = document.getElementById(fileInputRefId) as HTMLInputElement | null
     el?.click()
   }
-  const handleImportExcelFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportExcelFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     
     try {
+      setImportLoading(true)
       console.log('Starting Excel import...')
       const ExcelJS: any = await loadExcel()
       const wb = new ExcelJS.Workbook()
@@ -281,7 +353,7 @@ const AdminStudents = () => {
         toCreate.push({
           fullName: r[1] || '',
           fatherName: r[2] || '',
-          dob: r[3] || '',
+          dob: parseDateFlexible(r[3] ?? ''),
           rollNumber: r[4] || '',
           grNumber: r[5] || '',
           gender: r[6] || 'male',
@@ -324,12 +396,14 @@ const AdminStudents = () => {
       }
       
       await refreshStudents()
-      alert(`Import completed! ${successCount} out of ${toCreate.length} students imported successfully.`)
+      setImportResultMessage(`${successCount} out of ${toCreate.length} students imported successfully.`)
+      setImportResultOpen(true)
       
     } catch (error: any) {
       console.error('Excel import error:', error)
       alert(`Excel import mein error aaya: ${error?.message || 'Unknown error'}. File format check karein aur dev server restart karke dobara try karein.`)
     } finally {
+      setImportLoading(false)
       // Reset file input safely (React synthetic event's currentTarget can be null after async)
       const inputEl = document.getElementById(fileInputRefId) as HTMLInputElement | null
       if (inputEl) inputEl.value = ''
@@ -337,11 +411,55 @@ const AdminStudents = () => {
   }
 
   // derive filtered list once to use in both table and cards
-  const filteredStudents = students
-    .filter(student =>
-      student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.grNumber.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+  const filteredStudents = students.filter(student => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return true
+    const getVal = (field: typeof searchField) => {
+      const raw: any = (student as any)[field]
+      return (raw ?? '').toString().toLowerCase()
+    }
+    return getVal(searchField).includes(term)
+  })
+
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    const safe = (v: any) => (v ?? '').toString()
+    const num = (v: any) => {
+      const s = safe(v)
+      const m = s.match(/\d+/)
+      return m ? parseInt(m[0], 10) : NaN
+    }
+    const classRank = (c: any) => {
+      const s = safe(c).toUpperCase()
+      const order = ['1','2','3','4','5','6','7','8','SSCI','SSCII']
+      const idx = order.indexOf(s)
+      return idx === -1 ? 999 : idx
+    }
+    switch (sortBy) {
+      case 'name-asc':
+        return safe(a.fullName).localeCompare(safe(b.fullName))
+      case 'name-desc':
+        return safe(b.fullName).localeCompare(safe(a.fullName))
+      case 'class': {
+        return classRank(a.admissionFor) - classRank(b.admissionFor)
+      }
+      case 'gr': {
+        const an = num(a.grNumber)
+        const bn = num(b.grNumber)
+        if (!isNaN(an) && !isNaN(bn)) return an - bn
+        return safe(a.grNumber).localeCompare(safe(b.grNumber))
+      }
+      case 'roll': {
+        const an = num(a.rollNumber)
+        const bn = num(b.rollNumber)
+        if (!isNaN(an) && !isNaN(bn)) return an - bn
+        return safe(a.rollNumber).localeCompare(safe(b.rollNumber))
+      }
+      default:
+        return 0
+    }
+  })
+
+  // Note: Delete All handled via confirmation modal below
 
   return (
     <div>
@@ -353,16 +471,55 @@ const AdminStudents = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                placeholder="Search students..."
+                placeholder={`Search by ${searchField.replace(/([A-Z])/g,' $1').toLowerCase()}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
-            <button className="px-4 py-2 border rounded-lg flex items-center space-x-2 hover:bg-gray-50">
-              <Filter size={16} />
-              <span>Filter</span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterMenu(v => !v)}
+                className="px-3 py-2 border rounded-lg flex items-center gap-2 hover:bg-gray-50"
+                title="Filter"
+              >
+                <Filter size={16} />
+                <span className="hidden sm:inline">Filter</span>
+              </button>
+              {showFilterMenu && (
+                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-56 p-1">
+                  <div className="px-3 py-1 text-xs text-gray-500">Filter by</div>
+                  {(['rollNumber','fullName','fatherName','grNumber','admissionFor'] as const).map(opt => (
+                    <button key={opt} className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${searchField === opt ? 'bg-gray-100' : ''}`} onClick={() => { setSearchField(opt); setShowFilterMenu(false); }}>
+                      {opt === 'fullName' && 'Student Name'}
+                      {opt === 'fatherName' && "Father's Name"}
+                      {opt === 'grNumber' && 'GR Number'}
+                      {opt === 'admissionFor' && 'Class'}
+                      {opt === 'rollNumber' && 'Roll Number'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => setShowSortMenu((v) => !v)}
+                className="px-3 py-2 border rounded-lg flex items-center gap-2 hover:bg-gray-50"
+                title="Sorting"
+              >
+                <ArrowUpDown size={16} />
+                <span className="hidden sm:inline">Sorting</span>
+              </button>
+              {showSortMenu && (
+                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-44 p-1">
+                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'name-asc' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('name-asc'); setShowSortMenu(false); }}>A → Z</button>
+                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'name-desc' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('name-desc'); setShowSortMenu(false); }}>Z → A</button>
+                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'class' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('class'); setShowSortMenu(false); }}>By Class</button>
+                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'gr' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('gr'); setShowSortMenu(false); }}>By GR Number</button>
+                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'roll' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('roll'); setShowSortMenu(false); }}>By Roll No</button>
+                </div>
+              )}
+            </div>
           </div>
           {/* Actions move to next line on mobile */}
           <div className="flex items-center gap-2">
@@ -374,13 +531,28 @@ const AdminStudents = () => {
               <RotateCw size={16} className={loading ? 'animate-spin' : ''} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
+            <button
+              onClick={() => {
+                if (students.length === 0) {
+                  setDeleteAllMessage('No students to delete.')
+                  setShowDeleteAllConfirm(true)
+                  return
+                }
+                setDeleteAllMessage('')
+                setShowDeleteAllConfirm(true)
+              }}
+              className="px-3 py-2 border border-red-200 text-red-700 rounded-lg flex items-center gap-2 hover:bg-red-50 text-sm"
+              title="Delete all students"
+            >
+              Delete All
+            </button>
             <button onClick={() => { console.log('Add button clicked'); setShowAddModal(true) }} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg text-sm shadow hover:opacity-95">Add Student</button>
           </div>
         </div>
 
         {selectedStudent && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 w-full max-w-4xl relative shadow-2xl border border-gray-200 overflow-y-auto max-h-[90vh]">
+          <div className="fixed inset-0 bg-black/40 flex items-start sm:items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-4 sm:p-8 w-[95%] sm:w-full max-w-lg sm:max-w-4xl relative shadow-2xl border border-gray-200 overflow-y-auto max-h-[90vh] my-6 sm:my-10">
 
               {/* Close Button */}
               <button
@@ -392,7 +564,7 @@ const AdminStudents = () => {
               </button>
 
               {/* Title */}
-              <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center border-b pb-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center border-b pb-4">
                 👨‍🎓 Student Details
               </h2>
 
@@ -464,6 +636,7 @@ const AdminStudents = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GR Number</th>
@@ -471,13 +644,14 @@ const AdminStudents = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roll No</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date of Birth</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
 
               <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
+                {(loading || importLoading) ? (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={9}>
                       <div className="flex flex-col items-center justify-center py-16">
                         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
                         <div className="text-blue-600 font-semibold text-lg tracking-wide">
@@ -487,16 +661,23 @@ const AdminStudents = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents
-                    .map(student => (
+                  sortedStudents
+                    .map((student, index) => (
                       <tr key={student.grNumber} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <img
-                              src={student.photoUrl || '/assets/logo.png'}
-                              alt={student.fullName}
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
+                            {student.photoUrl ? (
+                              <img
+                                src={student.photoUrl}
+                                alt={student.fullName}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">
+                                {getInitial(student.fullName)}
+                              </div>
+                            )}
                             <div className="ml-3">
                               <div className="text-sm font-medium text-gray-900">{student.fullName}</div>
                             </div>
@@ -523,7 +704,7 @@ const AdminStudents = () => {
 
         {/* 👇 Cards list (Mobile only) */}
         <div className="md:hidden space-y-3">
-          {loading ? (
+          {(loading || importLoading) ? (
             <div className="bg-white rounded-2xl shadow p-6 flex flex-col items-center justify-center">
               <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
               <div className="text-blue-600 font-semibold">Loading students...</div>
@@ -531,10 +712,16 @@ const AdminStudents = () => {
           ) : filteredStudents.length === 0 ? (
             <div className="bg-white rounded-2xl shadow p-6 text-center text-gray-500">No students found</div>
           ) : (
-            filteredStudents.map((student) => (
+            sortedStudents.map((student, index) => (
               <div key={student.grNumber} className="bg-white rounded-2xl shadow border p-4">
                 <div className="flex items-center gap-3">
-                  <img src={student.photoUrl || '/assets/logo.png'} alt={student.fullName} className="w-12 h-12 rounded-full object-cover" />
+                  {student.photoUrl ? (
+                    <img src={student.photoUrl} alt={student.fullName} className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-base font-semibold">
+                      {getInitial(student.fullName)}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <div className="font-semibold text-gray-900 truncate">{student.fullName}</div>
                     <div className="text-xs text-gray-500">GR: {student.grNumber} • Class: {student.admissionFor}</div>
@@ -556,10 +743,79 @@ const AdminStudents = () => {
           )}
         </div>
 
+        {/* Delete Confirm Modal */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl border">
+            <h4 className="text-lg font-semibold mb-2">Delete Student</h4>
+            <p className="text-sm text-gray-600 mb-4">Kya aap sure hain ke is student ko delete karna chahte hain? Ye action wapas nahin hoga.</p>
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 border rounded" onClick={() => setConfirmDeleteId(null)}>No</button>
+              <button className="px-4 py-2 bg-red-600 text-white rounded" onClick={() => handleDeleteStudent(confirmDeleteId!)}>
+                {deleteLoadingId === confirmDeleteId ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirm Modal */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl border">
+            <h4 className="text-lg font-semibold mb-2">Delete ALL Students</h4>
+            <p className="text-sm text-gray-600 mb-4">Is action se tamam students delete ho jayenge. Confirm karne ke liye niche <span className="font-semibold">DELETE</span> type karein.</p>
+            {deleteAllMessage && <div className="mb-3 text-sm text-red-600">{deleteAllMessage}</div>}
+            <input value={deleteAllInput} onChange={(e) => setDeleteAllInput(e.target.value)} placeholder="Type DELETE" className="w-full border rounded px-3 py-2 mb-4" />
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 border rounded" onClick={() => { setShowDeleteAllConfirm(false); setDeleteAllInput(''); setDeleteAllMessage(''); }}>Close</button>
+              <button
+                disabled={deleteAllInput !== 'DELETE' || loading || students.length === 0}
+                onClick={async () => {
+                  setLoading(true)
+                  try {
+                    const res = await fetch('/api/students?all=true', { method: 'DELETE' })
+                    const json = await res.json()
+                    if (!json.ok) throw new Error(json.error || 'Bulk delete failed')
+                    await refreshStudents()
+                    setDeleteAllMessage('All students deleted successfully.')
+                    setDeleteAllInput('')
+                  } catch (err) {
+                    console.error('Failed to delete all students', err)
+                    setDeleteAllMessage('Failed to delete all students')
+                  } finally {
+                    setLoading(false)
+                  }
+                }}
+                className={`px-4 py-2 rounded text-white ${deleteAllInput === 'DELETE' && !loading && students.length > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 cursor-not-allowed'}`}
+              >
+                {loading ? 'Deleting...' : 'Yes, Delete All'}
+              </button>
+            </div>
+            {deleteAllMessage && (
+              <div className={`mt-3 text-sm ${deleteAllMessage.includes('successfully') ? 'text-green-600' : 'text-red-600'}`}>{deleteAllMessage}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Import Result Modal */}
+      {importResultOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl border">
+            <h4 className="text-lg font-semibold mb-2">Import Completed</h4>
+            <p className="text-sm text-gray-700 mb-4">{importResultMessage}</p>
+            <div className="flex justify-end">
+              <button className="px-4 py-2 border rounded" onClick={() => setImportResultOpen(false)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
         {/* Add Student Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-3xl my-10 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/40 flex items-start sm:items-center justify-center z-50 overflow-y-auto">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 w-[95%] sm:w-full max-w-lg sm:max-w-3xl my-6 sm:my-10 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
               <h3 className="text-2xl font-semibold mb-4">Add Student</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <input value={newStudent.fullName} onChange={(e) => setNewStudent({ ...newStudent, fullName: e.target.value })} placeholder="Full Name" className="w-full border p-2 rounded" />
@@ -568,63 +824,10 @@ const AdminStudents = () => {
                 <input value={newStudent.rollNumber} onChange={(e) => setNewStudent({ ...newStudent, rollNumber: e.target.value })} placeholder="Roll Number" className="w-full border p-2 rounded" />
                 <input value={newStudent.grNumber} onChange={(e) => setNewStudent({ ...newStudent, grNumber: e.target.value })} placeholder="GR Number" className="w-full border p-2 rounded" />
                 <input value={newStudent.cnicOrBform} onChange={(e) => setNewStudent({ ...newStudent, cnicOrBform: e.target.value })} placeholder="CNIC / B-Form" className="w-full border p-2 rounded" />
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-600 mb-1">Photo</label>
-                  <input type="file" accept="image/*" onChange={(e) => setNewStudent({ ...newStudent, photoFile: e.target.files?.[0] || null })} className="w-full border p-2 rounded" />
-                </div>
-                <select value={newStudent.admissionFor} onChange={(e) => setNewStudent({ ...newStudent, admissionFor: e.target.value })} className="w-full border p-2 rounded">
-                  <option value="1">Class 1</option>
-                  <option value="2">Class 2</option>
-                  <option value="3">Class 3</option>
-                  <option value="4">Class 4</option>
-                  <option value="5">Class 5</option>
-                  <option value="6">Class 6</option>
-                  <option value="7">Class 7</option>
-                  <option value="8">Class 8</option>
-                  <option value="SSCI">SSCI</option>
-                  <option value="SSCII">SSCII</option>
-                </select>
-                <div className="flex items-center gap-3 border rounded p-2">
-                  <span className="text-sm text-gray-600">Gender:</span>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="genderAdd" checked={newStudent.gender === 'male'} onChange={() => setNewStudent({ ...newStudent, gender: 'male' })} /> Male</label>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="genderAdd" checked={newStudent.gender === 'female'} onChange={() => setNewStudent({ ...newStudent, gender: 'female' })} /> Female</label>
-                </div>
-                <div className="flex items-center gap-3 border rounded p-2">
-                  <span className="text-sm text-gray-600">Nationality:</span>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="nationalityAdd" checked={newStudent.nationality === 'pakistani'} onChange={() => setNewStudent({ ...newStudent, nationality: 'pakistani' })} /> Pakistani</label>
-                </div>
-                <div className="flex items-center gap-3 border rounded p-2">
-                  <span className="text-sm text-gray-600">Medical Condition:</span>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="medicalAdd" checked={newStudent.medicalCondition === 'yes'} onChange={() => setNewStudent({ ...newStudent, medicalCondition: 'yes' })} /> Yes</label>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="medicalAdd" checked={newStudent.medicalCondition === 'no'} onChange={() => setNewStudent({ ...newStudent, medicalCondition: 'no' })} /> No</label>
-                </div>
-                <input value={newStudent.email} onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })} placeholder="Email" className="w-full border p-2 rounded" />
-                <input value={newStudent.phoneNumber} onChange={(e) => setNewStudent({ ...newStudent, phoneNumber: e.target.value })} placeholder="Phone Number" className="w-full border p-2 rounded" />
-                <input value={newStudent.whatsappNumber} onChange={(e) => setNewStudent({ ...newStudent, whatsappNumber: e.target.value })} placeholder="WhatsApp Number" className="w-full border p-2 rounded" />
-                <textarea value={newStudent.address} onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })} placeholder="Address" className="w-full border p-2 rounded sm:col-span-2" />
-                <select value={newStudent.formerEducation} onChange={(e) => setNewStudent({ ...newStudent, formerEducation: e.target.value })} className="w-full border p-2 rounded">
-                  <option value="">Former Education</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                  <option value="SSCI">SSCI</option>
-                  <option value="SSCII">SSCII</option>
-                </select>
-                <input value={newStudent.previousInstitute} onChange={(e) => setNewStudent({ ...newStudent, previousInstitute: e.target.value })} placeholder="Previous Institute" className="w-full border p-2 rounded" />
-                <input value={newStudent.lastExamPercentage} onChange={(e) => setNewStudent({ ...newStudent, lastExamPercentage: e.target.value })} placeholder="Last Exam %" className="w-full border p-2 rounded" />
-                <input value={newStudent.guardianName} onChange={(e) => setNewStudent({ ...newStudent, guardianName: e.target.value })} placeholder="Guardian Name" className="w-full border p-2 rounded" />
-                <input value={newStudent.guardianContact} onChange={(e) => setNewStudent({ ...newStudent, guardianContact: e.target.value })} placeholder="Guardian Contact" className="w-full border p-2 rounded" />
-                <input value={newStudent.guardianCnic} onChange={(e) => setNewStudent({ ...newStudent, guardianCnic: e.target.value })} placeholder="Guardian CNIC" className="w-full border p-2 rounded" />
-                <input value={newStudent.guardianRelation} onChange={(e) => setNewStudent({ ...newStudent, guardianRelation: e.target.value })} placeholder="Relation" className="w-full border p-2 rounded" />
               </div>
               <div className="flex justify-end gap-2 mt-6">
-                <button onClick={() => { console.log('Add modal cancel'); setShowAddModal(false) }} className="px-4 py-2 border rounded">Cancel</button>
-                <button onClick={async () => { console.log('Create clicked', newStudent); await handleCreateStudent() }} disabled={createLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{createLoading ? 'Creating...' : 'Create'}</button>
+                <button onClick={() => setShowAddModal(false)} className="px-4 py-2 border rounded">Cancel</button>
+                <button onClick={handleCreateStudent} disabled={createLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{createLoading ? 'Creating...' : 'Create'}</button>
               </div>
             </div>
           </div>
@@ -632,8 +835,8 @@ const AdminStudents = () => {
 
         {/* Edit Student Modal */}
         {showEditModal && editingStudent && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-3xl my-10 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/40 flex items-start sm:items-center justify-center z-50 overflow-y-auto">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 w-[95%] sm:w-full max-w-lg sm:max-w-3xl my-6 sm:my-10 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
               <h3 className="text-2xl font-semibold mb-4">Edit Student</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <input value={editingStudent.fullName} onChange={(e) => setEditingStudent({ ...editingStudent, fullName: e.target.value })} placeholder="Full Name" className="w-full border p-2 rounded" />
@@ -642,72 +845,14 @@ const AdminStudents = () => {
                 <input value={editingStudent.rollNumber || ''} onChange={(e) => setEditingStudent({ ...editingStudent, rollNumber: e.target.value })} placeholder="Roll Number" className="w-full border p-2 rounded" />
                 <input value={editingStudent.grNumber} onChange={(e) => setEditingStudent({ ...editingStudent, grNumber: e.target.value })} placeholder="GR Number" className="w-full border p-2 rounded" />
                 <input value={editingStudent.cnicOrBform} onChange={(e) => setEditingStudent({ ...editingStudent, cnicOrBform: e.target.value })} placeholder="CNIC / B-Form" className="w-full border p-2 rounded" />
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-600 mb-1">Photo</label>
-                  <input type="file" accept="image/*" onChange={(e) => setEditingStudent({ ...editingStudent, photoFile: e.target.files?.[0] || null })} className="w-full border p-2 rounded" />
-                </div>
-                <select value={editingStudent.admissionFor} onChange={(e) => setEditingStudent({ ...editingStudent, admissionFor: e.target.value })} className="w-full border p-2 rounded">
-                  <option value="1">Class 1</option>
-                  <option value="2">Class 2</option>
-                  <option value="3">Class 3</option>
-                  <option value="4">Class 4</option>
-                  <option value="5">Class 5</option>
-                  <option value="6">Class 6</option>
-                  <option value="7">Class 7</option>
-                  <option value="8">Class 8</option>
-                  <option value="SSCI">SSCI</option>
-                  <option value="SSCII">SSCII</option>
-                </select>
-                <div className="flex items-center gap-3 border rounded p-2">
-                  <span className="text-sm text-gray-600">Gender:</span>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="genderEdit" checked={editingStudent.gender === 'male'} onChange={() => setEditingStudent({ ...editingStudent, gender: 'male' })} /> Male</label>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="genderEdit" checked={editingStudent.gender === 'female'} onChange={() => setEditingStudent({ ...editingStudent, gender: 'female' })} /> Female</label>
-                </div>
-                <div className="flex items-center gap-3 border rounded p-2">
-                  <span className="text-sm text-gray-600">Nationality:</span>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="nationalityEdit" checked={editingStudent.nationality === 'pakistani'} onChange={() => setEditingStudent({ ...editingStudent, nationality: 'pakistani' })} /> Pakistani</label>
-                </div>
-                <div className="flex items-center gap-3 border rounded p-2">
-                  <span className="text-sm text-gray-600">Medical Condition:</span>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="medicalEdit" checked={editingStudent.medicalCondition === 'yes'} onChange={() => setEditingStudent({ ...editingStudent, medicalCondition: 'yes' })} /> Yes</label>
-                  <label className="flex items-center gap-1 text-sm"><input type="radio" name="medicalEdit" checked={editingStudent.medicalCondition === 'no'} onChange={() => setEditingStudent({ ...editingStudent, medicalCondition: 'no' })} /> No</label>
-                </div>
-                <input value={editingStudent.email || ''} onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })} placeholder="Email" className="w-full border p-2 rounded" />
-                <input value={editingStudent.phoneNumber || ''} onChange={(e) => setEditingStudent({ ...editingStudent, phoneNumber: e.target.value })} placeholder="Phone Number" className="w-full border p-2 rounded" />
-                <input value={editingStudent.whatsappNumber || ''} onChange={(e) => setEditingStudent({ ...editingStudent, whatsappNumber: e.target.value })} placeholder="WhatsApp Number" className="w-full border p-2 rounded" />
-                <textarea value={editingStudent.address || ''} onChange={(e) => setEditingStudent({ ...editingStudent, address: e.target.value })} placeholder="Address" className="w-full border p-2 rounded sm:col-span-2" />
-                <select value={editingStudent.formerEducation || ''} onChange={(e) => setEditingStudent({ ...editingStudent, formerEducation: e.target.value })} className="w-full border p-2 rounded">
-                  <option value="">Former Education</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                  <option value="SSCI">SSCI</option>
-                  <option value="SSCII">SSCII</option>
-                </select>
-                <input value={editingStudent.previousInstitute || ''} onChange={(e) => setEditingStudent({ ...editingStudent, previousInstitute: e.target.value })} placeholder="Previous Institute" className="w-full border p-2 rounded" />
-                <input value={editingStudent.lastExamPercentage || ''} onChange={(e) => setEditingStudent({ ...editingStudent, lastExamPercentage: e.target.value })} placeholder="Last Exam %" className="w-full border p-2 rounded" />
-                <input value={editingStudent.guardianName || ''} onChange={(e) => setEditingStudent({ ...editingStudent, guardianName: e.target.value })} placeholder="Guardian Name" className="w-full border p-2 rounded" />
-                <input value={editingStudent.guardianContact || ''} onChange={(e) => setEditingStudent({ ...editingStudent, guardianContact: e.target.value })} placeholder="Guardian Contact" className="w-full border p-2 rounded" />
-                <input value={editingStudent.guardianCnic || ''} onChange={(e) => setEditingStudent({ ...editingStudent, guardianCnic: e.target.value })} placeholder="Guardian CNIC" className="w-full border p-2 rounded" />
-                <input value={editingStudent.guardianRelation || ''} onChange={(e) => setEditingStudent({ ...editingStudent, guardianRelation: e.target.value })} placeholder="Relation" className="w-full border p-2 rounded" />
               </div>
               <div className="flex justify-end gap-2 mt-6">
-                <button onClick={() => { console.log('Edit modal cancel'); setShowEditModal(false); setEditingStudent(null); }} className="px-4 py-2 border rounded">Cancel</button>
+                <button onClick={() => { setShowEditModal(false); setEditingStudent(null); }} className="px-4 py-2 border rounded">Cancel</button>
                 <button onClick={async () => {
-                    console.log('Save edit clicked', editingStudent)
                     setEditLoading(true)
                     try {
                       const id = (editingStudent as any)._id
-                      const patch: any = { fullName: editingStudent.fullName, fatherName: editingStudent.fatherName, grNumber: editingStudent.grNumber, cnicOrBform: editingStudent.cnicOrBform, admissionFor: editingStudent.admissionFor, dob: editingStudent.dob, rollNumber: editingStudent.rollNumber, gender: editingStudent.gender, email: editingStudent.email, phoneNumber: editingStudent.phoneNumber, whatsappNumber: editingStudent.whatsappNumber, address: editingStudent.address, formerEducation: editingStudent.formerEducation, previousInstitute: editingStudent.previousInstitute, lastExamPercentage: editingStudent.lastExamPercentage, guardianName: editingStudent.guardianName, guardianContact: editingStudent.guardianContact, guardianCnic: editingStudent.guardianCnic, guardianRelation: editingStudent.guardianRelation, nationality: editingStudent.nationality, medicalCondition: editingStudent.medicalCondition }
-                      if (editingStudent.photoFile) {
-                        const imageRef = await uploadPhotoAndGetRef(editingStudent.photoFile)
-                        patch.photo = imageRef
-                      }
+                      const patch: any = { fullName: editingStudent.fullName, fatherName: editingStudent.fatherName, grNumber: editingStudent.grNumber, cnicOrBform: editingStudent.cnicOrBform, dob: editingStudent.dob, rollNumber: editingStudent.rollNumber }
                       const res = await fetch('/api/students', { method: 'PATCH', body: JSON.stringify({ id, patch }), headers: { 'Content-Type': 'application/json' } })
                       const json = await res.json()
                       if (!json.ok) throw new Error(json.error || 'Update failed')
@@ -726,31 +871,15 @@ const AdminStudents = () => {
           </div>
         )}
 
-        {/* Delete Confirm Modal */}
-        {confirmDeleteId && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl border">
-              <h4 className="text-lg font-semibold mb-2">Delete Student</h4>
-              <p className="text-sm text-gray-600 mb-4">Kya aap sure hain ke is student ko delete karna chahte hain? Ye action wapas nahin hoga.</p>
-              <div className="flex justify-end gap-2">
-                <button className="px-4 py-2 border rounded" onClick={() => setConfirmDeleteId(null)}>No</button>
-                <button className="px-4 py-2 bg-red-600 text-white rounded" onClick={() => handleDeleteStudent(confirmDeleteId!)}>
-                  {deleteLoadingId === confirmDeleteId ? 'Deleting...' : 'Yes, Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
 
       {/* Import / Export Controls */}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button onClick={handleExportExcel} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm">
+        <button onClick={handleExportExcel} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-indigo-50 transition-colors shadow-sm text-sm">
           <Download size={16} />
           <span>Export Excel</span>
         </button>
-        <button onClick={handleImportExcelClick} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm">
+        <button onClick={handleImportExcelClick} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-indigo-50 transition-colors shadow-sm text-sm">
           <Upload size={16} />
           <span>Import Excel</span>
         </button>

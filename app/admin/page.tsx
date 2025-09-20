@@ -204,7 +204,7 @@ const AdminPortal = ({ isBlurred = false }: { isBlurred?: boolean }) => {
                 {/* Sticky Tabs Bar for better mobile UX */}
                 <nav className="bg-white/90 backdrop-blur sticky top-0 z-30 shadow-sm pt-4">
                     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-                        <div className="relative flex gap-2 sm:gap-4 border-b overflow-x-auto snap-x snap-mandatory">
+                        <div className="relative flex items-center justify-between gap-2 sm:gap-4 border-b overflow-x-auto snap-x snap-mandatory">
                             <div
                                 className="absolute bottom-0 h-0.5 bg-blue-600 transition-all duration-300"
                                 style={{
@@ -212,23 +212,31 @@ const AdminPortal = ({ isBlurred = false }: { isBlurred?: boolean }) => {
                                     width: indicatorStyle.width,
                                 }}
                             />
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    ref={(el) => {
-                                        tabRefs.current[tab.id] = el;
-                                    }}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`relative py-3 sm:py-4 px-3 sm:px-4 text-sm font-medium capitalize transition-all duration-300 flex-none snap-start
-                                        ${activeTab === tab.id
-                                            ? 'text-blue-600'
-                                            : 'text-gray-500 hover:text-blue-500'
-                                        }`}
-                                    aria-current={activeTab === tab.id ? 'page' : undefined}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
+                            <div className="flex gap-2 sm:gap-4">
+                                {tabs.map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        ref={(el) => {
+                                            tabRefs.current[tab.id] = el;
+                                        }}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`relative py-3 sm:py-4 px-3 sm:px-4 text-sm font-medium capitalize transition-all duration-300 flex-none snap-start
+                                            ${activeTab === tab.id
+                                                ? 'text-blue-600'
+                                                : 'text-gray-500 hover:text-blue-500'
+                                            }`}
+                                        aria-current={activeTab === tab.id ? 'page' : undefined}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => { try { localStorage.removeItem('adminSession'); } catch {} window.location.href = '/admin'; }}
+                                className="ml-auto my-2 px-3 py-1.5 rounded-lg text-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                            >
+                                Logout
+                            </button>
                         </div>
                     </div>
                 </nav>

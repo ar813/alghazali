@@ -26,6 +26,23 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const url = new URL(request.url)
+  const all = url.searchParams.get('all') === 'true'
+
+  // If bulk delete is requested, delete all students via GROQ query
+  if (all) {
+    console.log('API DELETE /api/students (bulk delete all)')
+    try {
+      // Sanity supports delete by query
+      const res = await serverClient.delete({ query: '*[_type == "student"]' })
+      return NextResponse.json({ ok: true, res })
+    } catch (err) {
+      console.error('API BULK DELETE error', err)
+      return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
+    }
+  }
+
+  // Otherwise delete a single student by id (expects JSON body with { id })
   const { id } = await request.json()
   console.log('API DELETE /api/students', id)
   try {

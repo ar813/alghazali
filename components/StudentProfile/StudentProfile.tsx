@@ -3,16 +3,27 @@ import { Student } from '@/types/student';
 
 
 export default function StudentProfile({ student }: { student: Student }) {
+    const getInitial = (name?: string) => {
+        if (!name) return 'A'
+        const first = name.trim().charAt(0).toUpperCase()
+        return first || 'A'
+    }
     return (
         <div className="max-w-4xl mx-auto">
             <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-3xl shadow-lg sm:shadow-2xl overflow-hidden border border-white/20">
                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 sm:p-6 lg:p-8 text-white">
                     <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-6">
-                        <img
-                            src={student.photoUrl}
-                            alt="Student Avatar"
-                            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-white/30 shadow-lg object-cover"
-                        />
+                        {student.photoUrl ? (
+                            <img
+                                src={student.photoUrl}
+                                alt="Student Avatar"
+                                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-white/30 shadow-lg object-cover"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/20 border-2 sm:border-4 border-white/30 shadow-lg flex items-center justify-center text-3xl font-bold">
+                                {getInitial(student.fullName)}
+                            </div>
+                        )}
                         <div>
                             <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2">{student.fullName}</h3>
                             <p className="text-base sm:text-lg text-blue-100">Admission For: {student.admissionFor}</p>

@@ -5,7 +5,7 @@ import { client } from '@/sanity/lib/client';
 const AdminDashboard = () => {
 
     const [totalStudents, setTotalStudents] = useState<number>(0)
-    const [admissionsLast30, setAdmissionsLast30] = useState<number>(0)
+    const [admissionsLast365, setAdmissionsLast365] = useState<number>(0)
     type RecentAdmission = { _id: string; fullName: string; admissionFor?: string; _createdAt: string }
     const [recentAdmissions, setRecentAdmissions] = useState<RecentAdmission[]>([])
 
@@ -14,15 +14,15 @@ const AdminDashboard = () => {
             // Count total students
             const total: number = await client.fetch('count(*[_type == "student"])')
 
-            // Admissions in last 30 days using _createdAt
-            const last30Query = `count(*[_type == "student" && dateTime(_createdAt) >= dateTime(now()) - 60*60*24*30])`
-            const last30: number = await client.fetch(last30Query)
+            // Admissions in last 365 days using _createdAt
+            const last365Query = `count(*[_type == "student" && dateTime(_createdAt) >= dateTime(now()) - 60*60*24*365])`
+            const last365: number = await client.fetch(last365Query)
 
             // Recent admissions list (latest 6)
             const recents: RecentAdmission[] = await client.fetch(`*[_type == "student"]|order(_createdAt desc)[0...6]{ _id, fullName, admissionFor, _createdAt }`)
 
             setTotalStudents(total)
-            setAdmissionsLast30(last30)
+            setAdmissionsLast365(last365)
             setRecentAdmissions(recents)
         }
         fetchStats()
@@ -50,7 +50,7 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <StatCard stat={{ title: 'Total Students', value: totalStudents.toLocaleString(), icon: Users, color: 'from-blue-500 to-purple-600' }} />
                 <StatCard stat={{ title: 'Faculty Members', value: '—', icon: GraduationCap, color: 'from-orange-500 to-red-600' }} />
-                <StatCard stat={{ title: 'Admission Rate (30 days)', value: totalStudents > 0 ? `${Math.round((admissionsLast30 / totalStudents) * 100)}%` : '0%', icon: TrendingUp, color: 'from-pink-500 to-rose-600' }} />
+                <StatCard stat={{ title: 'Admission Rate (365 days)', value: totalStudents > 0 ? `${Math.round((admissionsLast365 / totalStudents) * 100)}%` : '0%', icon: TrendingUp, color: 'from-pink-500 to-rose-600' }} />
             </div>
 
             {/* Recent Admissions */}

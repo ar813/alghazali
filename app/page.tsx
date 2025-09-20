@@ -5,7 +5,6 @@ import HeroSection from '@/components/HeroSection/HeroSection';
 import StatsSection from '@/components/StatsSection/StatsSection';
 import About from '@/components/About/About';
 import AcademicPrograms from '@/components/AcademicPrograms/AcademicPrograms';
-import Testimonials from '@/components/Testimonials/Testimonials';
 import Faculty from '@/components/Faculty/Faculty';
 import SchoolEvents from '@/components/SchoolEvents/SchoolEvents';
 import AdmissionDetail from '@/components/AdmissionDetail/AdmissionDetail';
@@ -21,12 +20,11 @@ export default function HomePage() {
 
       <NavBar />
       <HeroSection />
-      <StatsSection />
+      <SchoolEvents />
       <About />
       <AcademicPrograms />
-      <Testimonials />
       <Faculty />
-      <SchoolEvents />
+      <StatsSection />
       <AdmissionDetail />      
       <Contact />
       <Footer />

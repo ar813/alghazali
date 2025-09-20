@@ -31,6 +31,7 @@ export default function StylishStudentPortal() {
   const [searchBFormNumber, setSearchBFormNumber] = useState('')
   const [searchGRNumber, setSearchGRNumber] = useState('')
   const [validationMessage, setValidationMessage] = useState('');
+  const sessionDuration = 30 * 60 * 1000; // 30 minutes
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -41,6 +42,34 @@ export default function StylishStudentPortal() {
     fetchStudents();
   }, []);
 
+  // Check existing session on mount
+  useEffect(() => {
+    const session = localStorage.getItem('studentSession')
+    if (!session) return
+    try {
+      const { timestamp, bFormOrCnic, grNumber } = JSON.parse(session)
+      const now = Date.now()
+      if (now - timestamp < sessionDuration) {
+        // If we already have students fetched, try to filter; else wait for students
+        const findAndSet = () => {
+          const result = students.filter((s: Student) => {
+            const docId = String((s as any).cnicOrBform ?? '').trim()
+            const guardian = String((s as any).guardianCnic ?? '').trim()
+            const gr = String((s as any).grNumber ?? '').trim()
+            return (docId === bFormOrCnic || guardian === bFormOrCnic) && gr === grNumber
+          })
+          if (result.length > 0) {
+            setFiltered(result)
+            setShowModal(false)
+          }
+        }
+        if (students.length > 0) findAndSet()
+      } else {
+        localStorage.removeItem('studentSession')
+      }
+    } catch {}
+  }, [students])
+
   const handleSearch = () => {
     const bForm = searchBFormNumber.trim();
     const grNo = searchGRNumber.trim();
@@ -50,9 +79,12 @@ export default function StylishStudentPortal() {
       return;
     }
 
-    const result = students.filter((s: Student) =>
-      s.cnicOrBform.trim() === bForm && s.grNumber.trim() === grNo
-    );
+    const result = students.filter((s: Student) => {
+      const docId = String((s as any).cnicOrBform ?? '').trim()
+      const guardian = String((s as any).guardianCnic ?? '').trim()
+      const gr = String((s as any).grNumber ?? '').trim()
+      return (docId === bForm || guardian === bForm) && gr === grNo
+    });
 
     if (result.length === 0) {
       setValidationMessage('No student found with the provided details.');
@@ -60,6 +92,9 @@ export default function StylishStudentPortal() {
       setFiltered(result);
       setShowModal(false);
       setValidationMessage('');
+      // Save session
+      const payload = { timestamp: Date.now(), bFormOrCnic: bForm, grNumber: grNo }
+      localStorage.setItem('studentSession', JSON.stringify(payload))
     }
   };
 
@@ -222,6 +257,16 @@ export default function StylishStudentPortal() {
               </button>
             ))}
           </nav>
+
+          {/* Student Logout */}
+          <div className="mt-auto p-4">
+            <button
+              onClick={() => { try { localStorage.removeItem('studentSession'); } catch {} window.location.href = '/student-portal'; }}
+              className="w-full px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm"
+            >
+              Logout
+            </button>
+          </div>
         </aside>
 
         {/* Main Content */}
