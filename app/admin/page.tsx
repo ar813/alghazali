@@ -9,11 +9,13 @@ import Footer from '@/components/Footer/Footer';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
 import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import TopLoader from '@/components/TopLoader/TopLoader'
 // import { useRouter } from 'next/router';
 
 const AdminPage = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [childLoading, setChildLoading] = useState(true);
 
     // Check for existing session on component mount
     useEffect(() => {
@@ -37,7 +39,7 @@ const AdminPage = () => {
         checkSession();
     }, []);
 
-    // Show loading spinner while checking session
+    // Show loading spinner only while checking session
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -52,7 +54,9 @@ const AdminPage = () => {
     return (
         <div className="relative">
             <NavBar />
-            <AdminPortal isBlurred={!isAuthenticated} />
+            {/* Top non-blocking progress bar for child loading */}
+            <TopLoader loading={childLoading} />
+            <AdminPortal isBlurred={!isAuthenticated} onLoadingChange={setChildLoading} />
             <Footer />
             {!isAuthenticated && <Popup onLoginSuccess={() => setIsAuthenticated(true)} />}
         </div>
@@ -180,7 +184,7 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 };
 
 // ✅ Admin Portal (sidebar layout similar to student portal)
-const AdminPortal = ({ isBlurred = false }: { isBlurred?: boolean }) => {
+const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports'>('dashboard');
     const [collapsed, setCollapsed] = useState(false);
 
@@ -204,6 +208,11 @@ const AdminPortal = ({ isBlurred = false }: { isBlurred?: boolean }) => {
         window.addEventListener('hashchange', onHash)
         return () => window.removeEventListener('hashchange', onHash)
     }, [])
+
+    // Notify parent to show loader whenever tab changes (until child reports done)
+    useEffect(() => {
+        onLoadingChange?.(true)
+    }, [activeTab, onLoadingChange])
 
     return (
         <div className={`${isBlurred ? 'pointer-events-none select-none' : ''}`}>
@@ -292,10 +301,10 @@ const AdminPortal = ({ isBlurred = false }: { isBlurred?: boolean }) => {
                             <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
                         </div>
 
-                        {activeTab === 'dashboard' && <AdminDashboard />}
-                        {activeTab === 'students' && <AdminStudents />}
-                        {activeTab === 'schedule' && <AdminSchedule />}
-                        {activeTab === 'reports' && <AdminReports />}
+                        {activeTab === 'dashboard' && <AdminDashboard onLoadingChange={onLoadingChange} />}
+                        {activeTab === 'students' && <AdminStudents onLoadingChange={onLoadingChange} />}
+                        {activeTab === 'schedule' && <AdminSchedule onLoadingChange={onLoadingChange} />}
+                        {activeTab === 'reports' && <AdminReports onLoadingChange={onLoadingChange} />}
                     </div>
                 </main>
             </div>

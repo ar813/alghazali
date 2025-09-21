@@ -10,19 +10,21 @@ type StudentType = {
   admissionFor?: string
 }
 
-const AdminReports = () => {
+const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
   const [students, setStudents] = useState<StudentType[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchStudents = async () => {
       setLoading(true)
+      onLoadingChange?.(true)
       const data: StudentType[] = await client.fetch(getAllStudentsQuery)
       setStudents(data)
       setLoading(false)
+      onLoadingChange?.(false)
     }
     fetchStudents()
-  }, [])
+  }, [onLoadingChange])
 
   const totals = useMemo(() => {
     const total = students.length
@@ -47,27 +49,43 @@ const AdminReports = () => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Total Students</p>
-            <p className="text-2xl font-bold">{totals.total.toLocaleString()}</p>
-          </div>
-          <Users className="text-blue-600" />
-        </div>
-        <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Male</p>
-            <p className="text-2xl font-bold">{totals.male.toLocaleString()}</p>
-          </div>
-          <PieChart className="text-green-600" />
-        </div>
-        <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Female</p>
-            <p className="text-2xl font-bold">{totals.female.toLocaleString()}</p>
-          </div>
-          <PieChart className="text-pink-600" />
-        </div>
+        {loading ? (
+          <>
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl shadow p-4 flex items-center justify-between animate-pulse">
+                <div>
+                  <div className="h-3 w-24 bg-gray-200 rounded mb-2" />
+                  <div className="h-6 w-12 bg-gray-200 rounded" />
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-gray-200" />
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Students</p>
+                <p className="text-2xl font-bold">{totals.total.toLocaleString()}</p>
+              </div>
+              <Users className="text-blue-600" />
+            </div>
+            <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Male</p>
+                <p className="text-2xl font-bold">{totals.male.toLocaleString()}</p>
+              </div>
+              <PieChart className="text-green-600" />
+            </div>
+            <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Female</p>
+                <p className="text-2xl font-bold">{totals.female.toLocaleString()}</p>
+              </div>
+              <PieChart className="text-pink-600" />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -75,7 +93,14 @@ const AdminReports = () => {
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><BarChart2 size={18} /> Class-wise Distribution</h3>
           {loading ? (
-            <div className="text-sm text-gray-500">Loading...</div>
+            <div className="space-y-2 animate-pulse">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between py-2">
+                  <div className="h-3 w-28 bg-gray-200 rounded" />
+                  <div className="h-3 w-8 bg-gray-200 rounded" />
+                </div>
+              ))}
+            </div>
           ) : classWise.length === 0 ? (
             <div className="text-sm text-gray-500">No data</div>
           ) : (

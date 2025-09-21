@@ -1,8 +1,11 @@
 import { User, Mail, Phone, TrendingUp, Calendar, MapPin, Landmark } from 'lucide-react'
 import { Student } from '@/types/student';
+import React, { useState } from 'react'
+import ImageModal from '@/components/ImageModal/ImageModal'
 
 
 export default function StudentProfile({ student }: { student: Student }) {
+    const [imgOpen, setImgOpen] = useState(false)
     const getInitial = (name?: string) => {
         if (!name) return 'A'
         const first = name.trim().charAt(0).toUpperCase()
@@ -17,7 +20,9 @@ export default function StudentProfile({ student }: { student: Student }) {
                             <img
                                 src={student.photoUrl}
                                 alt="Student Avatar"
-                                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-white/30 shadow-lg object-cover"
+                                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-white/30 shadow-lg object-cover cursor-zoom-in"
+                                onClick={() => setImgOpen(true)}
+                                title="Click to enlarge"
                             />
                         ) : (
                             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/20 border-2 sm:border-4 border-white/30 shadow-lg flex items-center justify-center text-3xl font-bold">
@@ -91,6 +96,7 @@ export default function StudentProfile({ student }: { student: Student }) {
                     </div>
                 </div>
             </div>
+            <ImageModal open={imgOpen} src={student.photoUrl} alt={student.fullName} onClose={() => setImgOpen(false)} />
         </div>
     )
 }

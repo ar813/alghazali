@@ -1,6 +1,7 @@
 import { Student } from '@/types/student';
 import { Award, BookOpen, Clock, GraduationCap, Megaphone, TrendingUp } from 'lucide-react';
-import React from 'react'
+import React, { useState } from 'react'
+import ImageModal from '@/components/ImageModal/ImageModal'
 
 const student = {
   name: "Muhammad Arsalan Khan",
@@ -82,6 +83,7 @@ const notices = [
 ];
 
 const StudentDashboard = ({data}:{data: Student}) => {
+    const [imgOpen, setImgOpen] = useState(false)
     
     return (
         <div className="space-y-8 ">
@@ -96,7 +98,9 @@ const StudentDashboard = ({data}:{data: Student}) => {
                         <img
                             src={data.photoUrl}
                             alt="Student Avatar"
-                            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 sm:border-4 border-white/30 shadow-lg"
+                            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 sm:border-4 border-white/30 shadow-lg cursor-zoom-in"
+                            onClick={() => data.photoUrl && setImgOpen(true)}
+                            title="Click to enlarge"
                         />
                     </div>
                 </div>
@@ -165,6 +169,7 @@ const StudentDashboard = ({data}:{data: Student}) => {
                     </div>
                 </div>
             </div>
+            <ImageModal open={imgOpen} src={data.photoUrl} alt={data.fullName} onClose={() => setImgOpen(false)} />
         </div>
     )
 }

@@ -27,6 +27,46 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
+    
+    // Handle delete action via POST (fallback)
+    if (body.action === 'delete') {
+      const { className, day } = body as { action: string; className?: string; day?: string }
+      
+      if (!className || !day) {
+        return NextResponse.json({ ok: false, error: 'className and day are required for delete' }, { status: 400 })
+      }
+
+      // Find existing schedule for class
+      const existing = await client.fetch(
+        `*[_type=="schedule" && className == $className][0]{ _id, days }`,
+        { className }
+      ) as { _id: string; days?: { day: string; periods?: { subject: string; time: string }[] }[] } | null
+
+      if (!existing) {
+        return NextResponse.json({ ok: false, error: 'Schedule not found' }, { status: 404 })
+      }
+
+      const scheduleId = existing._id
+      const existingDayIndex = (existing.days || []).findIndex(d => d.day === day)
+
+      if (existingDayIndex === -1) {
+        return NextResponse.json({ ok: false, error: 'Day not found in schedule' }, { status: 404 })
+      }
+
+      // Remove the day from the schedule
+      const updatedDays = (existing.days || []).filter(d => d.day !== day)
+      
+      if (updatedDays.length === 0) {
+        // If no days left, delete the entire schedule document
+        await client.delete(scheduleId)
+        return NextResponse.json({ ok: true, action: 'schedule_deleted', id: scheduleId })
+      } else {
+        // Update the schedule with remaining days
+        await client.patch(scheduleId).set({ days: updatedDays }).commit()
+        return NextResponse.json({ ok: true, action: 'day_deleted', id: scheduleId })
+      }
+    }
+
     const { className, day, periods } = body as { className?: string; day?: string; periods?: { subject: string; time: string }[] }
 
     if (!className || !day || !Array.isArray(periods) || periods.length === 0) {
@@ -74,5 +114,53 @@ export async function POST(req: NextRequest) {
     }
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || 'Failed to upsert schedule' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  if (!token) {
+    return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_TOKEN' }, { status: 500 })
+  }
+
+  try {
+    const { searchParams } = new URL(req.url)
+    const className = searchParams.get('className')
+    const day = searchParams.get('day')
+
+    if (!className || !day) {
+      return NextResponse.json({ ok: false, error: 'className and day are required' }, { status: 400 })
+    }
+
+    // Find existing schedule for class
+    const existing = await client.fetch(
+      `*[_type=="schedule" && className == $className][0]{ _id, days }`,
+      { className }
+    ) as { _id: string; days?: { day: string; periods?: { subject: string; time: string }[] }[] } | null
+
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: 'Schedule not found' }, { status: 404 })
+    }
+
+    const scheduleId = existing._id
+    const existingDayIndex = (existing.days || []).findIndex(d => d.day === day)
+
+    if (existingDayIndex === -1) {
+      return NextResponse.json({ ok: false, error: 'Day not found in schedule' }, { status: 404 })
+    }
+
+    // Remove the day from the schedule
+    const updatedDays = (existing.days || []).filter(d => d.day !== day)
+    
+    if (updatedDays.length === 0) {
+      // If no days left, delete the entire schedule document
+      await client.delete(scheduleId)
+      return NextResponse.json({ ok: true, action: 'schedule_deleted', id: scheduleId })
+    } else {
+      // Update the schedule with remaining days
+      await client.patch(scheduleId).set({ days: updatedDays }).commit()
+      return NextResponse.json({ ok: true, action: 'day_deleted', id: scheduleId })
+    }
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message || 'Failed to delete schedule day' }, { status: 500 })
   }
 }

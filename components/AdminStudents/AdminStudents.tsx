@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { Search, RotateCw, Upload, Download, ArrowUpDown, Filter } from 'lucide-react'
+import { Search, RotateCw, Upload, Download, Filter } from 'lucide-react'
 import { client } from "@/sanity/lib/client";
 import { getAllStudentsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
+import ImageModal from '@/components/ImageModal/ImageModal'
 
 // Reusable info row renderer (kept at top to avoid any scoping issues)
 const Info = ({ label, value }: { label: string; value?: any }) => {
@@ -33,7 +34,7 @@ const Info = ({ label, value }: { label: string; value?: any }) => {
   )
 }
 
-const AdminStudents = () => {
+const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true); // ⏳ Loading state
@@ -74,30 +75,48 @@ const AdminStudents = () => {
   const [importLoading, setImportLoading] = useState(false)
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
   const [deleteAllInput, setDeleteAllInput] = useState('')
-  const [showSortMenu, setShowSortMenu] = useState(false)
-  const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'class' | 'gr' | 'roll'>('roll')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
-  const [searchField, setSearchField] = useState<'fullName' | 'fatherName' | 'grNumber' | 'admissionFor' | 'rollNumber'>('rollNumber')
+  const [searchField, setSearchField] = useState<'all' | 'fullName' | 'fatherName' | 'grNumber' | 'admissionFor' | 'rollNumber'>('all')
   const [importResultOpen, setImportResultOpen] = useState(false)
   const [importResultMessage, setImportResultMessage] = useState('')
   const [deleteAllMessage, setDeleteAllMessage] = useState('')
+  const [imgPreviewOpen, setImgPreviewOpen] = useState(false)
 
   useEffect(() => {
     const fetchStudents = async () => {
       setLoading(true); // Start loading
+      onLoadingChange?.(true)
       const data: Student[] = await client.fetch(getAllStudentsQuery);
       setStudents(data.map(normalizeStudent));
       setLoading(false); // Done loading
+      onLoadingChange?.(false)
     };
 
     fetchStudents();
+  }, [onLoadingChange]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.filter-dropdown')) {
+        setShowFilterMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const refreshStudents = async () => {
     setLoading(true)
+    onLoadingChange?.(true)
     const data: Student[] = await client.fetch(getAllStudentsQuery);
     setStudents(data.map(normalizeStudent))
     setLoading(false)
+    onLoadingChange?.(false)
   }
 
   // Normalize a Student record so that all searchable/sortable fields are plain strings
@@ -533,49 +552,13 @@ const AdminStudents = () => {
   const filteredStudents = students.filter(student => {
     const term = searchTerm.trim().toLowerCase()
     if (!term) return true
-    const getVal = (field: typeof searchField) => {
-      const raw: any = (student as any)[field]
-      return (raw ?? '').toString().toLowerCase()
+    const safeVal = (v: any) => (v ?? '').toString().toLowerCase()
+    if (searchField === 'all') {
+      return [student.rollNumber, student.fullName, student.fatherName, student.grNumber, student.admissionFor]
+        .some(v => safeVal(v).includes(term))
     }
-    return getVal(searchField).includes(term)
-  })
-
-  const sortedStudents = [...filteredStudents].sort((a, b) => {
-    const safe = (v: any) => (v ?? '').toString()
-    const num = (v: any) => {
-      const s = safe(v)
-      const m = s.match(/\d+/)
-      return m ? parseInt(m[0], 10) : NaN
-    }
-    const classRank = (c: any) => {
-      const s = safe(c).toUpperCase()
-      const order = ['1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII']
-      const idx = order.indexOf(s)
-      return idx === -1 ? 999 : idx
-    }
-    switch (sortBy) {
-      case 'name-asc':
-        return safe(a.fullName).localeCompare(safe(b.fullName))
-      case 'name-desc':
-        return safe(b.fullName).localeCompare(safe(a.fullName))
-      case 'class': {
-        return classRank(a.admissionFor) - classRank(b.admissionFor)
-      }
-      case 'gr': {
-        const an = num(a.grNumber)
-        const bn = num(b.grNumber)
-        if (!isNaN(an) && !isNaN(bn)) return an - bn
-        return safe(a.grNumber).localeCompare(safe(b.grNumber))
-      }
-      case 'roll': {
-        const an = num(a.rollNumber)
-        const bn = num(b.rollNumber)
-        if (!isNaN(an) && !isNaN(bn)) return an - bn
-        return safe(a.rollNumber).localeCompare(safe(b.rollNumber))
-      }
-      default:
-        return 0
-    }
+    const raw: any = (student as any)[searchField]
+    return safeVal(raw).includes(term)
   })
 
   // Note: Delete All handled via confirmation modal below
@@ -596,20 +579,21 @@ const AdminStudents = () => {
                 className="pl-10 pr-4 py-3 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full"
               />
             </div>
-            <div className="relative w-full sm:w-auto">
+            <div className="relative w-full sm:w-auto filter-dropdown">
               <button
                 onClick={() => setShowFilterMenu(v => !v)}
                 className="px-3 py-3 sm:py-2 border rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 w-full sm:w-auto"
                 title="Filter"
               >
                 <Filter size={16} />
-                <span className="hidden sm:inline"></span>
+                <span className="hidden sm:inline">Filter</span>
               </button>
               {showFilterMenu && (
                 <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-56 p-1 right-0">
                   <div className="px-3 py-1 text-xs text-gray-500">Filter by</div>
-                  {(['rollNumber', 'fullName', 'fatherName', 'grNumber', 'admissionFor'] as const).map(opt => (
-                    <button key={opt} className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${searchField === opt ? 'bg-gray-100' : ''}`} onClick={() => { setSearchField(opt); setShowFilterMenu(false); }}>
+                  {(['all','rollNumber', 'fullName', 'fatherName', 'grNumber', 'admissionFor'] as const).map(opt => (
+                    <button key={opt} className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${searchField === opt ? 'bg-blue-100 text-blue-700' : ''}`} onClick={() => { setSearchField(opt); setShowFilterMenu(false); }}>
+                      {opt === 'all' && 'All fields'}
                       {opt === 'fullName' && 'Student Name'}
                       {opt === 'fatherName' && "Father's Name"}
                       {opt === 'grNumber' && 'GR Number'}
@@ -617,25 +601,6 @@ const AdminStudents = () => {
                       {opt === 'rollNumber' && 'Roll Number'}
                     </button>
                   ))}
-                </div>
-              )}
-            </div>
-            <div className="relative w-full sm:w-auto">
-              <button
-                onClick={() => setShowSortMenu((v) => !v)}
-                className="px-3 py-2 border rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 w-full sm:w-auto"
-                title="Sorting"
-              >
-                <ArrowUpDown size={16} />
-                <span className="hidden sm:inline">Sorting</span>
-              </button>
-              {showSortMenu && (
-                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-44 p-1 right-0">
-                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'name-asc' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('name-asc'); setShowSortMenu(false); }}>A → Z</button>
-                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'name-desc' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('name-desc'); setShowSortMenu(false); }}>Z → A</button>
-                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'class' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('class'); setShowSortMenu(false); }}>By Class</button>
-                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'gr' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('gr'); setShowSortMenu(false); }}>By GR Number</button>
-                  <button className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${sortBy === 'roll' ? 'bg-gray-100' : ''}`} onClick={() => { setSortBy('roll'); setShowSortMenu(false); }}>By Roll No</button>
                 </div>
               )}
             </div>
@@ -797,6 +762,7 @@ const AdminStudents = () => {
               <button onClick={() => setShowAddModal(false)} className="px-4 py-2 border rounded w-full sm:w-auto">Cancel</button>
               <button onClick={handleCreateStudent} disabled={createLoading} className="px-4 py-2 bg-blue-600 text-white rounded w-full sm:w-auto">{createLoading ? 'Creating...' : 'Create'}</button>
             </div>
+            <ImageModal open={imgPreviewOpen} src={selectedStudent?.photoUrl} alt={selectedStudent?.fullName || 'Student Photo'} onClose={() => setImgPreviewOpen(false)} />
           </div>
         </div>
       )}
@@ -956,7 +922,9 @@ const AdminStudents = () => {
                 <img
                   src={selectedStudent.photoUrl}
                   alt="Student"
-                  className="w-32 h-32 object-cover rounded-full border shadow-md"
+                  className="w-32 h-32 object-cover rounded-full border shadow-md cursor-zoom-in"
+                  onClick={() => setImgPreviewOpen(true)}
+                  title="Click to enlarge"
                 />
               </div>
             )}
@@ -1003,6 +971,7 @@ const AdminStudents = () => {
               <Info label="Guardian CNIC" value={selectedStudent.guardianCnic} />
               <Info label="Guardian Relation" value={selectedStudent.guardianRelation} />
             </div>
+            <ImageModal open={imgPreviewOpen} src={selectedStudent?.photoUrl} alt={selectedStudent?.fullName || 'Student Photo'} onClose={() => setImgPreviewOpen(false)} />
           </div>
         </div>
       )}
@@ -1042,7 +1011,7 @@ const AdminStudents = () => {
                   </td>
                 </tr>
               ) : (
-                sortedStudents
+                filteredStudents
                   .map((student, index) => (
                     <tr
                       key={student.grNumber}
@@ -1095,7 +1064,7 @@ const AdminStudents = () => {
         ) : filteredStudents.length === 0 ? (
           <div className="bg-white rounded-2xl shadow p-6 text-center text-gray-500">No students found</div>
         ) : (
-          sortedStudents.map((student, index) => (
+          filteredStudents.map((student, index) => (
             <div
               key={student.grNumber}
               className="bg-white rounded-2xl shadow border p-4 cursor-pointer"

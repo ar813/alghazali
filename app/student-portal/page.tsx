@@ -28,6 +28,10 @@ export default function StylishStudentPortal() {
   const [filtered, setFiltered] = useState<Student[]>([])
   const [matchedSchedule, setMatchedSchedule] = useState<ScheduleDay[] | null>(null)
   const [showModal, setShowModal] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [scheduleLoading, setScheduleLoading] = useState(false)
+  const [sessionData, setSessionData] = useState<{ bFormOrCnic: string; grNumber: string } | null>(null)
+  const [studentsLoaded, setStudentsLoaded] = useState(false)
   const [searchBFormNumber, setSearchBFormNumber] = useState('')
   const [searchGRNumber, setSearchGRNumber] = useState('')
   const [validationMessage, setValidationMessage] = useState('');
@@ -37,38 +41,60 @@ export default function StylishStudentPortal() {
     const fetchStudents = async () => {
       const data = await client.fetch(getAllStudentsQuery);
       setStudents(data);
+      setStudentsLoaded(true)
     };
 
     fetchStudents();
   }, []);
 
-  // Check existing session on mount
+  // Check existing session immediately on mount (admin-like behavior)
   useEffect(() => {
-    const session = localStorage.getItem('studentSession')
-    if (!session) return
     try {
+      const session = localStorage.getItem('studentSession')
+      if (!session) {
+        setIsLoading(false)
+        return
+      }
       const { timestamp, bFormOrCnic, grNumber } = JSON.parse(session)
       const now = Date.now()
       if (now - timestamp < sessionDuration) {
-        // If we already have students fetched, try to filter; else wait for students
-        const findAndSet = () => {
-          const result = students.filter((s: Student) => {
-            const docId = String((s as any).cnicOrBform ?? '').trim()
-            const guardian = String((s as any).guardianCnic ?? '').trim()
-            const gr = String((s as any).grNumber ?? '').trim()
-            return (docId === bFormOrCnic || guardian === bFormOrCnic) && gr === grNumber
-          })
-          if (result.length > 0) {
-            setFiltered(result)
-            setShowModal(false)
-          }
-        }
-        if (students.length > 0) findAndSet()
+        // Valid session: hide modal immediately and wait for students to load
+        setSessionData({ bFormOrCnic, grNumber })
+        setShowModal(false)
+        setIsLoading(true)
       } else {
         localStorage.removeItem('studentSession')
+        setIsLoading(false)
       }
-    } catch {}
-  }, [students])
+    } catch {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Once students load and we have a valid session, match the student
+  useEffect(() => {
+    if (!sessionData) return
+    if (students.length === 0) return
+    const { bFormOrCnic, grNumber } = sessionData
+    const result = students.filter((s: Student) => {
+      const docId = String((s as any).cnicOrBform ?? '').trim()
+      const guardian = String((s as any).guardianCnic ?? '').trim()
+      const gr = String((s as any).grNumber ?? '').trim()
+      return (docId === bFormOrCnic || guardian === bFormOrCnic) && gr === grNumber
+    })
+    if (result.length > 0) {
+      setFiltered(result)
+      setShowModal(false)
+      setIsLoading(false)
+    } else {
+      // Session didn't match any student (data changed). Clear and show modal
+      try { localStorage.removeItem('studentSession') } catch {}
+      setSessionData(null)
+      setFiltered([])
+      setShowModal(true)
+      setIsLoading(false)
+    }
+  }, [students, sessionData])
 
   const handleSearch = () => {
     const bForm = searchBFormNumber.trim();
@@ -95,6 +121,7 @@ export default function StylishStudentPortal() {
       // Save session
       const payload = { timestamp: Date.now(), bFormOrCnic: bForm, grNumber: grNo }
       localStorage.setItem('studentSession', JSON.stringify(payload))
+      setSessionData({ bFormOrCnic: bForm, grNumber: grNo })
     }
   };
 
@@ -107,9 +134,11 @@ export default function StylishStudentPortal() {
       return
     }
     let mounted = true
+    setScheduleLoading(true)
     client.fetch(getScheduleByClassQuery(studentClass))
       .then((sch: { days?: ScheduleDay[] } | null) => { if (!mounted) return; if (sch && sch.days) setMatchedSchedule(sch.days); else setMatchedSchedule(null) })
       .catch(() => { if (!mounted) return; setMatchedSchedule(null) })
+      .finally(() => { if (!mounted) return; setScheduleLoading(false) })
     return () => { mounted = false }
   }, [filtered])
 
@@ -123,6 +152,18 @@ export default function StylishStudentPortal() {
     // { name: 'Activities', icon: GraduationCap },
     { name: 'Notices', icon: Megaphone },
   ] as const
+
+  const shouldShowLoader = isLoading || !studentsLoaded || (activeTab === 'Schedule' && scheduleLoading)
+  if (shouldShowLoader) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
