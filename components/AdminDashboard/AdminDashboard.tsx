@@ -1,14 +1,15 @@
-import { GraduationCap, Users, TrendingUp } from 'lucide-react';
+import { Users, TrendingUp, Activity, Calendar, Sparkles } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 import { client } from '@/sanity/lib/client';
 
 const AdminDashboard = () => {
-
+    // Stats
     const [totalStudents, setTotalStudents] = useState<number>(0)
     const [admissionsLast365, setAdmissionsLast365] = useState<number>(0)
     type RecentAdmission = { _id: string; fullName: string; admissionFor?: string; _createdAt: string }
     const [recentAdmissions, setRecentAdmissions] = useState<RecentAdmission[]>([])
 
+    // Data fetching for dashboard
     useEffect(() => {
         const fetchStats = async () => {
             // Count total students
@@ -28,6 +29,7 @@ const AdminDashboard = () => {
         fetchStats()
     }, [])
 
+    // Components
     type Stat = { title: string; value: string; icon: React.ElementType; color: string }
     const StatCard = ({ stat }: { stat: Stat }) => (
         <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300">
@@ -41,21 +43,73 @@ const AdminDashboard = () => {
                 </div>
             </div>
         </div>
-    );
+    )
 
+    const Section = ({ title, icon: Icon, children, actions }: { title: string; icon: React.ElementType; children: React.ReactNode; actions?: React.ReactNode }) => (
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Icon size={18} /> {title}</h3>
+                <div className="flex items-center gap-2">{actions}</div>
+            </div>
+            {children}
+        </div>
+    )
 
     return (
         <div className="space-y-6 sm:space-y-8">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Quick Stats (only 2 items kept) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <StatCard stat={{ title: 'Total Students', value: totalStudents.toLocaleString(), icon: Users, color: 'from-blue-500 to-purple-600' }} />
-                <StatCard stat={{ title: 'Faculty Members', value: '—', icon: GraduationCap, color: 'from-orange-500 to-red-600' }} />
-                <StatCard stat={{ title: 'Admission Rate (365 days)', value: totalStudents > 0 ? `${Math.round((admissionsLast365 / totalStudents) * 100)}%` : '0%', icon: TrendingUp, color: 'from-pink-500 to-rose-600' }} />
+                <StatCard stat={{ title: 'Admissions (365 days)', value: admissionsLast365.toLocaleString(), icon: TrendingUp, color: 'from-pink-500 to-rose-600' }} />
             </div>
 
-            {/* Recent Admissions */}
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Recent Admissions</h3>
+            {/* Quick Actions Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <button onClick={() => window.location.assign('/admin')}
+                    className="group bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 text-left">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-gray-600 text-sm font-medium">View All Admissions</div>
+                            <div className="text-lg font-semibold text-gray-800">Students</div>
+                        </div>
+                        <Sparkles className="text-purple-600 group-hover:rotate-12 transition" />
+                    </div>
+                </button>
+                <button onClick={() => { window.location.hash = 'schedule'; window.location.assign('/admin#schedule'); }}
+                    className="group bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 text-left">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-gray-600 text-sm font-medium">Create or Update</div>
+                            <div className="text-lg font-semibold text-gray-800">Class Schedule</div>
+                        </div>
+                        <Calendar className="text-blue-600 group-hover:rotate-12 transition" />
+                    </div>
+                </button>
+                <button onClick={() => window.alert('Coming soon: Cards -> Reports')}
+                    className="group bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 text-left">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-gray-600 text-sm font-medium">Insights</div>
+                            <div className="text-lg font-semibold text-gray-800">Reports</div>
+                        </div>
+                        <TrendingUp className="text-rose-600 group-hover:rotate-12 transition" />
+                    </div>
+                </button>
+                <button onClick={() => window.alert('Coming soon: Cards -> Exports')}
+                    className="group bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 text-left">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-gray-600 text-sm font-medium">Backup & Export</div>
+                            <div className="text-lg font-semibold text-gray-800">Data</div>
+                        </div>
+                        {/* Using Sparkles for consistency, since Save icon removed */}
+                        <Sparkles className="text-green-600 group-hover:rotate-12 transition" />
+                    </div>
+                </button>
+            </div>
+
+            {/* 3. Recent Activity (Admissions) */}
+            <Section title="Recent Admissions" icon={Activity} actions={<button onClick={() => window.location.assign('/admin')} className="text-sm text-blue-600 hover:underline">View all</button>}>
                 {recentAdmissions.length === 0 ? (
                     <div className="text-gray-500 text-sm">No recent admissions</div>
                 ) : (
@@ -71,7 +125,16 @@ const AdminDashboard = () => {
                         ))}
                     </div>
                 )}
-            </div>
+            </Section>
+            
+
+            {/* Messages and Uploads removed as requested */}
+
+            {/* System Health removed as requested */}
+
+            {/* Charts removed as requested */}
+
+            {/* Pending Approvals removed as requested */}
         </div>
     )
 }

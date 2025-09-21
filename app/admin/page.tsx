@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import AdminDashboard from '@/components/AdminDashboard/AdminDashboard';
 import AdminReports from '@/components/AdminReports/AdminReports';
 import AdminStudents from '@/components/AdminStudents/AdminStudents';
+import AdminSchedule from '@/components/AdminSchedule/AdminSchedule';
 import Footer from '@/components/Footer/Footer';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 // import { useRouter } from 'next/router';
 
 const AdminPage = () => {
@@ -177,92 +179,126 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   );
 };
 
-// ✅ Admin Portal (only main content is blurred if needed)
+// ✅ Admin Portal (sidebar layout similar to student portal)
 const AdminPortal = ({ isBlurred = false }: { isBlurred?: boolean }) => {
-    const [activeTab, setActiveTab] = useState('dashboard');
-    const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports'>('dashboard');
+    const [collapsed, setCollapsed] = useState(false);
 
-    const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
-
-    const tabs = [
-        { id: 'dashboard', label: 'Dashboard' },
-        { id: 'students', label: 'Students' },
-        { id: 'reports', label: 'Reports' },
+    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports'; label: string; icon: any }[] = [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'students', label: 'Students', icon: UsersIcon },
+        { id: 'schedule', label: 'Schedule', icon: Calendar },
+        { id: 'reports', label: 'Reports', icon: BarChart3 },
     ];
 
+    // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
     useEffect(() => {
-        const currentTab = tabRefs.current[activeTab];
-        if (currentTab) {
-            const { offsetLeft, offsetWidth } = currentTab;
-            setIndicatorStyle({ left: offsetLeft, width: offsetWidth });
+        const applyHash = () => {
+            const hash = (typeof window !== 'undefined' && window.location.hash.replace('#','')) as typeof activeTab | ''
+            if (hash && ['dashboard','students','schedule','reports'].includes(hash)) {
+                setActiveTab(hash as any)
+            }
         }
-    }, [activeTab]);
+        applyHash()
+        const onHash = () => applyHash()
+        window.addEventListener('hashchange', onHash)
+        return () => window.removeEventListener('hashchange', onHash)
+    }, [])
 
     return (
         <div className={`${isBlurred ? 'pointer-events-none select-none' : ''}`}>
-            <div className={`min-h-screen bg-gray-50 transition-all duration-300 ${isBlurred ? 'blur-sm scale-[.98] brightness-90' : ''}`}>
-                {/* Sticky Tabs Bar for better mobile UX */}
-                <nav className="bg-white/90 backdrop-blur sticky top-0 z-30 shadow-sm pt-4">
-                    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-                        <div className="relative flex items-center justify-between gap-2 sm:gap-4 border-b overflow-x-auto snap-x snap-mandatory">
-                            <div
-                                className="absolute bottom-0 h-0.5 bg-blue-600 transition-all duration-300"
-                                style={{
-                                    left: indicatorStyle.left,
-                                    width: indicatorStyle.width,
-                                }}
-                            />
-                            <div className="flex gap-2 sm:gap-4">
-                                {tabs.map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        ref={(el) => {
-                                            tabRefs.current[tab.id] = el;
-                                        }}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`relative py-3 sm:py-4 px-3 sm:px-4 text-sm font-medium capitalize transition-all duration-300 flex-none snap-start
-                                            ${activeTab === tab.id
-                                                ? 'text-blue-600'
-                                                : 'text-gray-500 hover:text-blue-500'
-                                            }`}
-                                        aria-current={activeTab === tab.id ? 'page' : undefined}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
+            <div className={`min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 transition-all duration-300 ${isBlurred ? 'blur-sm scale-[.98] brightness-90' : ''}`}>
+                {/* Mobile Navigation */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex md:hidden z-30">
+                    <nav className="flex w-full px-2 py-2">
+                        {sidebarItems.map(({ id, label, icon: Icon }) => (
                             <button
-                                onClick={() => { try { localStorage.removeItem('adminSession'); } catch {} window.location.href = '/admin'; }}
-                                className="ml-auto my-2 px-3 py-1.5 rounded-lg text-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                                key={id}
+                                onClick={() => { setActiveTab(id); if (typeof window !== 'undefined') window.location.hash = id; }}
+                                className={`flex-1 flex flex-col items-center justify-center gap-1 p-2 rounded-lg ${
+                                    activeTab === id ? 'text-blue-600' : 'text-gray-600'
+                                }`}
                             >
-                                Logout
+                                <Icon size={20} className={activeTab === id ? 'scale-110' : ''} />
+                                <span className="text-xs font-medium">{label}</span>
                             </button>
-                        </div>
-                    </div>
-                </nav>
+                        ))}
+                    </nav>
+                </div>
 
-                <main
-                    key={activeTab}
-                    className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 transition-opacity duration-300 opacity-100 animate-[fadeIn_0.3s_ease-in]"
-                    style={{
-                        animationName: 'fadeIn',
-                        animationDuration: '0.3s',
-                        animationTimingFunction: 'ease-in',
-                    }}
-                >
-                    {activeTab === 'dashboard' && <AdminDashboard />}
-                    {activeTab === 'students' && <AdminStudents />}
-                    {activeTab === 'reports' && <AdminReports />}
+                {/* Sidebar - Desktop */}
+                <aside className={`transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} bg-white/80 backdrop-blur-xl shadow-2xl hidden md:flex flex-col border-r border-white/20`}>
+                    {/* Toggle Button */}
+                    <div className="flex justify-end p-2">
+                        <button onClick={() => setCollapsed(!collapsed)} className="text-gray-600 hover:text-gray-800 transition-all">
+                            {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                        </button>
+                    </div>
+
+                    {/* Logo / Branding */}
+                    <div className={`p-6 text-center border-b border-gray-200/50 pt-6 transition-all duration-300 ${collapsed ? 'pt-0' : 'pt-6'}`}>
+                        {!collapsed && (
+                            <>
+                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg">
+                                    <GraduationCap size={28} className="text-white" />
+                                </div>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                    Admin Portal
+                                </h1>
+                                <p className="text-sm text-gray-500 mt-1">Management Dashboard</p>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Navigation */}
+                    <nav className="p-4 space-y-2">
+                        {sidebarItems.map(({ id, label, icon: Icon }) => (
+                            <button
+                                key={id}
+                                onClick={() => { setActiveTab(id); if (typeof window !== 'undefined') window.location.hash = id; }}
+                                className={`group flex items-center w-full gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 hover:scale-[1.02] ${
+                                    activeTab === id
+                                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                                }`}
+                            >
+                                <Icon size={20} className={`transition-transform duration-300 ${activeTab === id ? 'scale-110' : 'group-hover:scale-105'}`} />
+                                {!collapsed && <span className="font-medium">{label}</span>}
+                                {activeTab === id && !collapsed && (
+                                    <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                                )}
+                            </button>
+                        ))}
+                    </nav>
+
+                    {/* Logout */}
+                    <div className="mt-auto p-4">
+                        <button
+                            onClick={() => { try { localStorage.removeItem('adminSession'); } catch {} window.location.href = '/admin'; }}
+                            className="w-full px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                </aside>
+
+                {/* Main Content */}
+                <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto">
+                    <div className="max-w-7xl mx-auto pb-20 md:pb-8">
+                        <div className="mb-6 sm:mb-8 pt-4 sm:pt-8">
+                            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2 capitalize">
+                                {sidebarItems.find(i => i.id === activeTab)?.label}
+                            </h2>
+                            <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                        </div>
+
+                        {activeTab === 'dashboard' && <AdminDashboard />}
+                        {activeTab === 'students' && <AdminStudents />}
+                        {activeTab === 'schedule' && <AdminSchedule />}
+                        {activeTab === 'reports' && <AdminReports />}
+                    </div>
                 </main>
             </div>
-
-            {/* Inline fade-in animation */}
-            <style jsx>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-            `}</style>
         </div>
     );
 };
