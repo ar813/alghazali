@@ -16,6 +16,7 @@ import StudentSubjects from '@/components/StudentSubjects/StudentSubjects';
 import StudentSchedule from '@/components/StudentSchedule/StudentSchedule';
 import StudentNotices from '@/components/StudentNotices/StudentNotices';
 import StudentCard from '@/components/StudentCard/StudentCard';
+import StudentFees from '@/components/StudentFees/StudentFees';
 
 
 export default function StylishStudentPortal() {
@@ -150,8 +151,8 @@ export default function StylishStudentPortal() {
     { name: 'Profile', icon: User },
     { name: 'Subjects', icon: BookOpen },
     { name: 'Schedule', icon: CalendarCheck },
+    { name: 'Fees', icon: GraduationCap },
     { name: 'ID Card', icon: QrCode },
-    // { name: 'Activities', icon: GraduationCap },
     { name: 'Notices', icon: Megaphone },
   ] as const
 
@@ -341,6 +342,7 @@ export default function StylishStudentPortal() {
                 {activeTab === 'Subjects' && <StudentSubjects />}
                 {activeTab === 'Schedule' && <StudentSchedule schedule={matchedSchedule} />}
                 {activeTab === 'Notices' && <StudentNotices />}
+                {activeTab === 'Fees' && <StudentFees studentId={String(filtered[0]!._id)} />}
                 {activeTab === 'ID Card' && <StudentCard student={filtered[0]} />}
               </div>
             )}

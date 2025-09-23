@@ -127,6 +127,44 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
     img.src = src;
   });
 
+  // Helper: return a circular-cropped PNG data URL for an image at a given size
+  // qualityScale > 1 increases pixel density (improves sharpness in PDF while maintaining same displayed size)
+  const circleImageDataUrl = (img: HTMLImageElement, size: number, qualityScale: number = 3) => {
+    try {
+      const canvas = document.createElement('canvas');
+      const cs = Math.max(1, Math.floor(size * qualityScale));
+      canvas.width = cs; canvas.height = cs;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '';
+
+      // Transparent background
+      ctx.clearRect(0, 0, cs, cs);
+
+      // Create circular clipping path
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cs / 2, cs / 2, cs / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+
+      // Draw the image with object-fit: cover behavior
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      const scale = Math.max(cs / iw, cs / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      const dx = (cs - dw) / 2;
+      const dy = (cs - dh) / 2;
+      ctx.drawImage(img, dx, dy, dw, dh);
+      ctx.restore();
+
+      return canvas.toDataURL('image/png');
+    } catch {
+      // If cross-origin taints the canvas or any error occurs, return empty string to allow fallback
+      return '';
+    }
+  };
+
   // Generate per-student PDFs (card-sized based on background) and download as ZIP
   const handleDownloadZip = async () => {
     if (toPrint.length === 0) return;
@@ -144,9 +182,6 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
     // Export size must match on-screen preview (189x321)
     const cardW = 189;
     const cardH = 321;
-    // Scale factors relative to original small design 189x321 (fixed 1:1)
-    const sx = 1;
-    const sy = 1;
 
     // For each selected student create a PDF
     for (const s of toPrint) {
@@ -155,61 +190,121 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
       const drawFront = async () => {
         // Background
         doc.addImage(frontImg, 'JPEG', 0, 0, cardW, cardH);
-        // Photo (approx positions based on DOM layout)
+        
+        // Photo positioning - matching Python ReportLab coordinates
         if (s.photoUrl) {
           try {
             const photo = await loadImage(String(s.photoUrl));
-            // 103x103 centered region starting at y ~ 46 (scaled)
-            const pw = 103 * sx; const ph = 103 * sy;
-            const px = (cardW - pw) / 2; const py = 46 * sy;
-            doc.addImage(photo, 'JPEG', px, py, pw, ph);
+            // Python coordinates: img_x = CARD_WIDTH - 149 = 40, img_y = CARD_HEIGHT - 161.5 = 159.5, img_size = 103
+            // jsPDF uses different Y-axis (0 at top), so we need to convert: cardH - pythonY - height
+            const img_x = cardW - 149; // 40
+            const img_y = cardH - 161.5 - 101; // Convert from bottom-up to top-down coordinates
+            const img_size = 103;
+            // Create a circular PNG via canvas to match UI (rounded avatar)
+            const circ = circleImageDataUrl(photo, img_size, 3);
+            if (circ) {
+              doc.addImage(circ, 'PNG', img_x, img_y, img_size, img_size);
+            } else {
+              // Fallback to original square if canvas is tainted or conversion fails
+              // Use no compression to avoid additional blurring
+              doc.addImage(photo as any, 'JPEG', img_x, img_y, img_size, img_size, undefined as any, 'NONE');
+            }
           } catch {}
         }
-        // Texts
-        doc.setTextColor(35, 31, 85);
-        doc.setFontSize(11 * sx);
+        
+        // Text positioning - matching Python ReportLab coordinates exactly
+        doc.setTextColor(35, 31, 85); // #231f55
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
+        
         const name = String(s.fullName || '').toUpperCase();
         const father = String(s.fatherName || '').toUpperCase();
-        // Name centered around y ~ 46 + 103 + 10 => ~159
-        doc.text(name, cardW / 2, 159 * sy, { align: 'center' });
-        // Father name at ~ 159 + 18 => ~177
-        doc.text(father, cardW / 2, 177 * sy, { align: 'center' });
-        // Level badge text (white on template) just draw for record at ~ 188
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10 * sx);
-        doc.text(`Level-${intToRoman(s.admissionFor)}`, cardW / 2, 188 * sy, { align: 'center' });
+        
+        // Python coordinates: c.drawCentredString(94.5, 140, info['name'].upper())
+        // Convert Y coordinate: cardH - pythonY = 321 - 140 = 181
+        doc.text(name, 94.5, cardH - 140, { align: 'center' });
+        
+        // Python coordinates: c.drawCentredString(94.5, 113, info['father_name'].upper())
+        // Convert Y coordinate: cardH - pythonY = 321 - 113 = 208
+        doc.text(father, 94.5, cardH - 113, { align: 'center' });
 
-        // Secondary values block at roughly x ~ 150, starting y ~ 205
+        // Level badge text (white on template)
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        // Python coordinates: c.drawCentredString(90.5, 95, "Level" + "-" + roman_class)
+        // Convert Y coordinate: cardH - pythonY = 321 - 95 = 226
+        doc.text(`Level-${intToRoman(s.admissionFor)}`, 90.5, cardH - 95, { align: 'center' });
+
+        // Secondary values - matching Python positioning exactly
         doc.setTextColor(35, 31, 85);
-        doc.setFontSize(10 * sx);
-        const baseX = Math.min(cardW - 35 * sx, 154 * sx);
-        let y = 205 * sy;
-        doc.text(String(s.rollNumber || ''), baseX, y, { align: 'right' }); y += 16 * sy;
-        doc.text(String(s.grNumber || ''), baseX, y, { align: 'right' }); y += 16 * sy;
-        doc.text(String(s.dob || ''), baseX, y, { align: 'right' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        // Python coordinates: c.drawString(65, 67, info['roll_no'])
+        // Convert Y coordinate: cardH - pythonY = 321 - 67 = 254
+        doc.text(String(s.rollNumber || ''), 65, cardH - 67);
+        
+        // Python coordinates: c.drawString(65, 52, info['gr_number'])
+        // Convert Y coordinate: cardH - pythonY = 321 - 52 = 269
+        doc.text(String(s.grNumber || ''), 65, cardH - 52);
+        
+        // Python coordinates: c.drawString(65, 37, dob_formatted)
+        // Convert Y coordinate: cardH - pythonY = 321 - 37 = 284
+        const dobFormatted = s.dob ? new Date(s.dob).toLocaleDateString('en-GB', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }) : '';
+        doc.text(dobFormatted, 65, cardH - 37);
       };
 
       const drawBack = async () => {
         doc.addImage(backImg, 'JPEG', 0, 0, cardW, cardH);
-        // QR in center at ~ y 105, size 80 (scaled)
+        
+        // QR Code positioning - matching Python ReportLab coordinates
         try {
-          const qr = await loadImage(getQrSrc(s, Math.round(80 * sx)));
-          const qSize = 80 * sx;
-          const qx = (cardW - qSize) / 2;
-          const qy = 105 * sy;
+          const qr = await loadImage(getQrSrc(s, 80));
+          const qSize = 80;
+          // Python coordinates: d.drawOn(c, 50, 125)
+          // Convert Y coordinate: cardH - pythonY - qrSize = 321 - 125 - 80 = 116
+          const qx = 50;
+          const qy = cardH - 125 - qSize;
           doc.addImage(qr, 'PNG', qx, qy, qSize, qSize);
         } catch {}
-        // Issue/Expiry near right side
+        
+        // Issue/Expiry dates - matching Python positioning exactly
         doc.setTextColor(35, 31, 85);
-        doc.setFontSize(8 * sx);
-        const tx = Math.min(cardW - 20 * sx, 170 * sx);
-        doc.text(String(issue || ''), tx, 205 * sy);
-        doc.text(String(expiry || ''), tx, 215 * sy);
-        // Phone printed in white on template position
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        
+        // Format dates to match Python formatting
+        const issueFormatted = issue ? new Date(issue).toLocaleDateString('en-GB', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }) : '';
+        const expiryFormatted = expiry ? new Date(expiry).toLocaleDateString('en-GB', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }) : '';
+        
+        // Python coordinates: c.drawString(95, 104, issue_formatted)
+        // Convert Y coordinate: cardH - pythonY = 321 - 104 = 217
+        doc.text(issueFormatted, 95, cardH - 104);
+        
+        // Python coordinates: c.drawString(95, 93, expiry_formatted)
+        // Convert Y coordinate: cardH - pythonY = 321 - 93 = 228
+        doc.text(expiryFormatted, 95, cardH - 93);
+        
+        // Phone number - matching Python positioning exactly
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9 * sx);
-        doc.text(String(s.phoneNumber || ''), 120 * sx, 232 * sy);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        // Python coordinates: c.drawString(85.5, 62.5, info['phone'])
+        // Convert Y coordinate: cardH - pythonY = 321 - 62.5 = 258.5
+        doc.text(String(s.phoneNumber || ''), 85.5, cardH - 62.5);
       };
 
       if (side === 'front') {
@@ -403,24 +498,28 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                           ) : null}
                         </div>
 
-                        {/* Name and Father (only dynamic values) */}
+                        {/* Name and Father - positioned to match PDF exactly */}
                         <div className="mt-3 w-full text-center">
-                          <div className="mb-1 text-[11px] font-bold text-[#231f55] truncate">{(s.fullName || "").toUpperCase()}</div>
+                          <div className="mb-1 text-[9px] font-bold text-[#231f55] truncate">{(s.fullName || "").toUpperCase()}</div>
                           {/* Background already has 'SON OF' label */}
-                          <div className="mt-[7px] text-[11px] font-bold text-[#231f55] truncate">{(s.fatherName || "").toUpperCase()}</div>
-                          <div className="mt-[1px] text-[10px] font-semibold text-white truncate ">Level-{intToRoman(s.admissionFor)}</div>
+                          <div className="mt-[11px] text-[9px] font-bold text-[#231f55] truncate">{(s.fatherName || "").toUpperCase()}</div>
+                          <div className="mt-[3.5px] text-[9px] font-bold text-white truncate">Level-{intToRoman(s.admissionFor)}</div>
                         </div>
 
-                        {/* Secondary values aligned with template labels */}
-                        <div className="mt-[14px] ml-24 w-full text-[10px] text-[#231f55]">
-                          <div className="flex items-center justify-between">
-                            <span className="opacity-80">{s.rollNumber || ""}</span>
+                        {/* Secondary values - positioned to match PDF exactly */}
+                        <div className="mt-[15px] ml-24 w-full text-[9px] text-[#231f55]">
+                          <div className="mb-[2px]">
+                            <span>{s.rollNumber || ""}</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="opacity-80">{s.grNumber || ""}</span>
+                          <div className="mb-[1px]">
+                            <span>{s.grNumber || ""}</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="opacity-80">{s.dob || ""}</span>
+                          <div>
+                            <span>{s.dob ? new Date(s.dob).toLocaleDateString('en-GB', { 
+                              day: 'numeric', 
+                              month: 'long', 
+                              year: 'numeric' 
+                            }) : ""}</span>
                           </div>
                         </div>
                       </div>
@@ -434,18 +533,35 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                       <img src={backBg} alt="back" className="absolute inset-0 w-full h-full object-cover" />
                     </div>
                     <div className="relative z-10 p-3 h-full flex flex-col">
-                      <div className="mt-[105px] w-full text-[10px] text-[#231f55]">
-                        <div className="flex items-center justify-center mb-2">
-                          {/* Real QR rendered via external API for now */}
+                      <div className="mt-[116px] w-full text-[8px] text-[#231f55]">
+                        {/* QR Code positioned to match PDF exactly */}
+                        <div className="absolute left-[50px] top-[116px]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={getQrSrc(s, 80)} alt="QR" className="w-20 h-20 bg-white rounded border" />
                         </div>
-                        {/* Background already contains labels 'Issue:', 'Expiry:', 'Phone' */}
-                        <div className="flex flex-col items-start ml-20">
-                          <span className="opacity-80 text-right text-[8px] mt-[2px] ">{issue || ''}</span>
-                          <span className="opacity-80 text-right text-[8px]">{expiry || ''}</span>
+                        
+                        {/* Issue and Expiry dates positioned to match PDF exactly */}
+                        <div className="absolute left-[95px] top-[207px] text-[8px] font-bold text-[#231f55]">
+                          <div className="mb-[0.1px]">
+                            {issue ? new Date(issue).toLocaleDateString('en-GB', { 
+                              day: 'numeric', 
+                              month: 'long', 
+                              year: 'numeric' 
+                            }) : ''}
+                          </div>
+                          <div>
+                            {expiry ? new Date(expiry).toLocaleDateString('en-GB', { 
+                              day: 'numeric', 
+                              month: 'long', 
+                              year: 'numeric' 
+                            }) : ''}
+                          </div>
                         </div>
-                          <div className="mt-[17px] ml-[68px] text-[9px] font-semibold text-white truncate ">{s.phoneNumber || ''}</div>
+                        
+                        {/* Phone number positioned to match PDF exactly */}
+                        <div className="absolute left-[85px] top-[248px] text-[8px] font-bold text-white">
+                          {s.phoneNumber || ''}
+                        </div>
                       </div>
                     </div>
                   </div>

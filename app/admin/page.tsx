@@ -8,9 +8,10 @@ import AdminSchedule from '@/components/AdminSchedule/AdminSchedule';
 import Footer from '@/components/Footer/Footer';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
-import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard, Banknote } from 'lucide-react';
 import TopLoader from '@/components/TopLoader/TopLoader'
 import AdminCards from '@/components/AdminCards/AdminCards';
+import AdminFees from '@/components/AdminFees/AdminFees';
 // import { useRouter } from 'next/router';
 
 const AdminPage = () => {
@@ -58,7 +59,7 @@ const AdminPage = () => {
             {/* Top non-blocking progress bar for child loading */}
             <TopLoader loading={childLoading} />
             <AdminPortal isBlurred={!isAuthenticated} onLoadingChange={setChildLoading} />
-            <Footer />
+            {/* <Footer /> */}
             {!isAuthenticated && <Popup onLoginSuccess={() => setIsAuthenticated(true)} />}
         </div>
     );
@@ -186,22 +187,23 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
 // ✅ Admin Portal (sidebar layout similar to student portal)
 const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees'>('dashboard');
     const [collapsed, setCollapsed] = useState(false);
 
-    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards'; label: string; icon: any }[] = [
+    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees'; label: string; icon: any }[] = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'students', label: 'Students', icon: UsersIcon },
         { id: 'schedule', label: 'Schedule', icon: Calendar },
         { id: 'reports', label: 'Reports', icon: BarChart3 },
         { id: 'cards', label: 'Card', icon: IdCard },
+        { id: 'fees', label: 'Fees', icon: Banknote },
     ];
 
     // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
     useEffect(() => {
         const applyHash = () => {
             const hash = (typeof window !== 'undefined' && window.location.hash.replace('#','')) as typeof activeTab | ''
-            if (hash && ['dashboard','students','schedule','reports','cards'].includes(hash)) {
+            if (hash && ['dashboard','students','schedule','reports','cards','fees'].includes(hash)) {
                 setActiveTab(hash as any)
             }
         }
@@ -311,6 +313,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
                         {activeTab === 'schedule' && <AdminSchedule onLoadingChange={onLoadingChange} />}
                         {activeTab === 'reports' && <AdminReports onLoadingChange={onLoadingChange} />}
                         {activeTab === 'cards' && <AdminCards onLoadingChange={onLoadingChange} />}
+                        {activeTab === 'fees' && <AdminFees onLoadingChange={onLoadingChange} />}
                     </div>
                 </main>
             </div>
