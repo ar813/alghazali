@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react'
-import { BookOpen, CalendarCheck, GraduationCap, LayoutDashboard, Megaphone, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, CalendarCheck, GraduationCap, LayoutDashboard, Megaphone, User, ChevronLeft, ChevronRight, LogOut, QrCode } from 'lucide-react';
 import { client } from "@/sanity/lib/client";
 import { getAllStudentsQuery, getScheduleByClassQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
@@ -15,6 +15,7 @@ import StudentProfile from '@/components/StudentProfile/StudentProfile';
 import StudentSubjects from '@/components/StudentSubjects/StudentSubjects';
 import StudentSchedule from '@/components/StudentSchedule/StudentSchedule';
 import StudentNotices from '@/components/StudentNotices/StudentNotices';
+import StudentCard from '@/components/StudentCard/StudentCard';
 
 
 export default function StylishStudentPortal() {
@@ -149,6 +150,7 @@ export default function StylishStudentPortal() {
     { name: 'Profile', icon: User },
     { name: 'Subjects', icon: BookOpen },
     { name: 'Schedule', icon: CalendarCheck },
+    { name: 'ID Card', icon: QrCode },
     // { name: 'Activities', icon: GraduationCap },
     { name: 'Notices', icon: Megaphone },
   ] as const
@@ -234,12 +236,12 @@ export default function StylishStudentPortal() {
       <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         {/* Mobile Navigation */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex md:hidden z-10">
-          <nav className="flex w-full px-2 py-2">
+          <nav className="flex w-full px-2 py-2 items-center overflow-x-auto gap-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
             {sidebarItems.map(({ name, icon: Icon }) => (
               <button
                 key={name}
                 onClick={() => setActiveTab(name)}
-                className={`flex-1 flex flex-col items-center justify-center gap-1 p-2 rounded-lg ${
+                className={`flex-[0_0_20%] shrink-0 flex flex-col items-center justify-center gap-1 p-2 rounded-lg ${
                   activeTab === name
                     ? `text-blue-600`
                     : 'text-gray-600'
@@ -299,25 +301,30 @@ export default function StylishStudentPortal() {
             ))}
           </nav>
 
-          {/* Student Logout */}
-          <div className="mt-auto p-4">
-            <button
-              onClick={() => { try { localStorage.removeItem('studentSession'); } catch {} window.location.href = '/student-portal'; }}
-              className="w-full px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm"
-            >
-              Logout
-            </button>
-          </div>
+          {/* removed logout from sidebar; moved to header */}
         </aside>
 
         {/* Main Content */}
         <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto">
           <div className="max-w-7xl mx-auto pb-20 md:pb-8">
-            <div className="mb-6 sm:mb-8 pt-4 sm:pt-8">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2">
-                {activeTab}
-              </h2>
-              <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+            <div className="mb-6 sm:mb-8 pt-4 sm:pt-8 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2">
+                  {activeTab}
+                </h2>
+                <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+              </div>
+              {activeTab === 'Dashboard' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { try { localStorage.removeItem('studentSession'); } catch {} window.location.href = '/student-portal'; }}
+                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white hover:opacity-95 text-sm shadow inline-flex items-center gap-2"
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {filtered.length === 0 ? (
@@ -334,6 +341,7 @@ export default function StylishStudentPortal() {
                 {activeTab === 'Subjects' && <StudentSubjects />}
                 {activeTab === 'Schedule' && <StudentSchedule schedule={matchedSchedule} />}
                 {activeTab === 'Notices' && <StudentNotices />}
+                {activeTab === 'ID Card' && <StudentCard student={filtered[0]} />}
               </div>
             )}
 

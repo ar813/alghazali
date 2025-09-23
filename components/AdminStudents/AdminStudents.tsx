@@ -565,11 +565,11 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   return (
     <div>
-      <div className="space-y-6 pb-14">
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-3 rounded-xl shadow sm:bg-transparent sm:p-0 sm:shadow-none">
+      <div className="space-y-4 pb-14">
+        {/* Row 1: Search and Filter (full width) */}
+        <div className="w-full bg-white p-3 rounded-xl shadow sm:bg-transparent sm:p-0 sm:shadow-none">
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
-            <div className="relative w-full sm:w-auto">
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
@@ -579,10 +579,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 className="pl-10 pr-4 py-3 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full"
               />
             </div>
-            <div className="relative w-full sm:w-auto filter-dropdown">
+            <div className="relative w-full sm:w-56 filter-dropdown">
               <button
                 onClick={() => setShowFilterMenu(v => !v)}
-                className="px-3 py-3 sm:py-2 border rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 w-full sm:w-auto"
+                className="px-3 py-3 sm:py-2 border rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 w-full"
                 title="Filter"
               >
                 <Filter size={16} />
@@ -605,16 +605,39 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               )}
             </div>
           </div>
-          {/* Actions move to next line on mobile */}
-          <div className="grid grid-cols-2 sm:flex items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        </div>
+        {/* Row 2: Actions (full width; wrap nicely; right-aligned) */}
+        <div className="flex flex-wrap items-stretch sm:items-center justify-end gap-2 w-full">
+            {/* Refresh */}
             <button
               onClick={refreshStudents}
-              className="px-3 py-3 sm:py-2 border rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 text-sm w-full sm:w-auto"
+              className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-gray-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
               title="Refresh table"
             >
               <RotateCw size={16} className={loading ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden sm:inline font-medium">Refresh</span>
             </button>
+            {/* Export Excel */}
+            <button
+              onClick={handleExportExcel}
+              className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
+              title="Export students to Excel"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline font-medium">Export</span>
+            </button>
+            {/* Import Excel */}
+            <button
+              onClick={handleImportExcelClick}
+              className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
+              title="Import students from Excel"
+            >
+              <Upload size={16} />
+              <span className="hidden sm:inline font-medium">Import</span>
+            </button>
+            {/* Hidden file input for import */}
+            <input id={fileInputRefId} type="file" accept=".xlsx" className="hidden" onChange={handleImportExcelFile} />
+            {/* Delete All */}
             <button
               onClick={() => {
                 if (students.length === 0) {
@@ -625,15 +648,20 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 setDeleteAllMessage('')
                 setShowDeleteAllConfirm(true)
               }}
-              className="px-3 py-3 sm:py-2 border border-red-200 text-red-700 rounded-lg flex items-center justify-center gap-2 hover:bg-red-50 text-sm w-full sm:w-auto"
+              className="px-4 h-10 md:h-11 border border-red-300 text-red-700 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-red-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
               title="Delete all students"
             >
-              Delete All
+              <span className="font-medium">Delete All</span>
             </button>
-            <button onClick={() => { console.log('Add button clicked'); setShowAddModal(true) }} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-3 sm:py-2 rounded-lg text-sm shadow hover:opacity-95 w-full sm:w-auto">Add Student</button>
-          </div>
+            {/* Add Student */}
+            <button
+              onClick={() => { console.log('Add button clicked'); setShowAddModal(true) }}
+              className="px-5 h-10 md:h-11 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-sm shadow hover:opacity-95 w-full sm:w-auto font-medium"
+            >
+              Add Student
+            </button>
         </div>
-      </div>
+        </div>
 
       {/* Add Student Modal */}
       {showAddModal && (
@@ -1153,18 +1181,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </div>
       )}
 
-      {/* Import / Export Controls */}
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button onClick={handleExportExcel} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-indigo-50 transition-colors shadow-sm text-sm">
-          <Download size={16} />
-          <span>Export Excel</span>
-        </button>
-        <button onClick={handleImportExcelClick} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-indigo-50 transition-colors shadow-sm text-sm">
-          <Upload size={16} />
-          <span>Import Excel</span>
-        </button>
-        <input id={fileInputRefId} type="file" accept=".xlsx" className="hidden" onChange={handleImportExcelFile} />
-      </div>
+      
     </div>
   );
 };

@@ -8,8 +8,9 @@ import AdminSchedule from '@/components/AdminSchedule/AdminSchedule';
 import Footer from '@/components/Footer/Footer';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
-import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard } from 'lucide-react';
 import TopLoader from '@/components/TopLoader/TopLoader'
+import AdminCards from '@/components/AdminCards/AdminCards';
 // import { useRouter } from 'next/router';
 
 const AdminPage = () => {
@@ -185,21 +186,22 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
 // ✅ Admin Portal (sidebar layout similar to student portal)
 const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards'>('dashboard');
     const [collapsed, setCollapsed] = useState(false);
 
-    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports'; label: string; icon: any }[] = [
+    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards'; label: string; icon: any }[] = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'students', label: 'Students', icon: UsersIcon },
         { id: 'schedule', label: 'Schedule', icon: Calendar },
         { id: 'reports', label: 'Reports', icon: BarChart3 },
+        { id: 'cards', label: 'Card', icon: IdCard },
     ];
 
     // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
     useEffect(() => {
         const applyHash = () => {
             const hash = (typeof window !== 'undefined' && window.location.hash.replace('#','')) as typeof activeTab | ''
-            if (hash && ['dashboard','students','schedule','reports'].includes(hash)) {
+            if (hash && ['dashboard','students','schedule','reports','cards'].includes(hash)) {
                 setActiveTab(hash as any)
             }
         }
@@ -219,12 +221,12 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
             <div className={`min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 transition-all duration-300 ${isBlurred ? 'blur-sm scale-[.98] brightness-90' : ''}`}>
                 {/* Mobile Navigation */}
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex md:hidden z-30">
-                    <nav className="flex w-full px-2 py-2">
+                    <nav className="flex w-full px-2 py-2 items-center overflow-x-auto gap-1">
                         {sidebarItems.map(({ id, label, icon: Icon }) => (
                             <button
                                 key={id}
                                 onClick={() => { setActiveTab(id); if (typeof window !== 'undefined') window.location.hash = id; }}
-                                className={`flex-1 flex flex-col items-center justify-center gap-1 p-2 rounded-lg ${
+                                className={`flex-[0_0_20%] shrink-0 flex flex-col items-center justify-center gap-1 p-2 rounded-lg ${
                                     activeTab === id ? 'text-blue-600' : 'text-gray-600'
                                 }`}
                             >
@@ -279,32 +281,36 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
                             </button>
                         ))}
                     </nav>
-
-                    {/* Logout */}
-                    <div className="mt-auto p-4">
-                        <button
-                            onClick={() => { try { localStorage.removeItem('adminSession'); } catch {} window.location.href = '/admin'; }}
-                            className="w-full px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm"
-                        >
-                            Logout
-                        </button>
-                    </div>
                 </aside>
 
                 {/* Main Content */}
                 <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto">
                     <div className="max-w-7xl mx-auto pb-20 md:pb-8">
-                        <div className="mb-6 sm:mb-8 pt-4 sm:pt-8">
-                            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2 capitalize">
-                                {sidebarItems.find(i => i.id === activeTab)?.label}
-                            </h2>
-                            <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                        <div className="mb-6 sm:mb-8 pt-4 sm:pt-8 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2 capitalize">
+                                    {sidebarItems.find(i => i.id === activeTab)?.label}
+                                </h2>
+                                <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                            </div>
+                            {activeTab === 'dashboard' && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => { try { localStorage.removeItem('adminSession'); } catch {} window.location.href = '/admin'; }}
+                                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white hover:opacity-95 text-sm shadow inline-flex items-center gap-2"
+                                    >
+                                        <LogOut size={16} />
+                                        <span>Logout</span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {activeTab === 'dashboard' && <AdminDashboard onLoadingChange={onLoadingChange} />}
                         {activeTab === 'students' && <AdminStudents onLoadingChange={onLoadingChange} />}
                         {activeTab === 'schedule' && <AdminSchedule onLoadingChange={onLoadingChange} />}
                         {activeTab === 'reports' && <AdminReports onLoadingChange={onLoadingChange} />}
+                        {activeTab === 'cards' && <AdminCards onLoadingChange={onLoadingChange} />}
                     </div>
                 </main>
             </div>

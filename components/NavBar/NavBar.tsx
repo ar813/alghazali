@@ -39,40 +39,41 @@ const NavBar = () => {
         </div>
 
         {/* Mobile Slide-over Drawer (right side) */}
-        {isMenuOpen && (
-          <>
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ease-in-out"
-              onClick={() => setIsMenuOpen(false)}
-            />
+        {/* Backdrop */}
+        <div
+          className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ease-in-out md:hidden ${isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+          onClick={() => setIsMenuOpen(false)}
+          aria-hidden={!isMenuOpen}
+        />
 
-            {/* Drawer */}
-            <aside id="mobile-drawer" className="fixed top-0 right-0 h-full w-72 bg-white text-slate-900 z-50 transform transition-all duration-300 ease-in-out translate-x-0 animate-in slide-in-from-right">
-              <div className="p-6 flex flex-col h-full">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-                      <BookOpen className="w-5 h-5 text-white" />
-                    </div>
-                    <h2 className="font-semibold">Menu</h2>
-                  </div>
-                  <button onClick={() => setIsMenuOpen(false)} aria-label="Close menu">
-                    <X className="w-6 h-6" />
-                  </button>
+        {/* Drawer */}
+        <aside
+          id="mobile-drawer"
+          className={`fixed top-0 right-0 h-full w-72 bg-white text-slate-900 z-50 transform transition-transform duration-300 ease-in-out md:hidden ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          aria-hidden={!isMenuOpen}
+        >
+          <div className="p-6 flex flex-col h-full">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-white" />
                 </div>
-
-                <nav className="mt-8 flex flex-col gap-4">
-                  <a href="/" className="hover:text-amber-300 transition-colors font-medium">Home</a>
-                  <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
-                  <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
-                </nav>
-
-                <div className="mt-auto text-sm text-gray-500">Al Ghazali High School</div>
+                <h2 className="font-semibold">Menu</h2>
               </div>
-            </aside>
-          </>
-        )}
+              <button onClick={() => setIsMenuOpen(false)} aria-label="Close menu">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <nav className="mt-8 flex flex-col gap-4">
+              <a href="/" className="hover:text-amber-300 transition-colors font-medium">Home</a>
+              <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
+              <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
+            </nav>
+
+            <div className="mt-auto text-sm text-gray-500">Al Ghazali High School</div>
+          </div>
+        </aside>
       </div>
     </header>
   )

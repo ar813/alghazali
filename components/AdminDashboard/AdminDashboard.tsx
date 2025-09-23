@@ -93,50 +93,7 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 )}
             </div>
 
-            {/* Quick Actions Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <button onClick={() => window.location.assign('/admin')}
-                    className="group bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 text-left">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-gray-600 text-sm font-medium">View All Admissions</div>
-                            <div className="text-lg font-semibold text-gray-800">Students</div>
-                        </div>
-                        <Sparkles className="text-purple-600 group-hover:rotate-12 transition" />
-                    </div>
-                </button>
-                <button onClick={() => { window.location.hash = 'schedule'; window.location.assign('/admin#schedule'); }}
-                    className="group bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 text-left">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-gray-600 text-sm font-medium">Create or Update</div>
-                            <div className="text-lg font-semibold text-gray-800">Class Schedule</div>
-                        </div>
-                        <Calendar className="text-blue-600 group-hover:rotate-12 transition" />
-                    </div>
-                </button>
-                <button onClick={() => window.alert('Coming soon: Cards -> Reports')}
-                    className="group bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 text-left">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-gray-600 text-sm font-medium">Insights</div>
-                            <div className="text-lg font-semibold text-gray-800">Reports</div>
-                        </div>
-                        <TrendingUp className="text-rose-600 group-hover:rotate-12 transition" />
-                    </div>
-                </button>
-                <button onClick={() => window.alert('Coming soon: Cards -> Exports')}
-                    className="group bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 text-left">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-gray-600 text-sm font-medium">Backup & Export</div>
-                            <div className="text-lg font-semibold text-gray-800">Data</div>
-                        </div>
-                        {/* Using Sparkles for consistency, since Save icon removed */}
-                        <Sparkles className="text-green-600 group-hover:rotate-12 transition" />
-                    </div>
-                </button>
-            </div>
+            {/* Quick Actions removed per request */}
 
             {/* 3. Recent Activity (Admissions) */}
             <Section title="Recent Admissions" icon={Activity} actions={<button onClick={() => window.location.assign('/admin')} className="text-sm text-blue-600 hover:underline">View all</button>}>
