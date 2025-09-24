@@ -8,9 +8,10 @@ import AdminSchedule from '@/components/AdminSchedule/AdminSchedule';
 import Footer from '@/components/Footer/Footer';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
-import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard, Banknote } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard, Banknote, Megaphone } from 'lucide-react';
 import TopLoader from '@/components/TopLoader/TopLoader'
 import AdminCards from '@/components/AdminCards/AdminCards';
+import AdminNotice from '@/components/AdminNotice/AdminNotice';
 import AdminFees from '@/components/AdminFees/AdminFees';
 // import { useRouter } from 'next/router';
 
@@ -72,6 +73,7 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string>('')
 //   const router = useRouter();
 
   const adminUsers = [
@@ -102,11 +104,11 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
         user: match.username
       };
       localStorage.setItem('adminSession', JSON.stringify(sessionData));
+      setError('')
       onLoginSuccess();
     } else {
-      alert('Invalid credentials! Redirecting to home...');
-      window.location.href = "/"
-    //   router.push('/');
+      // Show inline error instead of alert/redirect
+      setError('Invalid credentials. Please check and try again.')
     }
   };
 
@@ -131,6 +133,11 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
           Admin Login
         </h2>
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-1">
               Username
@@ -187,23 +194,24 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
 // ✅ Admin Portal (sidebar layout similar to student portal)
 const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice'>('dashboard');
     const [collapsed, setCollapsed] = useState(false);
 
-    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees'; label: string; icon: any }[] = [
+    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice'; label: string; icon: any }[] = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'students', label: 'Students', icon: UsersIcon },
         { id: 'schedule', label: 'Schedule', icon: Calendar },
         { id: 'reports', label: 'Reports', icon: BarChart3 },
         { id: 'cards', label: 'Card', icon: IdCard },
         { id: 'fees', label: 'Fees', icon: Banknote },
+        { id: 'notice', label: 'Notice', icon: Megaphone },
     ];
 
     // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
     useEffect(() => {
         const applyHash = () => {
             const hash = (typeof window !== 'undefined' && window.location.hash.replace('#','')) as typeof activeTab | ''
-            if (hash && ['dashboard','students','schedule','reports','cards','fees'].includes(hash)) {
+            if (hash && ['dashboard','students','schedule','reports','cards','fees','notice'].includes(hash)) {
                 setActiveTab(hash as any)
             }
         }
@@ -314,6 +322,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
                         {activeTab === 'reports' && <AdminReports onLoadingChange={onLoadingChange} />}
                         {activeTab === 'cards' && <AdminCards onLoadingChange={onLoadingChange} />}
                         {activeTab === 'fees' && <AdminFees onLoadingChange={onLoadingChange} />}
+                        {activeTab === 'notice' && <AdminNotice onLoadingChange={onLoadingChange} />}
                     </div>
                 </main>
             </div>

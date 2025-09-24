@@ -160,6 +160,47 @@ export async function DELETE(req: NextRequest) {
     }
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
+    const deleteAll = searchParams.get('all') === 'true'
+
+    // Bulk deletion path: /api/fees?all=true&className=&month=&year=&q=
+    if (deleteAll) {
+      // Build filters similar to GET
+      const filters: any = {
+        className: searchParams.get('className') || undefined,
+        month: searchParams.get('month') || undefined,
+        year: searchParams.get('year') ? Number(searchParams.get('year')) : undefined,
+        q: searchParams.get('q') || undefined,
+      }
+
+      const where: string[] = ['_type == "fee"']
+      const params: Record<string, any> = {}
+      if (filters.className) { where.push('className == $className'); params.className = filters.className }
+      if (filters.month) { where.push('month == $month'); params.month = filters.month }
+      if (typeof filters.year === 'number' && !Number.isNaN(filters.year)) { where.push('year == $year'); params.year = filters.year }
+      if (filters.q) {
+        where.push(`(
+          (defined(receiptNumber) && receiptNumber match $q) ||
+          (defined(bookNumber) && bookNumber match $q) ||
+          (defined(notes) && notes match $q) ||
+          (defined(student->rollNumber) && student->rollNumber match $q) ||
+          (defined(student->grNumber) && student->grNumber match $q)
+        )`)
+        params.q = `${filters.q}*`
+      }
+
+      const idsQuery = `*[$where][0...500]{ _id }`.replace('$where', where.join(' && '))
+      const docs: { _id: string }[] = await serverClient.fetch(idsQuery, params)
+      if (!docs.length) {
+        return NextResponse.json({ ok: true, deleted: 0 })
+      }
+      // Delete in a transaction
+      let tx = serverClient.transaction()
+      docs.forEach(d => { tx = tx.delete(d._id) })
+      const result = await tx.commit()
+      return NextResponse.json({ ok: true, deleted: docs.length, tx: result })
+    }
+
+    // Single delete by id (default path)
     if (!id) {
       return NextResponse.json({ ok: false, error: 'id is required' }, { status: 400 })
     }

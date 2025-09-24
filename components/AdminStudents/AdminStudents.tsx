@@ -81,6 +81,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [importResultMessage, setImportResultMessage] = useState('')
   const [deleteAllMessage, setDeleteAllMessage] = useState('')
   const [imgPreviewOpen, setImgPreviewOpen] = useState(false)
+  // Toasts (match AdminSchedule style)
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ show: true, message, type })
+    window.setTimeout(() => setToast(null), 2200)
+  }
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -171,7 +177,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       await refreshStudents()
     } catch (error) {
       console.error('Failed to update student', error)
-      alert('Failed to update student')
+      showToast('Failed to update student', 'error')
     } finally {
       setEditLoading(false)
     }
@@ -234,7 +240,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       await refreshStudents()
     } catch (err) {
       console.error('Failed to create student', err)
-      alert('Failed to create student')
+      showToast('Failed to create student', 'error')
     } finally {
       setCreateLoading(false)
     }
@@ -249,7 +255,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       await refreshStudents()
     } catch (err) {
       console.error('Failed to delete student', err)
-      alert('Failed to delete student')
+      showToast('Failed to delete student', 'error')
     } finally {
       setDeleteLoadingId(null)
       setConfirmDeleteId(null)
@@ -361,7 +367,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       console.log('Starting Excel export...')
 
       if (students.length === 0) {
-        alert('Koi students nahi hain export karne ke liye!')
+        showToast('Koi students nahi hain export karne ke liye!', 'error')
         return
       }
 
@@ -453,11 +459,11 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         window.URL.revokeObjectURL(url)
       }
 
-      alert(`Excel file successfully exported! (${students.length} students)`)
+      showToast(`Excel file successfully exported! (${students.length} students)`, 'success')
 
     } catch (error: any) {
       console.error('Excel export error:', error)
-      alert(`Excel export mein error aaya: ${error?.message || 'Unknown error'}. Dev server restart karke dobara try karein.`)
+      showToast(`Excel export mein error aaya: ${error?.message || 'Unknown error'}`, 'error')
     }
   }
 
@@ -539,7 +545,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
     } catch (error: any) {
       console.error('Excel import error:', error)
-      alert(`Excel import mein error aaya: ${error?.message || 'Unknown error'}. File format check karein aur dev server restart karke dobara try karein.`)
+      showToast(`Excel import mein error aaya: ${error?.message || 'Unknown error'}`, 'error')
     } finally {
       setImportLoading(false)
       // Reset file input safely (React synthetic event's currentTarget can be null after async)
