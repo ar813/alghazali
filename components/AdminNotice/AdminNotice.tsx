@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { Megaphone, Send, Save, Users, User, School, Loader2 } from 'lucide-react'
+import { Megaphone, Save, Loader2, Edit2, Trash2, RefreshCw, X } from 'lucide-react'
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
 import type { Student } from '@/types/student'
@@ -29,8 +29,8 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
   const classOptions = useMemo(() => Array.from(new Set(students.map(s => s.admissionFor).filter(Boolean))).sort(), [students])
 
   type TargetType = 'all' | 'class' | 'student'
-  const [form, setForm] = useState<{ title: string; content: string; targetType: TargetType; className?: string; studentId?: string; sendEmail: boolean }>({
-    title: '', content: '', targetType: 'all', className: '', studentId: '', sendEmail: false,
+  const [form, setForm] = useState<{ title: string; content: string; targetType: TargetType; className?: string; studentId?: string; isEvent: boolean; eventDate?: string; eventType?: string }>({
+    title: '', content: '', targetType: 'all', className: '', studentId: '', isEvent: false, eventDate: '', eventType: '',
   })
 
   const submit = async () => {
@@ -38,15 +38,23 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
     if (!form.content.trim()) return showToast('Content is required', 'error')
     if (form.targetType === 'class' && !form.className) return showToast('Class is required for class target', 'error')
     if (form.targetType === 'student' && !form.studentId) return showToast('Student is required for student target', 'error')
+    // email sending removed from UI
     setSaving(true)
     try {
       const res = await fetch('/api/notices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        title: form.title, content: form.content, targetType: form.targetType, className: form.className || undefined, studentId: form.studentId || undefined, sendEmail: form.sendEmail,
+        title: form.title,
+        content: form.content,
+        targetType: form.targetType,
+        className: form.className || undefined,
+        studentId: form.studentId || undefined,
+        isEvent: form.isEvent,
+        eventDate: form.isEvent && form.eventDate ? new Date(form.eventDate).toISOString() : undefined,
+        eventType: form.isEvent ? (form.eventType || 'General') : undefined,
       }) })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to create notice')
       showToast('Notice created', 'success')
-      setForm({ title: '', content: '', targetType: 'all', className: '', studentId: '', sendEmail: false })
+      setForm({ title: '', content: '', targetType: 'all', className: '', studentId: '', isEvent: false, eventDate: '', eventType: '' })
     } catch (e: any) {
       showToast(e?.message || 'Failed to create notice', 'error')
     } finally { setSaving(false) }
@@ -93,8 +101,20 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
               </select>
             </div>
           )}
-          <div className="sm:col-span-2">
-            <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={form.sendEmail} onChange={e => setForm({ ...form, sendEmail: e.target.checked })} /> Also send via email</label>
+          <div className="sm:col-span-2 flex flex-col gap-2">
+            <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={form.isEvent} onChange={e => setForm({ ...form, isEvent: e.target.checked })} /> Make this an event</label>
+            {form.isEvent && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Event Date</label>
+                  <input type="datetime-local" value={form.eventDate || ''} onChange={e => setForm({ ...form, eventDate: e.target.value })} className="w-full border rounded px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Event Type</label>
+                  <input value={form.eventType || ''} onChange={e => setForm({ ...form, eventType: e.target.value })} placeholder="e.g. Academic, Sports" className="w-full border rounded px-3 py-2" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="mt-4 flex justify-end">
@@ -104,7 +124,7 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
         </div>
       </div>
 
-      <NoticesList />
+      <NoticesList onLoadingChange={onLoadingChange} students={students} classOptions={classOptions} />
 
       {toast?.show && (
         <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>{toast.message}</div>
@@ -113,17 +133,23 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
   )
 }
 
-const NoticesList = () => {
+const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingChange?: (loading: boolean) => void; students: Student[]; classOptions: string[] }) => {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [editing, setEditing] = useState<any | null>(null)
+  const [workingId, setWorkingId] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
+  const showToast = (m: string, t: 'success'|'error' = 'success') => { setToast({ show: true, message: m, type: t }); window.setTimeout(() => setToast(null), 2200) }
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
+  const [deleteAllInput, setDeleteAllInput] = useState('')
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true); onLoadingChange?.(true)
     try {
-      const res = await fetch('/api/notices?limit=50', { cache: 'no-store' })
+      const res = await fetch('/api/notices?limit=500', { cache: 'no-store' })
       const json = await res.json()
       if (json?.ok) setItems(json.data)
-    } finally { setLoading(false) }
+    } finally { setLoading(false); onLoadingChange?.(false) }
   }
 
   useEffect(() => { load() }, [])
@@ -131,29 +157,181 @@ const NoticesList = () => {
   return (
     <div className="bg-white rounded-2xl shadow p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Megaphone size={18}/> Recent Notices</h3>
-        <button onClick={load} className="px-3 py-1.5 border rounded text-sm">Refresh</button>
+        <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Megaphone size={18}/> All Notices</h3>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setDeleteAllInput(''); setShowDeleteAllConfirm(true) }} className="px-3 py-1.5 border rounded text-sm text-red-600 inline-flex items-center gap-2"><Trash2 size={14}/> Delete All</button>
+          <button onClick={load} className="px-3 py-1.5 border rounded text-sm inline-flex items-center gap-2"><RefreshCw size={14}/> Refresh</button>
+        </div>
       </div>
       {loading ? (
-        <div className="text-sm text-gray-600">Loading...</div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="p-3 rounded border bg-gray-50 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-3 bg-gray-200 rounded w-2/3 mt-2"></div>
+            </div>
+          ))}
+        </div>
       ) : items.length === 0 ? (
         <div className="text-sm text-gray-500">No notices yet.</div>
       ) : (
         <div className="space-y-3">
           {items.map(n => (
             <div key={n._id} className="p-3 rounded border bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="font-medium text-gray-800">{n.title}</div>
-                <span className="text-xs text-gray-500">{new Date(n.createdAt || n._createdAt).toLocaleString()}</span>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-gray-800 flex items-center gap-2">
+                    {n.title}
+                    <span className={`px-2 py-0.5 rounded-full text-xs border ${n.targetType==='all' ? 'bg-blue-50 text-blue-700 border-blue-200' : n.targetType==='class' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                      {n.targetType.toUpperCase()}
+                    </span>
+                    {n.isEvent && (
+                      <span className="px-2 py-0.5 rounded-full text-xs border bg-amber-50 text-amber-700 border-amber-200">EVENT</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500">{new Date(n.createdAt || n._createdAt).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setEditing(n)} className="px-2 py-1 text-xs border rounded inline-flex items-center gap-1"><Edit2 size={14}/> Edit</button>
+                  <button onClick={async () => { setWorkingId(n._id); try { await fetch(`/api/notices?id=${n._id}`, { method: 'DELETE' }); setItems(items.filter(i => i._id !== n._id)); showToast('Notice deleted.', 'success') } finally { setWorkingId(null) } }} disabled={workingId===n._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14}/>{workingId===n._id?'...':'Delete'}</button>
+                </div>
               </div>
               <div className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{n.content}</div>
               <div className="text-xs text-gray-500 mt-1">Target: {n.targetType}{n.className ? ` (${n.className})` : ''}{n.student?.fullName ? ` (${n.student.fullName})` : ''}</div>
+              {n.isEvent && (
+                <div className="text-xs text-amber-700 mt-1">Event: {n.eventType || 'General'} — {n.eventDate ? new Date(n.eventDate).toLocaleString() : 'No date'}</div>
+              )}
             </div>
           ))}
         </div>
+      )}
+
+      {editing && (
+        <EditModal
+          notice={editing}
+          students={students}
+          classOptions={classOptions}
+          onClose={() => setEditing(null)}
+          onSaved={(updated) => {
+            setItems(prev => prev.map(i => i._id === updated._id ? { ...i, ...updated } : i))
+            setEditing(null)
+          }}
+        />
+      )}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4">
+            <h4 className="font-semibold mb-2">Delete All Notices</h4>
+            <p className="text-sm text-gray-600">Type <span className="font-mono font-semibold">DELETE</span> to confirm. This action cannot be undone.</p>
+            <input value={deleteAllInput} onChange={e=>setDeleteAllInput(e.target.value)} className="w-full border rounded px-3 py-2 mt-3" placeholder="Type DELETE" />
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={()=>setShowDeleteAllConfirm(false)} className="px-3 py-2 border rounded">Cancel</button>
+              <button disabled={deleteAllInput !== 'DELETE'} onClick={async ()=>{ try { await fetch('/api/notices?all=true', { method: 'DELETE' }); setItems([]); showToast('All notices deleted','success') } finally { setShowDeleteAllConfirm(false); setDeleteAllInput('') } }} className={`px-4 py-2 rounded text-white ${deleteAllInput==='DELETE' ? 'bg-red-600' : 'bg-red-300 cursor-not-allowed'}`}>Delete All</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {toast?.show && (
+        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>{toast.message}</div>
       )}
     </div>
   )
 }
 
+const EditModal = ({ notice, onClose, onSaved, students, classOptions }: { notice: any; onClose: () => void; onSaved: (n: any) => void; students: Student[]; classOptions: string[] }) => {
+  const [title, setTitle] = useState(notice.title as string)
+  const [content, setContent] = useState(notice.content as string)
+  const [targetType, setTargetType] = useState<'all'|'class'|'student'>(notice.targetType)
+  const [className, setClassName] = useState<string>(notice.className || '')
+  const [studentId, setStudentId] = useState<string>(notice.student?._id || '')
+  const [isEvent, setIsEvent] = useState<boolean>(!!notice.isEvent)
+  const [eventDate, setEventDate] = useState<string>(notice.eventDate ? new Date(notice.eventDate).toISOString().slice(0,16) : '')
+  const [eventType, setEventType] = useState<string>(notice.eventType || '')
+  const [isHeadline, setIsHeadline] = useState<boolean>(false)
+  const [saving, setSaving] = useState(false)
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/notices', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: notice._id, title, content, targetType, className: className || undefined, studentId: studentId || undefined, isEvent, eventDate: isEvent && eventDate ? new Date(eventDate).toISOString() : undefined, eventType: isEvent ? (eventType || 'General') : undefined }) })
+      const json = await res.json()
+      if (!json?.ok) throw new Error(json?.error || 'Failed to update')
+      onSaved({ ...notice, title, content, targetType, className, student: studentId ? { _id: studentId, fullName: notice.student?.fullName || 'Student' } : null, isEvent, eventDate: isEvent ? (eventDate ? new Date(eventDate).toISOString() : null) : null, eventType: isEvent ? (eventType || 'General') : null })
+    } catch (e) {
+      // no-op basic error display for now
+      alert('Failed to update notice')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold">Edit Notice</h4>
+          <button onClick={onClose} className="p-1 text-gray-500"><X size={16}/></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm mb-1">Title</label>
+            <input value={title} onChange={e=>setTitle(e.target.value)} className="w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Content</label>
+            <textarea value={content} onChange={e=>setContent(e.target.value)} rows={4} className="w-full border rounded px-3 py-2" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm mb-1">Target</label>
+              <select value={targetType} onChange={e=>setTargetType(e.target.value as any)} className="w-full border rounded px-3 py-2">
+                <option value="all">Whole School</option>
+                <option value="class">Class</option>
+                <option value="student">Particular Student</option>
+              </select>
+            </div>
+            {targetType==='class' && (
+              <div>
+                <label className="block text-sm mb-1">Class</label>
+                <select value={className} onChange={e=>setClassName(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Class</option>
+                  {classOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            {targetType==='student' && (
+              <div className="col-span-2">
+                <label className="block text-sm mb-1">Student</label>
+                <select value={studentId} onChange={e=>setStudentId(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Student</option>
+                  {students.map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber} — Roll {s.rollNumber}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="space-y-2 mt-2">
+            <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={isEvent} onChange={e=>setIsEvent(e.target.checked)} /> Make this an event</label>
+            {/* headline option removed */}
+            {isEvent && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm mb-1">Event Date</label>
+                  <input type="datetime-local" value={eventDate} onChange={e=>setEventDate(e.target.value)} className="w-full border rounded px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Event Type</label>
+                  <input value={eventType} onChange={e=>setEventType(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="e.g. Academic, Sports" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="px-3 py-2 border rounded">Cancel</button>
+          <button onClick={save} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded inline-flex items-center gap-2">{saving ? <Loader2 className="animate-spin" size={16}/> : <Edit2 size={16}/>} Save</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default AdminNotice
+

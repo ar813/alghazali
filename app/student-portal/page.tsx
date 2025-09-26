@@ -17,6 +17,8 @@ import StudentSchedule from '@/components/StudentSchedule/StudentSchedule';
 import StudentNotices from '@/components/StudentNotices/StudentNotices';
 import StudentCard from '@/components/StudentCard/StudentCard';
 import StudentFees from '@/components/StudentFees/StudentFees';
+import StudentQuizzes from '@/components/StudentQuizzes/StudentQuizzes';
+import StudentResults from '@/components/StudentResults/StudentResults';
 
 
 export default function StylishStudentPortal() {
@@ -88,6 +90,8 @@ export default function StylishStudentPortal() {
       setFiltered(result)
       setShowModal(false)
       setIsLoading(false)
+      // persist studentId for quiz submission page
+      try { localStorage.setItem('studentId', String(result[0]!._id)) } catch {}
     } else {
       // Session didn't match any student (data changed). Clear and show modal
       try { localStorage.removeItem('studentSession') } catch {}
@@ -124,6 +128,8 @@ export default function StylishStudentPortal() {
       const payload = { timestamp: Date.now(), bFormOrCnic: bForm, grNumber: grNo }
       localStorage.setItem('studentSession', JSON.stringify(payload))
       setSessionData({ bFormOrCnic: bForm, grNumber: grNo })
+      // also persist studentId for quiz submission
+      try { localStorage.setItem('studentId', String(result[0]!._id)) } catch {}
     }
   };
 
@@ -154,6 +160,8 @@ export default function StylishStudentPortal() {
     { name: 'Fees', icon: GraduationCap },
     { name: 'ID Card', icon: QrCode },
     { name: 'Notices', icon: Megaphone },
+    { name: 'Quiz', icon: GraduationCap },
+    { name: 'Quiz Result', icon: GraduationCap },
   ] as const
 
   const shouldShowLoader = isLoading || !studentsLoaded || (activeTab === 'Schedule' && scheduleLoading)
@@ -341,7 +349,9 @@ export default function StylishStudentPortal() {
                 {activeTab === 'Profile' && <StudentProfile student={filtered[0]} />}
                 {activeTab === 'Subjects' && <StudentSubjects />}
                 {activeTab === 'Schedule' && <StudentSchedule schedule={matchedSchedule} />}
-                {activeTab === 'Notices' && <StudentNotices />}
+                {activeTab === 'Notices' && <StudentNotices studentId={String(filtered[0]!._id)} className={String(filtered[0]!.admissionFor || '')} />}
+                {activeTab === 'Quiz' && <StudentQuizzes studentId={String(filtered[0]!._id)} className={String(filtered[0]!.admissionFor || '')} />}
+                {activeTab === 'Quiz Result' && <StudentResults studentId={String(filtered[0]!._id)} />}
                 {activeTab === 'Fees' && <StudentFees studentId={String(filtered[0]!._id)} />}
                 {activeTab === 'ID Card' && <StudentCard student={filtered[0]} />}
               </div>

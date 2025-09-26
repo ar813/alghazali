@@ -1,7 +1,13 @@
 import { BookOpen } from 'lucide-react'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 const HeroSection = () => {
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
     return (
         <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden">
             {/* Animated Background Elements */}
@@ -17,9 +23,15 @@ const HeroSection = () => {
                     <BookOpen className="w-10 h-10 text-white" />
                 </div>
 
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-indigo-800 to-purple-800 bg-clip-text text-transparent mb-4 sm:mb-6 leading-tight">
+                <h1 className={`text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-indigo-800 to-purple-800 bg-clip-text text-transparent mb-4 sm:mb-6 leading-tight ${mounted ? 'animate-[hero_headline_in_800ms_ease-out_forwards]' : ''}`}>
                     Welcome to Al Ghazali High School
                 </h1>
+                <style jsx>{`
+                    @keyframes hero_headline_in {
+                        0% { transform: translateX(120%); opacity: 0; }
+                        100% { transform: translateX(0); opacity: 1; }
+                    }
+                `}</style>
 
                 <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full mx-auto mb-4 sm:mb-6" />
 

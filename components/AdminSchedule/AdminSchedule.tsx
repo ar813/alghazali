@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Calendar, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
+import { Calendar, Plus, Save, Sparkles, Trash2, Upload, Download } from 'lucide-react'
 
 // Types
  type ScheduleDay = { day: string; periods: { subject: string; time: string }[] }
@@ -33,6 +33,107 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   }
   // Delete confirm state
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; className: string; day: string } | null>(null)
+
+  // Import/Export helpers
+  const [importLoading, setImportLoading] = useState(false)
+  const fileInputId = 'schedule-import-input'
+
+  const loadExcel = async () => {
+    try {
+      const ExcelJS = await import('exceljs')
+      return (ExcelJS as any).default || (ExcelJS as any)
+    } catch (e) {
+      throw new Error('ExcelJS could not be loaded. Please ensure it is installed.')
+    }
+  }
+
+  const handleExport = async () => {
+    try {
+      if (schedules.length === 0) { showToast('No schedules to export', 'error'); return }
+      const ExcelJS: any = await loadExcel()
+      const fileSaver = await import('file-saver')
+      const saveAs = (fileSaver as any).default?.saveAs || (fileSaver as any).saveAs
+      const wb = new ExcelJS.Workbook()
+      const ws = wb.addWorksheet('Schedules')
+      ws.columns = [
+        { header: 'Class', key: 'className', width: 10 },
+        { header: 'Day', key: 'day', width: 12 },
+        { header: 'Subject', key: 'subject', width: 20 },
+        { header: 'Time', key: 'time', width: 18 },
+      ]
+      for (const sc of schedules) {
+        for (const d of sc.days || []) {
+          for (const p of d.periods || []) {
+            ws.addRow({ className: sc.className, day: d.day, subject: p.subject, time: p.time })
+          }
+        }
+      }
+      const buffer = await wb.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      saveAs(blob, `schedules_${new Date().toISOString().slice(0,10)}.xlsx`)
+      showToast('Schedules exported', 'success')
+    } catch (e: any) {
+      showToast(`Export failed: ${e?.message || 'Unknown error'}`, 'error')
+    }
+  }
+
+  const onClickImport = () => {
+    const el = document.getElementById(fileInputId) as HTMLInputElement | null
+    el?.click()
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      setImportLoading(true)
+      const ExcelJS: any = await loadExcel()
+      const wb = new ExcelJS.Workbook()
+      const buf = await file.arrayBuffer()
+      await wb.xlsx.load(buf)
+      const ws = wb.worksheets[0]
+      const rows = ws.getSheetValues()
+      // Expect columns: Class, Day, Subject, Time (header row index 1)
+      type RowType = { className: string; day: string; subject: string; time: string }
+      const records: RowType[] = []
+      for (let i = 2; i < rows.length; i++) {
+        const r: any = rows[i]
+        if (!r) continue
+        const className = String(r[1] ?? '').trim()
+        const day = String(r[2] ?? '').trim()
+        const subject = String(r[3] ?? '').trim()
+        const time = String(r[4] ?? '').trim()
+        if (!className || !day || !subject || !time) continue
+        records.push({ className, day, subject, time })
+      }
+      if (records.length === 0) { showToast('No valid rows found', 'error'); return }
+      // Group by class+day
+      const byKey: Record<string, { className: string; day: string; periods: { subject: string; time: string }[] }> = {}
+      for (const r of records) {
+        const key = `${r.className}__${r.day}`
+        if (!byKey[key]) byKey[key] = { className: r.className, day: r.day, periods: [] }
+        byKey[key].periods.push({ subject: r.subject, time: r.time })
+      }
+      // Save sequentially
+      let saved = 0
+      for (const k of Object.keys(byKey)) {
+        const rec = byKey[k]
+        const res = await fetch('/api/schedule', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ className: rec.className, day: rec.day, periods: rec.periods })
+        })
+        const j = await res.json()
+        if (j?.ok) saved++
+      }
+      await loadSchedules()
+      showToast(`Imported ${saved} day(s)`, 'success')
+    } catch (e: any) {
+      showToast(`Import failed: ${e?.message || 'Unknown error'}`, 'error')
+    } finally {
+      setImportLoading(false)
+      const el = document.getElementById(fileInputId) as HTMLInputElement | null
+      if (el) el.value = ''
+    }
+  }
 
   useEffect(() => {
     loadSchedules()
@@ -148,11 +249,14 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      <input id={fileInputId} type="file" accept=".xlsx" className="hidden" onChange={handleImport} />
       {/* Manage Schedule (first) */}
       <div id="manage-schedule" className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Calendar size={18}/> Manage Schedule</h3>
-          <button onClick={submitSchedule} disabled={formSubmitting} className="text-sm inline-flex items-center gap-1 px-3 py-1 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-60"><Save size={14}/> {formSubmitting ? 'Saving...' : 'Save Schedule'}</button>
+          <div className="flex items-center gap-2">
+            <button onClick={submitSchedule} disabled={formSubmitting} className="text-sm inline-flex items-center gap-1 px-3 py-1 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-60"><Save size={14}/> {formSubmitting ? 'Saving...' : 'Save Schedule'}</button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -208,10 +312,14 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             <Calendar size={20} className="text-blue-600"/> 
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">This Week Schedule</span>
           </h3>
-          <button onClick={loadSchedules} className="text-sm inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-200">
-            <Sparkles size={16} className="text-blue-600"/> 
-            <span className="text-blue-700 font-medium">Refresh</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExport} className="text-sm inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50"><Download size={16}/> Export</button>
+            <button onClick={onClickImport} disabled={importLoading} className="text-sm inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50"><Upload size={16}/> {importLoading ? 'Importing...' : 'Import'}</button>
+            <button onClick={loadSchedules} className="text-sm inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-200">
+              <Sparkles size={16} className="text-blue-600"/> 
+              <span className="text-blue-700 font-medium">Refresh</span>
+            </button>
+          </div>
         </div>
         
         {loadingSchedules ? (

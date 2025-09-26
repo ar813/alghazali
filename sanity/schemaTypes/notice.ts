@@ -22,5 +22,11 @@ export default defineType({
     defineField({ name: 'className', title: 'Class Name', type: 'string' }),
     defineField({ name: 'student', title: 'Student', type: 'reference', to: [{ type: 'student' }] }),
     defineField({ name: 'sendEmail', title: 'Send Email', type: 'boolean', initialValue: false }),
+    // Event-related fields
+    defineField({ name: 'isEvent', title: 'Is Event', type: 'boolean', initialValue: false }),
+    defineField({ name: 'eventDate', title: 'Event Date', type: 'datetime' }),
+    defineField({ name: 'eventType', title: 'Event Type', type: 'string' }),
+    // Headline-related field
+    defineField({ name: 'isHeadline', title: 'Is Headline', type: 'boolean', initialValue: false }),
   ],
 })
