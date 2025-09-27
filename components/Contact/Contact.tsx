@@ -1,8 +1,15 @@
 import { Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
 const Contact = () => {
+    const [settings, setSettings] = useState<any>(null)
+    useEffect(() => {
+        fetch('/api/important', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(j => { if (j?.ok) setSettings(j.data || null) })
+            .catch(()=>{})
+    }, [])
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
@@ -157,23 +164,21 @@ const Contact = () => {
                                         <MapPin className="w-5 h-5 text-blue-200 mt-1" />
                                         <div>
                                             <h4 className="font-semibold text-sm sm:text-base">Address</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">Block 15, Gulshan-e-Iqbal, Karachi, Sindh, Pakistan</p>
+                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.schoolAddress || 'Block 15, Gulshan-e-Iqbal, Karachi, Sindh, Pakistan'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start space-x-3">
                                         <Phone className="w-5 h-5 text-blue-200 mt-1" />
                                         <div>
                                             <h4 className="font-semibold text-sm sm:text-base">Phone</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">+92 21 34567890</p>
-                                            <p className="text-blue-100 text-sm sm:text-base">+92 300 1234567</p>
+                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.phoneNumber || '+92 21 34567890'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start space-x-3">
                                         <Mail className="w-5 h-5 text-blue-200 mt-1" />
                                         <div>
                                             <h4 className="font-semibold text-sm sm:text-base">Email</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">info@alghazalischool.edu.pk</p>
-                                            <p className="text-blue-100 text-sm sm:text-base">admissions@alghazalischool.edu.pk</p>
+                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.email || 'info@alghazalischool.edu.pk'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -182,18 +187,16 @@ const Contact = () => {
                             <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
                                 <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">Office Hours</h3>
                                 <div className="space-y-3">
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                                        <span className="text-gray-600 text-sm sm:text-base">Monday - Friday</span>
-                                        <span className="font-semibold text-sm sm:text-base">8:00 AM - 4:00 PM</span>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                                        <span className="text-gray-600 text-sm sm:text-base">Saturday</span>
-                                        <span className="font-semibold text-sm sm:text-base">9:00 AM - 2:00 PM</span>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                                        <span className="text-gray-600 text-sm sm:text-base">Sunday</span>
-                                        <span className="font-semibold text-sm sm:text-base">Closed</span>
-                                    </div>
+                                    {(settings?.officeHours || [
+                                        { day: 'Monday - Friday', open: '8:00 AM', close: '4:00 PM' },
+                                        { day: 'Saturday', open: '9:00 AM', close: '2:00 PM' },
+                                        { day: 'Sunday', open: 'Closed', close: '' }
+                                    ]).map((row: any, idx: number) => (
+                                        <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                                            <span className="text-gray-600 text-sm sm:text-base">{row.day}</span>
+                                            <span className="font-semibold text-sm sm:text-base">{row.close ? `${row.open} - ${row.close}` : row.open}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 

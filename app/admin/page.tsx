@@ -15,6 +15,7 @@ import AdminNotice from '@/components/AdminNotice/AdminNotice';
 import AdminFees from '@/components/AdminFees/AdminFees';
 import AdminQuiz from '@/components/AdminQuiz/AdminQuiz';
 import AdminResults from '@/components/AdminResults/AdminResults';
+import AdminSiteSettings from '@/components/AdminSiteSettings/AdminSiteSettings';
 // import { useRouter } from 'next/router';
 
 const AdminPage = () => {
@@ -196,10 +197,10 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
 // ✅ Admin Portal (sidebar layout similar to student portal)
 const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'site'>('dashboard');
     const [collapsed, setCollapsed] = useState(false);
 
-    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results'; label: string; icon: any }[] = [
+    const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'site'; label: string; icon: any }[] = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'students', label: 'Students', icon: UsersIcon },
         { id: 'schedule', label: 'Schedule', icon: Calendar },
@@ -209,13 +210,14 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
         { id: 'notice', label: 'Notice', icon: Megaphone },
         { id: 'quiz', label: 'Quiz', icon: GraduationCap },
         { id: 'results', label: 'Quiz Result', icon: BarChart3 },
+        { id: 'site', label: 'Site Settings', icon: LayoutDashboard },
     ];
 
     // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
     useEffect(() => {
         const applyHash = () => {
             const hash = (typeof window !== 'undefined' && window.location.hash.replace('#','')) as typeof activeTab | ''
-            if (hash && ['dashboard','students','schedule','reports','cards','fees','notice','quiz','results'].includes(hash)) {
+            if (hash && ['dashboard','students','schedule','reports','cards','fees','notice','quiz','results','site'].includes(hash)) {
                 setActiveTab(hash as any)
             }
         }
@@ -329,6 +331,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
                         {activeTab === 'notice' && <AdminNotice onLoadingChange={onLoadingChange} />}
                         {activeTab === 'quiz' && <AdminQuiz onLoadingChange={onLoadingChange} />}
                         {activeTab === 'results' && <AdminResults onLoadingChange={onLoadingChange} />}
+                        {activeTab === 'site' && <AdminSiteSettings onLoadingChange={onLoadingChange} />}
                     </div>
                 </main>
             </div>

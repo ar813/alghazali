@@ -1,7 +1,14 @@
 import { ChevronRight } from 'lucide-react'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 const AdmissionDetail = () => {
+    const [settings, setSettings] = useState<any>(null)
+    useEffect(() => {
+        fetch('/api/important', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(j => { if (j?.ok) setSettings(j.data || null) })
+            .catch(()=>{})
+    }, [])
     return (
         <section id="admissions" className="py-12 sm:py-20 bg-gradient-to-b from-slate-50 to-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -43,24 +50,16 @@ const AdmissionDetail = () => {
                     <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-6 sm:p-8 text-white">
                         <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Fee Structure 2025</h3>
                         <div className="space-y-4">
-                            <div className="flex justify-between items-center text-sm sm:text-base">
-                                <span>Classes 1-5</span>
-                                <span className="font-semibold">Rs. 15,000/month</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm sm:text-base">
-                                <span>Classes 6-8</span>
-                                <span className="font-semibold">Rs. 18,000/month</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm sm:text-base">
-                                <span>Classes 9-10</span>
-                                <span className="font-semibold">Rs. 22,000/month</span>
-                            </div>
-                            <div className="border-t border-white/20 pt-4">
-                                <div className="flex justify-between items-center text-sm sm:text-base">
-                                    <span>Admission Fee</span>
-                                    <span className="font-semibold">Rs. 25,000 (One-time)</span>
-                                </div>
-                            </div>
+                            {(settings?.classFees || []).length > 0 ? (
+                                (settings.classFees as any[]).map((row:any, idx:number)=> (
+                                    <div key={idx} className="flex justify-between items-center text-sm sm:text-base">
+                                        <span>{row.className}</span>
+                                        <span className="font-semibold">Rs. {row.amount?.toLocaleString?.() || row.amount}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-blue-100">Class-wise fees will appear here once configured in Site Settings.</div>
+                            )}
                         </div>
                         <div className="mt-6 sm:mt-8">
                             <button className="w-full bg-white text-indigo-600 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base hover:bg-gray-100 transition-colors">

@@ -124,26 +124,61 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     try {
       const ExcelJS = await import('exceljs')
       const fileSaver = await import('file-saver')
-      const Workbook = (ExcelJS as any).Workbook || (ExcelJS as any).default?.Workbook
       const wb = new (ExcelJS as any).Workbook()
       const ws = wb.addWorksheet('Results')
+      // Pre-compute class-wise positions
+      const positionMap = new Map<string, number>()
+      const groups: Record<string, Result[]> = {}
+      for (const r of results) {
+        const cls = (r.className || r.student?.admissionFor || '').toString()
+        if (!groups[cls]) groups[cls] = []
+        groups[cls].push(r)
+      }
+      Object.values(groups).forEach(list => {
+        list.sort((a,b)=> (b.score||0) - (a.score||0))
+        list.forEach((r, idx)=> positionMap.set(r._id, idx+1))
+      })
+
       ws.columns = [
+        { header: 'Quiz Title', key: 'quizTitle', width: 28 },
+        { header: 'Subject', key: 'subject', width: 16 },
+        { header: 'Quiz Date', key: 'quizDate', width: 22 },
         { header: 'Student Name', key: 'studentName', width: 25 },
         { header: 'GR Number', key: 'studentGrNumber', width: 15 },
         { header: 'Roll Number', key: 'studentRollNumber', width: 15 },
-        { header: 'Class', key: 'className', width: 10 },
+        { header: 'Class', key: 'className', width: 12 },
         { header: 'Email', key: 'studentEmail', width: 25 },
+        { header: 'Total Questions', key: 'total', width: 18 },
         { header: 'Score', key: 'score', width: 10 },
+        { header: 'Percentage', key: 'percentage', width: 12 },
+        { header: 'Grade', key: 'grade', width: 10 },
+        { header: 'Position', key: 'position', width: 10 },
+        { header: 'Status', key: 'status', width: 10 },
         { header: 'Submitted At', key: 'submittedAt', width: 22 },
-      ]
+      ] as any
+      // Header styling
+      ws.getRow(1).font = { bold: true }
+      ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' } as any
       for (const r of results) {
+        const total = r.quiz?.totalQuestions ?? (Array.isArray(r.answers) ? r.answers.length : 0)
+        const pct = total > 0 ? Math.round((r.score / total) * 100) : 0
+        const grade = pct >= 85 ? 'A+' : pct >= 75 ? 'A' : pct >= 65 ? 'B' : pct >= 50 ? 'C' : pct >= 40 ? 'D' : 'F'
+        const position = positionMap.get(r._id) || ''
         ws.addRow({
+          quizTitle: r.quiz?.title || '',
+          subject: r.quiz?.subject || '',
+          quizDate: new Date(r._createdAt || '').toLocaleString(),
           studentName: r.studentName || r.student?.fullName || '',
           studentGrNumber: r.studentGrNumber || r.student?.grNumber || '',
           studentRollNumber: r.studentRollNumber || '',
           className: r.className || r.student?.admissionFor || '',
           studentEmail: r.studentEmail || '',
+          total,
           score: r.score,
+          percentage: `${pct}%`,
+          grade,
+          position,
+          status: pct >= 40 ? 'Pass' : 'Fail',
           submittedAt: new Date(r.submittedAt || r._createdAt || '').toLocaleString(),
         })
       }
@@ -151,7 +186,58 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       ;(fileSaver as any).saveAs(blob, `quiz_results_${quiz.title.replace(/\s+/g,'_')}.xlsx`)
     } catch (e) {
-      alert('Failed to export Excel')
+      // Fallback: CSV export to ensure the user still gets a file if ExcelJS is unavailable in runtime
+      try {
+        // Pre-compute positions for CSV as well
+        const positionMap = new Map<string, number>()
+        const groups: Record<string, Result[]> = {}
+        for (const r of results) {
+          const cls = (r.className || r.student?.admissionFor || '').toString()
+          if (!groups[cls]) groups[cls] = []
+          groups[cls].push(r)
+        }
+        Object.values(groups).forEach(list => {
+          list.sort((a,b)=> (b.score||0) - (a.score||0))
+          list.forEach((r, idx)=> positionMap.set(r._id, idx+1))
+        })
+
+        const rows = [
+          ['Quiz Title','Subject','Quiz Date','Student Name','GR Number','Roll Number','Class','Email','Total Questions','Score','Percentage','Grade','Position','Status','Submitted At'],
+          ...results.map(r => {
+            const total = r.quiz?.totalQuestions ?? (Array.isArray(r.answers) ? r.answers.length : 0)
+            const pct = total > 0 ? Math.round((r.score / total) * 100) : 0
+            const grade = pct >= 85 ? 'A+' : pct >= 75 ? 'A' : pct >= 65 ? 'B' : pct >= 50 ? 'C' : pct >= 40 ? 'D' : 'F'
+            const position = positionMap.get(r._id) || ''
+            return [
+              r.quiz?.title || '',
+              r.quiz?.subject || '',
+              new Date(r._createdAt || '').toLocaleString(),
+              r.studentName || r.student?.fullName || '',
+              r.studentGrNumber || r.student?.grNumber || '',
+              r.studentRollNumber || '',
+              r.className || r.student?.admissionFor || '',
+              r.studentEmail || '',
+              String(total),
+              String(r.score),
+              `${pct}%`,
+              grade,
+              String(position),
+              pct >= 40 ? 'Pass' : 'Fail',
+              new Date(r.submittedAt || r._createdAt || '').toLocaleString(),
+            ]
+          })
+        ]
+        const csv = rows.map(r => r.map(v => {
+          const s = String(v ?? '')
+          return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s
+        }).join(',')).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const fname = `quiz_results_${quiz.title.replace(/\s+/g,'_')}.csv`
+        const a = document.createElement('a');
+        const url = URL.createObjectURL(blob); a.href = url; a.download = fname; a.click(); URL.revokeObjectURL(url)
+      } catch {
+        alert('Failed to export Excel')
+      }
     }
   }
 
