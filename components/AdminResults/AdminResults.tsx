@@ -18,6 +18,7 @@ type Result = {
   score: number
   submittedAt?: string
   _createdAt?: string
+  questionOrder?: number[]
 }
 
 const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
@@ -26,6 +27,11 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(false)
   const [working, setWorking] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Result | null>(null)
+  const [quizDetail, setQuizDetail] = useState<any | null>(null)
+  const [percent, setPercent] = useState<number | null>(null)
+  const [grade, setGrade] = useState<string>('')
+  const [rankInfo, setRankInfo] = useState<{ rank: number; total: number } | null>(null)
 
   const loadQuizzes = async () => {
     setLoading(true); onLoadingChange?.(true)
@@ -61,6 +67,47 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
 
   useEffect(() => { loadQuizzes() }, [])
   useEffect(() => { loadResults(selectedQuiz) }, [selectedQuiz])
+
+  // Fetch quiz details when a result is selected (for detailed popup)
+  useEffect(() => {
+    const fetchQuiz = async () => {
+      if (!selected?.quiz?._id) { setQuizDetail(null); return }
+      try {
+        const res = await fetch(`/api/quizzes?id=${encodeURIComponent(selected.quiz._id)}`, { cache: 'no-store' })
+        const json = await res.json()
+        if (json?.ok) setQuizDetail(json.data)
+        else setQuizDetail(null)
+      } catch { setQuizDetail(null) }
+    }
+    fetchQuiz()
+  }, [selected])
+
+  // Compute percentage, grade and class rank
+  useEffect(() => {
+    const compute = async () => {
+      if (!selected) { setPercent(null); setGrade(''); setRankInfo(null); return }
+      const totalQ = selected.quiz?.totalQuestions ?? (Array.isArray(selected.answers) ? selected.answers.length : 0)
+      if (totalQ > 0) {
+        const pct = Math.round((selected.score / totalQ) * 100)
+        setPercent(pct)
+        const g = pct >= 85 ? 'A+' : pct >= 75 ? 'A' : pct >= 65 ? 'B' : pct >= 50 ? 'C' : pct >= 40 ? 'D' : 'F'
+        setGrade(g)
+      } else { setPercent(null); setGrade('') }
+
+      try {
+        const resp = await fetch(`/api/quiz-results?quizId=${encodeURIComponent(selected.quiz!._id)}&limit=500`, { cache: 'no-store' })
+        const j = await resp.json()
+        if (j?.ok && Array.isArray(j.data)) {
+          const className = selected.className || selected.student?.admissionFor || ''
+          const sameClass = j.data.filter((r: Result) => (r.className || r.student?.admissionFor || '') === className)
+          const sorted = sameClass.sort((a: Result, b: Result) => (b.score || 0) - (a.score || 0))
+          const idx = sorted.findIndex((r: Result) => r._id === selected._id)
+          setRankInfo({ rank: idx >= 0 ? idx + 1 : sameClass.length, total: sameClass.length })
+        } else { setRankInfo(null) }
+      } catch { setRankInfo(null) }
+    }
+    compute()
+  }, [selected])
 
   const toggleAnnounce = async (quizId: string, current: boolean|undefined) => {
     setWorking(quizId)
@@ -170,7 +217,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
               </thead>
               <tbody>
                 {results.map(r => (
-                  <tr key={r._id} className="border-b">
+                  <tr key={r._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={()=>setSelected(r)}>
                     <td className="p-2">{r.studentName || r.student?.fullName}</td>
                     <td className="p-2">{r.studentGrNumber || r.student?.grNumber}</td>
                     <td className="p-2">{r.studentRollNumber || ''}</td>
@@ -179,7 +226,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                     <td className="p-2">{r.score}</td>
                     <td className="p-2">{new Date(r.submittedAt || r._createdAt || '').toLocaleString()}</td>
                     <td className="p-2">
-                      <button onClick={()=>deleteOne(r._id)} disabled={working===r._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14}/> {working===r._id ? '...' : 'Delete'}</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); deleteOne(r._id) }} disabled={working===r._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14}/> {working===r._id ? '...' : 'Delete'}</button>
                     </td>
                   </tr>
                 ))}
@@ -188,6 +235,90 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           </div>
         )}
       </div>
+      {selected && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-5 max-h-[85vh] overflow-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-lg font-bold">{selected.quiz?.title}</h4>
+              <button onClick={()=>setSelected(null)} className="px-2 py-1 rounded border">Close</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div>
+                <div className="text-gray-500">Student</div>
+                <div className="font-semibold">{selected.studentName || selected.student?.fullName || '-'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">GR</div>
+                <div className="font-semibold">{selected.studentGrNumber || selected.student?.grNumber || '-'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Class</div>
+                <div className="font-semibold">{selected.className || selected.student?.admissionFor || '-'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Email</div>
+                <div className="font-semibold">{selected.studentEmail || '-'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Subject</div>
+                <div className="font-semibold">{selected.quiz?.subject || '-'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Total Questions</div>
+                <div className="font-semibold">{selected.quiz?.totalQuestions ?? (Array.isArray(selected.answers) ? selected.answers.length : '-')}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Score</div>
+                <div className="font-semibold">{selected.score}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Submitted</div>
+                <div className="font-semibold">{new Date(selected.submittedAt || selected._createdAt || '').toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Percentage</div>
+                <div className="font-semibold">{percent != null ? `${percent}%` : '-'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Grade</div>
+                <div className="font-semibold">{grade || '-'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Class Position</div>
+                <div className="font-semibold">{rankInfo ? `${rankInfo.rank} of ${rankInfo.total}` : '-'}</div>
+              </div>
+            </div>
+            {quizDetail?.questions?.length ? (
+              <div className="mt-4">
+                <h5 className="font-semibold mb-2">Question-wise Details</h5>
+                <div className="space-y-3">
+                  {(selected.answers || []).map((_, idx: number) => {
+                    const origIdx = Array.isArray(selected.questionOrder) ? Number(selected.questionOrder[idx]) : idx
+                    const baseQ = quizDetail.questions[origIdx]
+                    if (!baseQ) return null
+                    const chosen = Number(selected.answers?.[idx])
+                    const correct = Number(baseQ.correctIndex)
+                    const isCorrect = chosen === correct
+                    return (
+                      <div key={idx} className={`border rounded p-3 ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="font-medium">Q{idx+1}. {baseQ.question}</div>
+                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                          {baseQ.options.map((opt: string, oi: number) => (
+                            <div key={oi} className={`px-2 py-1 rounded border ${oi===correct ? 'border-emerald-400 bg-emerald-100' : oi===chosen ? 'border-amber-400 bg-amber-100' : 'border-gray-200 bg-white'}`}>
+                              {String.fromCharCode(65+oi)}. {opt}
+                              {oi===correct ? ' (Correct)' : oi===chosen ? ' (Chosen)' : ''}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

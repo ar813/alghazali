@@ -16,6 +16,7 @@ type Result = {
   score: number
   submittedAt?: string
   _createdAt?: string
+  questionOrder?: number[]
 }
 
 const StudentResults = ({ studentId }: { studentId: string }) => {
@@ -185,15 +186,18 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
               <div className="mt-4">
                 <h5 className="font-semibold mb-2">Question-wise Details</h5>
                 <div className="space-y-3">
-                  {quizDetail.questions.slice(0, selected.answers?.length || quizDetail.questions.length).map((q: any, idx: number) => {
+                  {(selected.answers || []).map((_, idx: number) => {
+                    const origIdx = Array.isArray(selected.questionOrder) ? Number(selected.questionOrder[idx]) : idx
+                    const baseQ = quizDetail.questions[origIdx]
+                    if (!baseQ) return null
                     const chosen = Number(selected.answers?.[idx])
-                    const correct = Number(q.correctIndex)
+                    const correct = Number(baseQ.correctIndex)
                     const isCorrect = chosen === correct
                     return (
                       <div key={idx} className={`border rounded p-3 ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                        <div className="font-medium">Q{idx+1}. {q.question}</div>
+                        <div className="font-medium">Q{idx+1}. {baseQ.question}</div>
                         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                          {q.options.map((opt: string, oi: number) => (
+                          {baseQ.options.map((opt: string, oi: number) => (
                             <div key={oi} className={`px-2 py-1 rounded border ${oi===correct ? 'border-emerald-400 bg-emerald-100' : oi===chosen ? 'border-amber-400 bg-amber-100' : 'border-gray-200 bg-white'}`}>
                               {String.fromCharCode(65+oi)}. {opt}
                               {oi===correct ? ' (Correct)' : oi===chosen ? ' (Your choice)' : ''}

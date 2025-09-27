@@ -19,6 +19,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [answers, setAnswers] = useState<number[]>([])
   const [orderedQuestions, setOrderedQuestions] = useState<Quiz['questions']>([])
+  const [questionOrder, setQuestionOrder] = useState<number[]>([])
   const [current, setCurrent] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState<boolean>(false)
@@ -57,6 +58,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
             sequence.push(mod === 0 ? 'easy' : mod === 1 ? 'medium' : 'hard')
           }
           const out: Quiz['questions'] = []
+          const order: number[] = []
           for (const slot of sequence) {
             let picked: any = null
             if (slot === 'easy' && easy.length) picked = easy.shift()
@@ -67,16 +69,26 @@ export default function QuizPage({ params }: { params: { id: string } }) {
               const pools = [easy, med, hard].filter(p => p.length)
               if (pools.length) picked = pools[Math.floor(Math.random()*pools.length)].shift()
             }
-            if (picked) out.push(picked)
+            if (picked) {
+              out.push(picked)
+              const idx = qs.indexOf(picked)
+              order.push(idx >= 0 ? idx : out.length - 1)
+            }
             if (out.length >= limit) break
           }
           // If still short due to empty pools, pull any leftovers randomly until limit
           if (out.length < limit) {
             const leftovers = [...easy, ...med, ...hard].sort(() => Math.random() - 0.5)
-            while (out.length < limit && leftovers.length) out.push(leftovers.shift() as any)
+            while (out.length < limit && leftovers.length) {
+              const p = leftovers.shift() as any
+              out.push(p)
+              const idx = qs.indexOf(p)
+              order.push(idx >= 0 ? idx : out.length - 1)
+            }
           }
           setOrderedQuestions(out)
           setAnswers(new Array(out.length).fill(-1))
+          setQuestionOrder(order)
           setCurrent(0)
           // Setup countdown initial value. Timer will start after user clicks Continue.
           if (qz.durationMinutes && qz.durationMinutes > 0) {
@@ -133,7 +145,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch('/api/quiz-results', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quizId: id, studentId: sid, answers }) })
+      const res = await fetch('/api/quiz-results', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quizId: id, studentId: sid, answers, questionOrder }) })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to submit')
       setSubmitted(true)
@@ -188,22 +200,22 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   return (
     <div className="min-h-screen bg-white">
       {/* Sticky, stylish Header */}
-      <header className="sticky top-0 bg-white/80 backdrop-blur z-30 border-b">
+      <header className="sticky top-0 bg-white/90 backdrop-blur z-30 border-b">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-6 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-sm"/>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 truncate">{quiz.title}</h1>
+          <div className="min-w-0 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">Q</div>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-extrabold text-gray-900 truncate">{quiz.title}</h1>
+              <div className="text-xs sm:text-sm text-gray-600">Subject: {quiz.subject}</div>
             </div>
-            <div className="text-xs sm:text-sm text-gray-600">Subject: {quiz.subject}</div>
           </div>
           {typeof timeLeft === 'number' && started && !submitted && (
-            <div className="text-sm font-semibold text-gray-900 bg-gray-100 px-2 py-1 rounded">
+            <div className="text-sm font-semibold text-gray-900 bg-gray-100 px-2 py-1 rounded shadow-sm">
               ⏱ {Math.floor(timeLeft/60).toString().padStart(2,'0')}:{(timeLeft%60).toString().padStart(2,'0')}
             </div>
           )}
         </div>
-        <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"/>
+        <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"/>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
@@ -255,11 +267,16 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         {submitted ? (
             <div className="w-full max-w-2xl">
               <div className="border rounded-2xl p-6 sm:p-8 bg-white shadow-lg text-center">
-                <div className="text-2xl font-bold text-gray-900 mb-2">Quiz Submitted</div>
-                <div className="text-gray-700">{timeUp ? 'Time up. Your answers have been submitted.' : 'Quiz submitted. Please wait until results are announced.'}</div>
-                <div className="mt-5">
-                  <button onClick={() => (pushToast('Returning to dashboard...', 'info'), router.push('/student-portal'))} className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded shadow inline-flex items-center gap-2">
-                    Go to Dashboard
+                <div className="mx-auto mb-3 w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl">✓</div>
+                <div className="text-2xl font-extrabold text-gray-900 mb-1">Assessment Complete!</div>
+                <div className="text-gray-700">You are doing great! Results will be announced soon.</div>
+                <div className="text-gray-500 text-sm mt-1">{timeUp ? 'Time up. Your answers have been submitted.' : 'Your submission has been recorded.'}</div>
+                <div className="mt-5 flex items-center justify-center gap-3">
+                  <button onClick={()=>{ try { localStorage.removeItem('studentSession'); localStorage.removeItem('studentId') } catch {}; router.push('/student-portal') }} className="px-4 py-2 border rounded inline-flex items-center gap-2">
+                    Logout
+                  </button>
+                  <button onClick={() => router.push('/student-portal')} className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow inline-flex items-center gap-2">
+                    Go To Dashboard
                   </button>
                 </div>
               </div>

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const params: Record<string, any> = { limit }
     let query = `*[_type == "quizResult"] | order(coalesce(submittedAt, _createdAt) desc) [0...$limit]{
       _id, quiz->{_id, title, subject, resultsAnnounced, 'totalQuestions': coalesce(questionLimit, count(questions))}, student->{_id, fullName, grNumber, admissionFor}, answers, score, submittedAt, _createdAt,
-      studentName, studentGrNumber, studentRollNumber, className, studentEmail
+      studentName, studentGrNumber, studentRollNumber, className, studentEmail, questionOrder
     }`
 
     if (quizId || studentId) {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       if (studentId) { whereParts.push('student._ref == $studentId'); params.studentId = studentId }
       query = `*[$where] | order(coalesce(submittedAt, _createdAt) desc) [0...$limit]{
         _id, quiz->{_id, title, subject, resultsAnnounced, 'totalQuestions': coalesce(questionLimit, count(questions))}, student->{_id, fullName, grNumber, admissionFor}, answers, score, submittedAt, _createdAt,
-        studentName, studentGrNumber, studentRollNumber, className, studentEmail
+        studentName, studentGrNumber, studentRollNumber, className, studentEmail, questionOrder
       }`.replace('$where', whereParts.join(' && '))
     }
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
     const body = await req.json()
-    const { quizId, studentId, answers } = body || {}
+    const { quizId, studentId, answers, questionOrder } = body || {}
     if (!quizId || !studentId || !Array.isArray(answers)) {
       return NextResponse.json({ ok: false, error: 'quizId, studentId and answers[] are required' }, { status: 400 })
     }
@@ -51,14 +51,18 @@ export async function POST(req: NextRequest) {
     // Fetch quiz to compute score
     const quiz = await serverClient.fetch(`*[_type=="quiz" && _id == $id][0]{ questions[]{ correctIndex } }`, { id: quizId }) as { questions?: { correctIndex: number }[] } | null
     const correct = (quiz?.questions || []).map(q => q.correctIndex)
+    // Use questionOrder mapping if provided to align randomized order with original question indices
+    const order: number[] | null = Array.isArray(questionOrder) ? questionOrder.map((x: any) => Number(x)) : null
     let score = 0
     let totalAnswered = 0
-    const len = Math.min(correct.length, answers.length)
+    const len = Math.min(answers.length, order ? order.length : correct.length)
     for (let i = 0; i < len; i++) {
       const a = Number(answers[i])
       if (a >= 0) {
         totalAnswered++
-        if (a === Number(correct[i])) score++
+        const origIdx = order ? order[i] : i
+        const corr = Number(correct[origIdx] ?? -1)
+        if (a === corr) score++
       }
     }
 
@@ -77,6 +81,7 @@ export async function POST(req: NextRequest) {
       studentRollNumber: student?.rollNumber || undefined,
       className: student?.admissionFor || undefined,
       studentEmail: student?.email || undefined,
+      questionOrder: order || undefined,
     })
 
     return NextResponse.json({ ok: true, id: doc._id, score, total: totalAnswered })

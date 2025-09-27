@@ -31,6 +31,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const [editing, setEditing] = useState<Quiz | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editDraft, setEditDraft] = useState<any>(null)
+  const genId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? (crypto as any).randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,8)}`)
 
   const classOptions = useMemo(() => Array.from(new Set(students.map(s => s.admissionFor).filter(Boolean))).sort() as string[], [students])
 
@@ -51,11 +52,11 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   }, [onLoadingChange])
 
   type TargetType = 'all'|'class'|'student'
-  const [form, setForm] = useState<{ title: string; subject: string; targetType: TargetType; className?: string; studentId?: string; durationMinutes?: number | '' ; questionLimit?: number | '' ; questions: { question: string; options: string[]; correctIndex: number; difficulty?: 'easy'|'medium'|'hard' }[] }>({
-    title: '', subject: '', targetType: 'all', className: '', studentId: '', durationMinutes: '', questionLimit: '', questions: [ { question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' } ]
+  const [form, setForm] = useState<{ title: string; subject: string; targetType: TargetType; className?: string; studentId?: string; durationMinutes?: number | '' ; questionLimit?: number | '' ; questions: ({ _key: string; question: string; options: string[]; correctIndex: number; difficulty?: 'easy'|'medium'|'hard' })[] }>({
+    title: '', subject: '', targetType: 'all', className: '', studentId: '', durationMinutes: '', questionLimit: '', questions: [ { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' } ]
   })
 
-  const addQuestion = () => setForm(f => ({ ...f, questions: [...f.questions, { question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' }] }))
+  const addQuestion = () => setForm(f => ({ ...f, questions: [...f.questions, { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' }] }))
   const updateQuestion = (idx: number, patch: Partial<{ question: string; options: string[]; correctIndex: number; difficulty?: 'easy'|'medium'|'hard' }>) => {
     setForm(f => ({ ...f, questions: f.questions.map((q, i) => i===idx ? { ...q, ...patch } : q) }))
   }
@@ -84,7 +85,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
       const listJson = await list.json()
       if (listJson?.ok) setItems(listJson.data)
       // reset form
-      setForm({ title: '', subject: '', targetType: 'all', className: '', studentId: '', durationMinutes: '', questionLimit: '', questions: [ { question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' } ] })
+      setForm({ title: '', subject: '', targetType: 'all', className: '', studentId: '', durationMinutes: '', questionLimit: '', questions: [ { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' } ] })
     } catch (e: any) {
       alert(e?.message || 'Failed to create quiz')
     } finally { setSaving(false) }
@@ -108,8 +109,8 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
           <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Plus size={18}/> Create Quiz</h3>
         </div>
     {showEditModal && editDraft && (
-      <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-4">
+      <div className="fixed inset-0 bg-black/30 flex items-center justify-center sm:items-center z-50 p-2 sm:p-4">
+        <div className="bg-white rounded-none sm:rounded-xl shadow-xl w-full max-w-2xl p-4 sm:p-5 max-h-[95vh] sm:max-h-[85vh] overflow-auto">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-semibold">Edit Quiz</h4>
             <button onClick={()=>setShowEditModal(false)} className="p-1 text-gray-500">✕</button>
@@ -159,10 +160,49 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
             )}
           </div>
           <div className="mt-4">
-            <div className="flex items-center justify-between mb-2"><h4 className="font-semibold">Questions</h4><button onClick={()=>setEditDraft((d:any)=>({ ...d, questions: [...(d.questions||[]), { question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' }] }))} className="text-sm px-2 py-1 border rounded inline-flex items-center gap-1"><Plus size={14}/> Add</button></div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold">Questions</h4>
+              <div className="flex items-center gap-2">
+                <button onClick={()=>setEditDraft((d:any)=>({ ...d, questions: [...(d.questions||[]), { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' }] }))} className="text-sm px-2 py-1 border rounded inline-flex items-center gap-1"><Plus size={14}/> Add</button>
+                <button onClick={()=>{
+                  try {
+                    const data = JSON.stringify((editDraft.questions||[]).map((q:any)=>({ question:q.question, options:q.options, correctIndex:q.correctIndex, difficulty:q.difficulty||'easy' })), null, 2)
+                    const blob = new Blob([data], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a'); a.href = url; a.download = `quiz_questions_${(editDraft.title||'').replace(/\s+/g,'_')||'untitled'}.json`; a.click(); URL.revokeObjectURL(url)
+                  } catch { alert('Failed to export questions') }
+                }} className="text-sm px-2 py-1 border rounded">Export</button>
+                <label className="text-sm px-2 py-1 border rounded cursor-pointer">
+                  Import
+                  <input type="file" accept=".json,.csv" className="hidden" onChange={async (e)=>{
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const text = await file.text()
+                    let imported: any[] = []
+                    try {
+                      if (file.name.endsWith('.json')) {
+                        imported = JSON.parse(text)
+                      } else {
+                        // very simple CSV: question, option1, option2, option3, option4, correctIndex (0-3), difficulty
+                        imported = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(line=>{
+                          const parts = line.split(',').map(p=>p.trim())
+                          const [question, o1, o2, o3, o4, idx, diff] = parts
+                          return { question, options: [o1,o2,o3,o4], correctIndex: Number(idx||0), difficulty: (diff as any)||'easy' }
+                        })
+                      }
+                      if (!Array.isArray(imported) || imported.length===0) throw new Error('No questions found')
+                      const normalized = imported.map((q:any)=>({ _key: genId(), question: String(q.question||''), options: Array.isArray(q.options)? q.options.slice(0,4).map((s:any)=>String(s||'')) : [String(q.o1||''),String(q.o2||''),String(q.o3||''),String(q.o4||'')], correctIndex: Math.max(0, Math.min(3, Number(q.correctIndex||0))), difficulty: ['easy','medium','hard'].includes((q.difficulty||'easy')) ? q.difficulty : 'easy' }))
+                      setEditDraft((d:any)=>({ ...d, questions: normalized }))
+                    } catch (err:any) {
+                      alert(err?.message || 'Failed to import')
+                    } finally { (e.target as HTMLInputElement).value = '' }
+                  }} />
+                </label>
+              </div>
+            </div>
             <div className="max-h-80 overflow-auto space-y-3 pr-1">
               {(editDraft.questions || []).map((q:any, idx:number) => (
-                <div key={idx} className="border rounded p-3 bg-gray-50">
+                <div key={q._key || idx} className="border rounded p-3 bg-gray-50">
                   <label className="block text-sm mb-1">Question {idx+1}</label>
                   <input value={q.question} onChange={e=>setEditDraft((d:any)=>({ ...d, questions: d.questions.map((qq:any,i:number)=> i===idx ? { ...qq, question: e.target.value } : qq) }))} className="w-full border rounded px-3 py-2 mb-2" />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -240,10 +280,48 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
           )}
         </div>
         <div className="mt-4">
-          <div className="flex items-center justify-between mb-2"><h4 className="font-semibold">Questions</h4><button onClick={addQuestion} className="text-sm px-2 py-1 border rounded inline-flex items-center gap-1"><Plus size={14}/> Add</button></div>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold">Questions</h4>
+            <div className="flex items-center gap-2">
+              <button onClick={addQuestion} className="text-sm px-2 py-1 border rounded inline-flex items-center gap-1"><Plus size={14}/> Add</button>
+              <button onClick={()=>{
+                try {
+                  const data = JSON.stringify(form.questions.map(q=>({ question:q.question, options:q.options, correctIndex:q.correctIndex, difficulty:q.difficulty||'easy' })), null, 2)
+                  const blob = new Blob([data], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a'); a.href = url; a.download = `quiz_questions_${(form.title||'').replace(/\s+/g,'_')||'untitled'}.json`; a.click(); URL.revokeObjectURL(url)
+                } catch { alert('Failed to export questions') }
+              }} className="text-sm px-2 py-1 border rounded">Export</button>
+              <label className="text-sm px-2 py-1 border rounded cursor-pointer">
+                Import
+                <input type="file" accept=".json,.csv" className="hidden" onChange={async (e)=>{
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const text = await file.text()
+                  let imported: any[] = []
+                  try {
+                    if (file.name.endsWith('.json')) {
+                      imported = JSON.parse(text)
+                    } else {
+                      imported = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(line=>{
+                        const parts = line.split(',').map(p=>p.trim())
+                        const [question, o1, o2, o3, o4, idx, diff] = parts
+                        return { question, options: [o1,o2,o3,o4], correctIndex: Number(idx||0), difficulty: (diff as any)||'easy' }
+                      })
+                    }
+                    if (!Array.isArray(imported) || imported.length===0) throw new Error('No questions found')
+                    const normalized = imported.map((q:any)=>({ _key: genId(), question: String(q.question||''), options: Array.isArray(q.options)? q.options.slice(0,4).map((s:any)=>String(s||'')) : [String(q.o1||''),String(q.o2||''),String(q.o3||''),String(q.o4||'')], correctIndex: Math.max(0, Math.min(3, Number(q.correctIndex||0))), difficulty: ['easy','medium','hard'].includes((q.difficulty||'easy')) ? q.difficulty : 'easy' }))
+                    setForm(f=>({ ...f, questions: normalized }))
+                  } catch (err:any) {
+                    alert(err?.message || 'Failed to import')
+                  } finally { (e.target as HTMLInputElement).value = '' }
+                }} />
+              </label>
+            </div>
+          </div>
           <div className="space-y-4">
             {form.questions.map((q, idx) => (
-              <div key={idx} className="border rounded p-3 bg-gray-50">
+              <div key={q._key || idx} className="border rounded p-3 bg-gray-50">
                 <label className="block text-sm mb-1">Question {idx+1}</label>
                 <input value={q.question} onChange={e=>updateQuestion(idx, { question: e.target.value })} className="w-full border rounded px-3 py-2 mb-2" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

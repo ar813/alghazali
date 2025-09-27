@@ -13,6 +13,7 @@ type Quiz = {
   resultsAnnounced?: boolean
   createdAt?: string
   _createdAt?: string
+  questions?: { difficulty?: 'easy'|'medium'|'hard' }[]
 }
 
 type Result = { _id: string; score: number; quiz?: { _id: string }; student?: { _id: string } }
@@ -50,6 +51,67 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
 
   useEffect(() => { load() }, [studentId, className])
 
+  // Seeded RNG for per-student variance and fairness
+  const seededShuffle = (arr: Quiz[], seedStr: string) => {
+    const h = (() => {
+      let h = 2166136261 >>> 0
+      for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0 }
+      return h >>> 0
+    })()
+    let t = h
+    const rand = () => {
+      t += 0x6D2B79F5
+      let r = Math.imul(t ^ (t >>> 15), 1 | t)
+      r ^= r + Math.imul(r ^ (r >>> 7), 61 | r)
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+    }
+    const copy = [...arr]
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1))
+      ;[copy[i], copy[j]] = [copy[j], copy[i]]
+    }
+    return copy
+  }
+
+  const randomized = useMemo(() => {
+    if (!quizzes || quizzes.length === 0) return [] as Quiz[]
+    // derive predominant difficulty for each quiz
+    const bucket: Record<'easy'|'medium'|'hard', Quiz[]> = { easy: [], medium: [], hard: [] }
+    const seed = `${studentId}|${new Date().toDateString()}`
+    const withLevels = quizzes.map(q => {
+      const qs = q.questions || []
+      const counts: Record<'easy'|'medium'|'hard', number> = { easy: 0, medium: 0, hard: 0 }
+      for (const qq of qs) {
+        const key: 'easy'|'medium'|'hard' = (qq?.difficulty === 'medium' ? 'medium' : qq?.difficulty === 'hard' ? 'hard' : 'easy')
+        counts[key]++
+      }
+      const level = counts.hard > counts.medium && counts.hard > counts.easy ? 'hard' : counts.medium > counts.easy ? 'medium' : 'easy'
+      return { q, level: level as 'easy'|'medium'|'hard' }
+    })
+    for (const item of withLevels) bucket[item.level].push(item.q)
+    // seeded shuffle within buckets
+    const e = seededShuffle(bucket.easy, seed + ':e')
+    const m = seededShuffle(bucket.medium, seed + ':m')
+    const h = seededShuffle(bucket.hard, seed + ':h')
+    // interleave E->M->H pattern for balanced distribution
+    const out: Quiz[] = []
+    let i = 0
+    while (e.length || m.length || h.length) {
+      const mod = i % 3
+      if (mod === 0 && e.length) out.push(e.shift()!)
+      else if (mod === 1 && m.length) out.push(m.shift()!)
+      else if (mod === 2 && h.length) out.push(h.shift()!)
+      else {
+        const pools = [e, m, h].filter(p => p.length)
+        if (!pools.length) break
+        const idx = Math.floor((i + quizzes.length) % pools.length)
+        out.push(pools[idx].shift()!)
+      }
+      i++
+    }
+    return out
+  }, [quizzes, studentId])
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6">
@@ -70,7 +132,7 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
           <div className="text-sm text-gray-500">No quizzes available.</div>
         ) : (
           <div className="space-y-3">
-            {quizzes.map(q => (
+            {randomized.map(q => (
               <div key={q._id} className="p-4 rounded-xl border bg-white/70">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

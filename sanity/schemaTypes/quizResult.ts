@@ -16,5 +16,6 @@ export default defineType({
     defineField({ name: 'answers', title: 'Answers (selected index per question)', type: 'array', of: [{ type: 'number' }], validation: r => r.min(1) }),
     defineField({ name: 'score', title: 'Score', type: 'number', validation: r => r.min(0) }),
     defineField({ name: 'submittedAt', title: 'Submitted At', type: 'datetime', initialValue: () => new Date().toISOString() }),
+    defineField({ name: 'questionOrder', title: 'Question order mapping (student index -> original index)', type: 'array', of: [{ type: 'number' }] }),
   ],
 })
