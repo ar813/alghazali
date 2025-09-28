@@ -184,14 +184,41 @@ export default function ImageCropper({ src, aspect: _aspect = 0, onCancel, onCro
       return
     }
 
-    // Map selection from container coords to image's natural size
-    const scaleX = img.naturalWidth / container.clientWidth
-    const scaleY = img.naturalHeight / container.clientHeight
+    // Map selection from container coords to the image's rendered box (object-contain)
+    const contW = container.clientWidth
+    const contH = container.clientHeight
+    const natW = img.naturalWidth
+    const natH = img.naturalHeight
+    const containerRatio = contW / contH
+    const imageRatio = natW / natH
+    let renderW = 0, renderH = 0, offsetX = 0, offsetY = 0
+    if (imageRatio > containerRatio) {
+      // limited by width
+      renderW = contW
+      renderH = contW / imageRatio
+      offsetX = 0
+      offsetY = (contH - renderH) / 2
+    } else {
+      // limited by height
+      renderH = contH
+      renderW = contH * imageRatio
+      offsetY = 0
+      offsetX = (contW - renderW) / 2
+    }
 
-    const sx = sel.x * scaleX
-    const sy = sel.y * scaleY
-    const sw = Math.max(1, sel.w * scaleX)
-    const sh = Math.max(1, sel.h * scaleY)
+    // Selection relative to rendered image rect
+    const relX = Math.max(0, Math.min(sel.x - offsetX, renderW))
+    const relY = Math.max(0, Math.min(sel.y - offsetY, renderH))
+    const relW = Math.max(1, Math.min(sel.w, renderW - relX))
+    const relH = Math.max(1, Math.min(sel.h, renderH - relY))
+
+    const scaleX = natW / renderW
+    const scaleY = natH / renderH
+
+    const sx = Math.round(relX * scaleX)
+    const sy = Math.round(relY * scaleY)
+    const sw = Math.max(1, Math.round(relW * scaleX))
+    const sh = Math.max(1, Math.round(relH * scaleY))
 
     const canvas = document.createElement('canvas')
     canvas.width = Math.round(sw)

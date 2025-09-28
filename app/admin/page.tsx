@@ -49,7 +49,6 @@ const AdminPage = () => {
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                     <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading...</p>
                 </div>
             </div>
         );
@@ -60,9 +59,9 @@ const AdminPage = () => {
             <NavBar />
             {/* Top non-blocking progress bar for child loading */}
             <TopLoader loading={childLoading} />
-            <AdminPortal isBlurred={!isAuthenticated} onLoadingChange={setChildLoading} />
+            {isAuthenticated && <AdminPortal onLoadingChange={setChildLoading} />}
             {/* <Footer /> */}
-            {!isAuthenticated && <Popup onLoginSuccess={() => setIsAuthenticated(true)} />}
+            {!isAuthenticated && <Popup onLoginSuccess={() => setIsAuthenticated(true)} />}        
         </div>
     );
 };
@@ -75,7 +74,6 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>('')
-//   const router = useRouter();
 
   const adminUsers = [
     { username: 'arsalan', email: 'arsalan@example.com', password: 'admin123' },
@@ -115,11 +113,10 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
   const handleClose = () => {
     window.location.href = "/"
-    // router.push('/');
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Admin Login">
+    <div className="fixed inset-0 bg-white z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Admin Login">
       <div className="relative bg-white sm:rounded-2xl rounded-none shadow-xl p-6 sm:p-8 w-full sm:w-[90%] sm:max-w-md h-full sm:h-auto">
         {/* Close Button */}
         <button

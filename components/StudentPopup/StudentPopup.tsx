@@ -22,8 +22,8 @@ const StudentPopup = ({ onSubmit }: { onSubmit: any }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="relative bg-white rounded-2xl shadow-xl p-8 w-[90%] max-w-md">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="relative bg-white/80 backdrop-blur-xl border border-white/40 rounded-2xl shadow-xl p-8 w-[90%] max-w-md">
         {/* Close Button */}
         <button
           onClick={handleClose}

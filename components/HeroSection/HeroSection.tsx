@@ -1,11 +1,28 @@
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Megaphone } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
 const HeroSection = () => {
     const [mounted, setMounted] = useState(false)
+    const [headlineTitle, setHeadlineTitle] = useState<string>('')
+    const [headlineContent, setHeadlineContent] = useState<string>('')
 
     useEffect(() => {
         setMounted(true)
+    }, [])
+
+    useEffect(() => {
+        // fetch most-recent headline notice (title + content)
+        (async () => {
+            try {
+                const res = await fetch('/api/notices?headline=true&limit=1', { cache: 'no-store' })
+                const json = await res.json()
+                const item = json?.data?.[0]
+                if (item) {
+                    setHeadlineTitle(item.title || '')
+                    setHeadlineContent(item.content || '')
+                }
+            } catch {}
+        })()
     }, [])
 
     return (
@@ -16,6 +33,36 @@ const HeroSection = () => {
                 <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-400 to-cyan-600 rounded-full opacity-20 blur-3xl animate-pulse delay-1000" />
                 <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full opacity-20 blur-3xl animate-pulse delay-2000 transform -translate-x-1/2 -translate-y-1/2" />
             </div>
+
+            {/* Headline (static Title + animated Content) */}
+            {(headlineTitle || headlineContent) && (
+                <div className="absolute top-0 left-0 right-0 z-20">
+                    <div className="mx-auto max-w-6xl px-3 sm:px-4 pt-4">
+                        <div className="relative rounded-2xl sm:rounded-full border border-rose-200/70 bg-rose-50/80 backdrop-blur shadow-md">
+                            <div className="grid grid-cols-[auto,1fr] items-center">
+                                {/* Static Title badge */}
+                                <div className="flex items-center gap-2 pl-3 pr-3 sm:pl-4 sm:pr-4 py-2 text-rose-800 whitespace-nowrap">
+                                    <Megaphone className="shrink-0" size={16} />
+                                    <span className="text-xs sm:text-sm md:text-base font-semibold truncate max-w-[45vw] sm:max-w-[30vw]">
+                                        {headlineTitle || 'Headline'}
+                                    </span>
+                                </div>
+                                {/* Animated Content ticker */}
+                                <div className="relative overflow-hidden">
+                                    {/* edge fades to avoid sharp cut */}
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 w-6 sm:w-10 bg-gradient-to-r from-rose-50/80 to-transparent" />
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 w-6 sm:w-10 bg-gradient-to-l from-rose-50/80 to-transparent" />
+                                    <div className="marquee-track whitespace-nowrap text-rose-800/90 text-xs sm:text-sm md:text-base py-2 will-change-transform">
+                                        <span className="mx-6 sm:mx-10 opacity-90">{headlineContent || '—'}</span>
+                                        {/* duplicate for seamless loop */}
+                                        <span className="mx-6 sm:mx-10 opacity-90">{headlineContent || '—'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Content (No Box) */}
             <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
@@ -30,6 +77,22 @@ const HeroSection = () => {
                     @keyframes hero_headline_in {
                         0% { transform: translateX(120%); opacity: 0; }
                         100% { transform: translateX(0); opacity: 1; }
+                    }
+                    /* Seamless marquee: two copies inside .marquee-track */
+                    @keyframes marquee {
+                        0% { transform: translateX(0); }
+                        100% { transform: translateX(-50%); }
+                    }
+                    :global(.marquee-track) {
+                        display: inline-flex;
+                        align-items: center;
+                        animation: marquee 28s linear infinite;
+                    }
+                    @media (max-width: 640px) {
+                        :global(.marquee-track) { animation-duration: 34s; }
+                    }
+                    @media (prefers-reduced-motion: reduce) {
+                        :global(.marquee-track) { animation: none; padding-left: 0; }
                     }
                 `}</style>
 

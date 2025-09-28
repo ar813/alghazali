@@ -23,6 +23,8 @@ export const getAllStudentsQuery = `*[_type == "student"]{
   guardianContact,
   guardianCnic,
   guardianRelation,
+  issueDate,
+  expiryDate,
   "photoUrl": photo.asset->url
 }`
 
@@ -69,5 +71,7 @@ export const getStudentByIdentifiers = (cnicOrBform: string, grNumber: string) =
   guardianContact,
   guardianCnic,
   guardianRelation,
+  issueDate,
+  expiryDate,
   "photoUrl": photo.asset->url
 }`

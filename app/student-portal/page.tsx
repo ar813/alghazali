@@ -193,8 +193,8 @@ export default function StylishStudentPortal() {
     <div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-10 px-4 sm:px-0">
-          <div className="relative bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-sm mx-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 px-4 sm:px-0">
+          <div className="relative bg-white/80 backdrop-blur-xl border border-white/40 p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-sm mx-4">
 
             <button
               onClick={() => router.push('/')}

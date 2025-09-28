@@ -186,5 +186,16 @@ export default defineType({
         hotspot: true
       }
     }),
+    // 🪪 Card Dates
+    defineField({
+      name: 'issueDate',
+      title: 'Card Issue Date',
+      type: 'date'
+    }),
+    defineField({
+      name: 'expiryDate',
+      title: 'Card Expiry Date',
+      type: 'date'
+    }),
   ],
 })

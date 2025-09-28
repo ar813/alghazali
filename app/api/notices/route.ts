@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
     const className = searchParams.get('className') || undefined
     const limit = searchParams.get('limit') ? Math.min(1000, Number(searchParams.get('limit'))) : 50
     const eventsOnly = searchParams.get('events') === '1' || searchParams.get('events') === 'true'
+    const headlineOnly = searchParams.get('headline') === '1' || searchParams.get('headline') === 'true'
 
     // If no filters are provided, return ALL notices for admin/overview screens
     const params: Record<string, any> = { limit }
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     if (!className && !studentId) {
       let baseWhere = "_type == \"notice\""
       if (eventsOnly) baseWhere += " && isEvent == true"
+      if (headlineOnly) baseWhere += " && isHeadline == true"
       query = `*[${baseWhere}] | order(coalesce(createdAt, _createdAt) desc) [0...$limit]{
         _id,
         title,
@@ -24,6 +26,7 @@ export async function GET(req: NextRequest) {
         className,
         student->{ _id, fullName, grNumber, rollNumber, email, admissionFor },
         isEvent,
+        isHeadline,
         eventDate,
         eventType,
         createdAt,
@@ -35,6 +38,7 @@ export async function GET(req: NextRequest) {
       if (className) { conditions.push(`(targetType == 'class' && className == $className)`); params.className = className }
       if (studentId) { conditions.push(`(targetType == 'student' && defined(student) && student._ref == $studentId)`); params.studentId = studentId }
       if (eventsOnly) { whereParts.push(`isEvent == true`) }
+      if (headlineOnly) { whereParts.push(`isHeadline == true`) }
       whereParts.push(`(${conditions.join(' || ')})`)
       query = `*[$where] | order(coalesce(createdAt, _createdAt) desc) [0...$limit]{
         _id,
@@ -44,6 +48,7 @@ export async function GET(req: NextRequest) {
         className,
         student->{ _id, fullName, grNumber, rollNumber, email, admissionFor },
         isEvent,
+        isHeadline,
         eventDate,
         eventType,
         createdAt,
@@ -64,7 +69,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
     const body = await req.json()
-    const { title, content, targetType, className, studentId, sendEmail, isEvent, eventDate, eventType } = body || {}
+    const { title, content, targetType, className, studentId, sendEmail, isEvent, eventDate, eventType, isHeadline } = body || {}
     if (!title || !content || !targetType) {
       return NextResponse.json({ ok: false, error: 'title, content and targetType are required' }, { status: 400 })
     }
@@ -84,6 +89,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     }
     if (typeof isEvent === 'boolean') doc.isEvent = isEvent
+    if (typeof isHeadline === 'boolean') doc.isHeadline = isHeadline
     if (isEvent && eventDate) doc.eventDate = eventDate
     if (isEvent && eventType) doc.eventType = eventType
     if (targetType === 'student') {

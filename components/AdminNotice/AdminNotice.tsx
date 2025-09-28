@@ -29,9 +29,10 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
   const classOptions = useMemo(() => Array.from(new Set(students.map(s => s.admissionFor).filter(Boolean))).sort(), [students])
 
   type TargetType = 'all' | 'class' | 'student'
-  const [form, setForm] = useState<{ title: string; content: string; targetType: TargetType; className?: string; studentId?: string; isEvent: boolean; eventDate?: string; eventType?: string }>({
-    title: '', content: '', targetType: 'all', className: '', studentId: '', isEvent: false, eventDate: '', eventType: '',
+  const [form, setForm] = useState<{ title: string; content: string; targetType: TargetType; className?: string; studentId?: string; isEvent: boolean; eventDate?: string; eventType?: string; isHeadline?: boolean }>({
+    title: '', content: '', targetType: 'all', className: '', studentId: '', isEvent: false, eventDate: '', eventType: '', isHeadline: false,
   })
+  const [studentQuickFilter, setStudentQuickFilter] = useState('')
 
   const submit = async () => {
     if (!form.title.trim()) return showToast('Title is required', 'error')
@@ -50,11 +51,12 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
         isEvent: form.isEvent,
         eventDate: form.isEvent && form.eventDate ? new Date(form.eventDate).toISOString() : undefined,
         eventType: form.isEvent ? (form.eventType || 'General') : undefined,
+        isHeadline: !!form.isHeadline,
       }) })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to create notice')
       showToast('Notice created', 'success')
-      setForm({ title: '', content: '', targetType: 'all', className: '', studentId: '', isEvent: false, eventDate: '', eventType: '' })
+      setForm({ title: '', content: '', targetType: 'all', className: '', studentId: '', isEvent: false, eventDate: '', eventType: '', isHeadline: false })
     } catch (e: any) {
       showToast(e?.message || 'Failed to create notice', 'error')
     } finally { setSaving(false) }
@@ -95,14 +97,29 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
           {form.targetType === 'student' && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium mb-1">Student</label>
+              <input
+                value={studentQuickFilter}
+                onChange={e => setStudentQuickFilter(e.target.value)}
+                placeholder="Filter by Roll or GR"
+                className="w-full border rounded px-3 py-2 mb-2 text-sm"
+              />
               <select value={form.studentId} onChange={e => setForm({ ...form, studentId: e.target.value })} className="w-full border rounded px-3 py-2">
                 <option value="">Select Student</option>
-                {students.map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber} — Roll {s.rollNumber}</option>)}
+                {students
+                  .filter(s => {
+                    const q = studentQuickFilter.trim().toLowerCase();
+                    if (!q) return true;
+                    const roll = String((s as any).rollNumber || '').toLowerCase();
+                    const gr = String(s.grNumber || '').toLowerCase();
+                    return roll.includes(q) || gr.includes(q);
+                  })
+                  .map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber} — Roll {(s as any).rollNumber}</option>)}
               </select>
             </div>
           )}
           <div className="sm:col-span-2 flex flex-col gap-2">
             <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={form.isEvent} onChange={e => setForm({ ...form, isEvent: e.target.checked })} /> Make this an event</label>
+            <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={!!form.isHeadline} onChange={e => setForm({ ...form, isHeadline: e.target.checked })} /> Make it a Headline</label>
             {form.isEvent && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -188,6 +205,9 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
                     {n.isEvent && (
                       <span className="px-2 py-0.5 rounded-full text-xs border bg-amber-50 text-amber-700 border-amber-200">EVENT</span>
                     )}
+                    {n.isHeadline && (
+                      <span className="px-2 py-0.5 rounded-full text-xs border bg-rose-50 text-rose-700 border-rose-200">HEADLINE</span>
+                    )}
                   </div>
                   <span className="text-xs text-gray-500">{new Date(n.createdAt || n._createdAt).toLocaleString()}</span>
                 </div>
@@ -245,17 +265,19 @@ const EditModal = ({ notice, onClose, onSaved, students, classOptions }: { notic
   const [className, setClassName] = useState<string>(notice.className || '')
   const [studentId, setStudentId] = useState<string>(notice.student?._id || '')
   const [isEvent, setIsEvent] = useState<boolean>(!!notice.isEvent)
+  const [isHeadline, setIsHeadline] = useState<boolean>(!!notice.isHeadline)
   const [eventDate, setEventDate] = useState<string>(notice.eventDate ? new Date(notice.eventDate).toISOString().slice(0,16) : '')
   const [eventType, setEventType] = useState<string>(notice.eventType || '')
   const [saving, setSaving] = useState(false)
+  const [studentQuickFilter, setStudentQuickFilter] = useState('')
 
   const save = async () => {
     setSaving(true)
     try {
-      const res = await fetch('/api/notices', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: notice._id, title, content, targetType, className: className || undefined, studentId: studentId || undefined, isEvent, eventDate: isEvent && eventDate ? new Date(eventDate).toISOString() : undefined, eventType: isEvent ? (eventType || 'General') : undefined }) })
+      const res = await fetch('/api/notices', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: notice._id, title, content, targetType, className: className || undefined, studentId: studentId || undefined, isEvent, eventDate: isEvent && eventDate ? new Date(eventDate).toISOString() : undefined, eventType: isEvent ? (eventType || 'General') : undefined, isHeadline }) })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to update')
-      onSaved({ ...notice, title, content, targetType, className, student: studentId ? { _id: studentId, fullName: notice.student?.fullName || 'Student' } : null, isEvent, eventDate: isEvent ? (eventDate ? new Date(eventDate).toISOString() : null) : null, eventType: isEvent ? (eventType || 'General') : null })
+      onSaved({ ...notice, title, content, targetType, className, student: studentId ? { _id: studentId, fullName: notice.student?.fullName || 'Student' } : null, isEvent, eventDate: isEvent ? (eventDate ? new Date(eventDate).toISOString() : null) : null, eventType: isEvent ? (eventType || 'General') : null, isHeadline })
     } catch (_e) {
       // no-op basic error display for now
       alert('Failed to update notice')
@@ -299,16 +321,30 @@ const EditModal = ({ notice, onClose, onSaved, students, classOptions }: { notic
             {targetType==='student' && (
               <div className="col-span-2">
                 <label className="block text-sm mb-1">Student</label>
+                <input
+                  value={studentQuickFilter}
+                  onChange={e => setStudentQuickFilter(e.target.value)}
+                  placeholder="Filter by Roll or GR"
+                  className="w-full border rounded px-3 py-2 mb-2 text-sm"
+                />
                 <select value={studentId} onChange={e=>setStudentId(e.target.value)} className="w-full border rounded px-3 py-2">
                   <option value="">Select Student</option>
-                  {students.map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber} — Roll {s.rollNumber}</option>)}
+                  {students
+                    .filter(s => {
+                      const q = studentQuickFilter.trim().toLowerCase();
+                      if (!q) return true;
+                      const roll = String((s as any).rollNumber || '').toLowerCase();
+                      const gr = String(s.grNumber || '').toLowerCase();
+                      return roll.includes(q) || gr.includes(q);
+                    })
+                    .map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber} — Roll {(s as any).rollNumber}</option>)}
                 </select>
               </div>
             )}
           </div>
           <div className="space-y-2 mt-2">
             <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={isEvent} onChange={e=>setIsEvent(e.target.checked)} /> Make this an event</label>
-            {/* headline option removed */}
+            <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={isHeadline} onChange={e=>setIsHeadline(e.target.checked)} /> Make it a Headline</label>
             {isEvent && (
               <div className="grid grid-cols-2 gap-3">
                 <div>

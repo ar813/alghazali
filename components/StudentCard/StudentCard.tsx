@@ -34,15 +34,67 @@ export default function StudentCard({ student }: { student: Student }) {
   const [issue, setIssue] = useState<string>("");
   const [expiry, setExpiry] = useState<string>("");
 
-  // Read dates from AdminCards configuration (localStorage keys)
+  // Prefer dates from Sanity student document; fallback to AdminCards localStorage
   useEffect(() => {
+    const sanityIssue = (student as any)?.issueDate || '';
+    const sanityExpiry = (student as any)?.expiryDate || '';
+    if (sanityIssue) setIssue(sanityIssue);
+    if (sanityExpiry) setExpiry(sanityExpiry);
+    if (!sanityIssue || !sanityExpiry) {
+      try {
+        const i = localStorage.getItem('admin_card_issue') || '';
+        const e = localStorage.getItem('admin_card_expiry') || '';
+        if (!sanityIssue) setIssue(i);
+        if (!sanityExpiry) setExpiry(e);
+      } catch {}
+    }
+  }, [student]);
+
+  // Helpers for transparent QR
+  const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+
+  const toTransparentPng = (img: HTMLImageElement) => {
+    const w = img.naturalWidth || img.width; const h = img.naturalHeight || img.height;
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d'); if (!ctx) return '';
+    ctx.clearRect(0,0,w,h);
+    ctx.drawImage(img, 0, 0, w, h);
     try {
-      const i = localStorage.getItem('admin_card_issue') || '';
-      const e = localStorage.getItem('admin_card_expiry') || '';
-      setIssue(i);
-      setExpiry(e);
-    } catch {}
-  }, []);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const d = imageData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i+1], b = d[i+2];
+        if (r > 240 && g > 240 && b > 240) d[i+3] = 0;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      return canvas.toDataURL('image/png');
+    } catch { return ''; }
+  };
+
+  const QRPreview = ({ src, size = 80 }: { src: string; size?: number }) => {
+    const [out, setOut] = useState<string>('');
+    useEffect(() => {
+      let mounted = true;
+      (async () => {
+        try {
+          const img = await loadImage(src);
+          const data = toTransparentPng(img);
+          if (mounted) setOut(data || src);
+        } catch { if (mounted) setOut(src); }
+      })();
+      return () => { mounted = false };
+    }, [src]);
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={out || src} alt="QR" className="w-20 h-20 rounded border pointer-events-none select-none" style={{ width: size, height: size }} draggable={false} />
+    );
+  };
 
   const qrSrc = useMemo(() => getQrSrc(student, issue, expiry, 80), [student, issue, expiry]);
 
@@ -116,8 +168,7 @@ export default function StudentCard({ student }: { student: Student }) {
               <div className="mt-[116px] w-full text-[8px] text-[#231f55]">
                 {/* QR Code positioned exactly like AdminCards preview */}
                 <div className="absolute left-[50px] top-[116px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qrSrc} alt="QR" className="w-20 h-20 bg-white rounded border pointer-events-none select-none" draggable={false} />
+                  <QRPreview src={qrSrc} />
                 </div>
 
                 {/* Issue and Expiry dates formatted and positioned */}

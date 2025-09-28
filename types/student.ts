@@ -23,4 +23,6 @@ export type Student = {
     guardianCnic?: string
     guardianRelation?: string
     photoUrl?: string
+    issueDate?: string
+    expiryDate?: string
 }

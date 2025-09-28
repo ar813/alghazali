@@ -75,6 +75,23 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
     });
   }, [students, search, klass]);
 
+  // Sort: by class (ascending numeric if possible), then by roll number (ascending numeric)
+  const sorted = useMemo(() => {
+    const parseNum = (v?: string | number | null) => {
+      const n = parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10);
+      return isNaN(n) ? Number.MAX_SAFE_INTEGER : n;
+    };
+    const byClass = (a: Student, b: Student) => {
+      const ca = parseNum(a.admissionFor as any);
+      const cb = parseNum(b.admissionFor as any);
+      if (ca !== cb) return ca - cb;
+      const ra = parseNum(a.rollNumber as any);
+      const rb = parseNum(b.rollNumber as any);
+      return ra - rb;
+    };
+    return [...filtered].sort(byClass);
+  }, [filtered]);
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -89,7 +106,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
   };
   const clearSelection = () => setSelectedIds(new Set());
 
-  const toPrint = filtered.filter((s) => selectedIds.size === 0 || selectedIds.has(s._id!));
+  const toPrint = sorted.filter((s) => selectedIds.size === 0 || selectedIds.has(s._id!));
 
   const intToRoman = (value?: string) => {
     if (!value) return "";
@@ -107,7 +124,9 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
 
   const buildQrData = (s: Student) => {
     const dob = (s.dob || '').toString();
-    return `Name: ${s.fullName || ''}\nFather Name: ${s.fatherName || ''}\nRoll No: ${s.rollNumber || ''}\nGR NO: ${s.grNumber || ''}\nDOB: ${dob}\nIssue: ${issue || ''}\nExpiry: ${expiry || ''}\nPhone: ${s.phoneNumber || ''}`;
+    const iss = (s as any).issueDate || issue || '';
+    const exp = (s as any).expiryDate || expiry || '';
+    return `Name: ${s.fullName || ''}\nFather Name: ${s.fatherName || ''}\nRoll No: ${s.rollNumber || ''}\nGR NO: ${s.grNumber || ''}\nDOB: ${dob}\nIssue: ${iss}\nExpiry: ${exp}\nPhone: ${s.phoneNumber || ''}`;
   };
 
   const getQrSrc = (s: Student, size = 80) => {
@@ -163,6 +182,50 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
       // If cross-origin taints the canvas or any error occurs, return empty string to allow fallback
       return '';
     }
+  };
+
+  // Helper: convert white pixels to transparent in an image and return dataURL PNG
+  const toTransparentPng = (img: HTMLImageElement) => {
+    const w = img.naturalWidth || img.width; const h = img.naturalHeight || img.height;
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d'); if (!ctx) return '';
+    ctx.clearRect(0,0,w,h);
+    ctx.drawImage(img, 0, 0, w, h);
+    try {
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const d = imageData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i+1], b = d[i+2];
+        // detect near-white boxes and make transparent
+        if (r > 240 && g > 240 && b > 240) {
+          d[i+3] = 0; // alpha to 0
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      return canvas.toDataURL('image/png');
+    } catch {
+      return '';
+    }
+  };
+
+  // Small helper component to preview QR without white background
+  const QRPreview = ({ src, size = 80 }: { src: string; size?: number }) => {
+    const [out, setOut] = useState<string>('');
+    useEffect(() => {
+      let mounted = true;
+      (async () => {
+        try {
+          const img = await loadImage(src);
+          const data = toTransparentPng(img);
+          if (mounted) setOut(data || src);
+        } catch {
+          if (mounted) setOut(src);
+        }
+      })();
+      return () => { mounted = false };
+    }, [src]);
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={out || src} alt="QR" style={{ width: size, height: size }} className="w-20 h-20" />
   };
 
   // Generate per-student PDFs (card-sized based on background) and download as ZIP
@@ -270,7 +333,13 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
           // Convert Y coordinate: cardH - pythonY - qrSize = 321 - 125 - 80 = 116
           const qx = 50;
           const qy = cardH - 125 - qSize;
-          doc.addImage(qr, 'PNG', qx, qy, qSize, qSize);
+          // Attempt to strip white background by converting near-white to transparent
+          const transparent = toTransparentPng(qr);
+          if (transparent) {
+            doc.addImage(transparent, 'PNG', qx, qy, qSize, qSize);
+          } else {
+            doc.addImage(qr as any, 'PNG', qx, qy, qSize, qSize);
+          }
         } catch {}
         
         // Issue/Expiry dates - matching Python positioning exactly
@@ -279,12 +348,14 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
         doc.setFont('helvetica', 'bold');
         
         // Format dates to match Python formatting
-        const issueFormatted = issue ? new Date(issue).toLocaleDateString('en-GB', { 
+        const issRaw = (s as any).issueDate || issue || '';
+        const expRaw = (s as any).expiryDate || expiry || '';
+        const issueFormatted = issRaw ? new Date(issRaw).toLocaleDateString('en-GB', { 
           day: 'numeric', 
           month: 'long', 
           year: 'numeric' 
         }) : '';
-        const expiryFormatted = expiry ? new Date(expiry).toLocaleDateString('en-GB', { 
+        const expiryFormatted = expRaw ? new Date(expRaw).toLocaleDateString('en-GB', { 
           day: 'numeric', 
           month: 'long', 
           year: 'numeric' 
@@ -386,6 +457,27 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
           <input type="date" value={issue} onChange={(e) => setIssue(e.target.value)} className="h-10 border rounded-lg px-3 text-sm bg-white w-[48%] sm:w-auto" placeholder="Issue" />
           <input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} className="h-10 border rounded-lg px-3 text-sm bg-white w-[48%] sm:w-auto" placeholder="Expiry" />
           <button
+            onClick={async () => {
+              if (!issue && !expiry) return;
+              try {
+                onLoadingChange?.(true);
+                await Promise.all(toPrint.map(s => fetch('/api/students', {
+                  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s._id, patch: {
+                    ...(issue ? { issueDate: new Date(issue).toISOString().slice(0,10) } : {}),
+                    ...(expiry ? { expiryDate: new Date(expiry).toISOString().slice(0,10) } : {}),
+                  } })
+                })));
+                // refresh students to reflect updated dates
+                const data: Student[] = await client.fetch(getAllStudentsQuery);
+                setStudents(data);
+              } finally { onLoadingChange?.(false); }
+            }}
+            className="px-3 h-10 md:h-11 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 text-sm"
+            title="Save dates to selected students"
+          >
+            Save Dates to Selected
+          </button>
+          <button
             onClick={selectAllVisible}
             className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 text-sm"
             title="Select all visible"
@@ -422,7 +514,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
       <div className="mt-6 grid md:grid-cols-3 gap-4">
         {/* List */}
         <div className={`${showListMobile ? 'block' : 'hidden'} sm:block md:col-span-1 bg-white rounded-2xl shadow p-4 h-max max-h-[70vh] overflow-auto`}>
-          <div className="text-sm text-gray-600 mb-2">{filtered.length} students</div>
+          <div className="text-sm text-gray-600 mb-2">{sorted.length} students</div>
           <div className="space-y-2">
             {loading ? (
               <div className="space-y-2 animate-pulse">
@@ -439,7 +531,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
             ) : filtered.length === 0 ? (
               <div className="text-gray-500">No students found</div>
             ) : (
-              filtered.map((s) => (
+              sorted.map((s) => (
                 <label key={s._id} className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer">
                   <input
                     type="checkbox"
@@ -536,21 +628,20 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                       <div className="mt-[116px] w-full text-[8px] text-[#231f55]">
                         {/* QR Code positioned to match PDF exactly */}
                         <div className="absolute left-[50px] top-[116px]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={getQrSrc(s, 80)} alt="QR" className="w-20 h-20 bg-white rounded border" />
+                          <QRPreview src={getQrSrc(s, 80)} size={80} />
                         </div>
                         
                         {/* Issue and Expiry dates positioned to match PDF exactly */}
                         <div className="absolute left-[95px] top-[207px] text-[8px] font-bold text-[#231f55]">
                           <div className="mb-[0.1px]">
-                            {issue ? new Date(issue).toLocaleDateString('en-GB', { 
+                            {((s as any).issueDate || issue) ? new Date((s as any).issueDate || issue).toLocaleDateString('en-GB', { 
                               day: 'numeric', 
                               month: 'long', 
                               year: 'numeric' 
                             }) : ''}
                           </div>
                           <div>
-                            {expiry ? new Date(expiry).toLocaleDateString('en-GB', { 
+                            {((s as any).expiryDate || expiry) ? new Date((s as any).expiryDate || expiry).toLocaleDateString('en-GB', { 
                               day: 'numeric', 
                               month: 'long', 
                               year: 'numeric' 

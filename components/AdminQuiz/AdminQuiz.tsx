@@ -31,6 +31,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const [workingId, setWorkingId] = useState<string | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editDraft, setEditDraft] = useState<any>(null)
+  const [studentQuickFilter, setStudentQuickFilter] = useState('')
   const genId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? (crypto as any).randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,8)}`)
 
   const classOptions = useMemo(() => Array.from(new Set(students.map(s => s.admissionFor).filter(Boolean))).sort() as string[], [students])
@@ -157,9 +158,23 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
             {editDraft.targetType==='student' && (
               <div className="sm:col-span-2">
                 <label className="block text-sm mb-1">Student</label>
+                <input
+                  value={studentQuickFilter}
+                  onChange={e=>setStudentQuickFilter(e.target.value)}
+                  placeholder="Filter by Roll or GR"
+                  className="w-full border rounded px-3 py-2 mb-2 text-sm"
+                />
                 <select value={editDraft.studentId || ''} onChange={e=>setEditDraft((d:any)=>({ ...d, studentId: e.target.value }))} className="w-full border rounded px-3 py-2">
                   <option value="">Select Student</option>
-                  {students.map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber}</option>)}
+                  {students
+                    .filter(s => {
+                      const q = studentQuickFilter.trim().toLowerCase();
+                      if (!q) return true;
+                      const roll = String((s as any).rollNumber || '').toLowerCase();
+                      const gr = String((s as any).grNumber || '').toLowerCase();
+                      return roll.includes(q) || gr.includes(q);
+                    })
+                    .map(s => <option key={s._id} value={s._id}>{s.fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}</option>)}
                 </select>
               </div>
             )}
@@ -281,9 +296,23 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
           {form.targetType==='student' && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium mb-1">Student</label>
+              <input
+                value={studentQuickFilter}
+                onChange={e=>setStudentQuickFilter(e.target.value)}
+                placeholder="Filter by Roll or GR"
+                className="w-full border rounded px-3 py-2 mb-2 text-sm"
+              />
               <select value={form.studentId} onChange={e=>setForm({ ...form, studentId: e.target.value })} className="w-full border rounded px-3 py-2">
                 <option value="">Select Student</option>
-                {students.map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber}</option>)}
+                {students
+                  .filter(s => {
+                    const q = studentQuickFilter.trim().toLowerCase();
+                    if (!q) return true;
+                    const roll = String((s as any).rollNumber || '').toLowerCase();
+                    const gr = String((s as any).grNumber || '').toLowerCase();
+                    return roll.includes(q) || gr.includes(q);
+                  })
+                  .map(s => <option key={s._id} value={s._id}>{s.fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}</option>)}
               </select>
             </div>
           )}
