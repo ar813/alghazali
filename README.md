@@ -2,7 +2,26 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+### 1. Environment Configuration
+
+Create a `.env.local` file in the project root and add the required variables:
+   - Get your Sanity project ID and dataset from [Sanity Dashboard](https://sanity.io/manage)
+   - Create a write token in your Sanity project settings
+   - Configure email settings if you need notification features
+
+Example `.env.local` keys:
+
+```
+NEXT_PUBLIC_SANITY_PROJECT_ID=your_project_id
+NEXT_PUBLIC_SANITY_DATASET=production
+SANITY_API_WRITE_TOKEN=your_sanity_token
+EMAIL_USER=your_email_user
+EMAIL_PASS=your_email_pass
+```
+
+### 2. Run the Development Server
+
+Then, run the development server:
 
 ```bash
 npm run dev

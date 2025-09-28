@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Megaphone, Save, Loader2, Edit2, Trash2, RefreshCw, X } from 'lucide-react'
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
@@ -143,16 +143,16 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
   const [deleteAllInput, setDeleteAllInput] = useState('')
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true); onLoadingChange?.(true)
     try {
       const res = await fetch('/api/notices?limit=500', { cache: 'no-store' })
       const json = await res.json()
       if (json?.ok) setItems(json.data)
     } finally { setLoading(false); onLoadingChange?.(false) }
-  }
+  }, [onLoadingChange])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   return (
     <div className="bg-white rounded-2xl shadow p-4 sm:p-6">
@@ -247,7 +247,6 @@ const EditModal = ({ notice, onClose, onSaved, students, classOptions }: { notic
   const [isEvent, setIsEvent] = useState<boolean>(!!notice.isEvent)
   const [eventDate, setEventDate] = useState<string>(notice.eventDate ? new Date(notice.eventDate).toISOString().slice(0,16) : '')
   const [eventType, setEventType] = useState<string>(notice.eventType || '')
-  const [isHeadline, setIsHeadline] = useState<boolean>(false)
   const [saving, setSaving] = useState(false)
 
   const save = async () => {
@@ -257,7 +256,7 @@ const EditModal = ({ notice, onClose, onSaved, students, classOptions }: { notic
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to update')
       onSaved({ ...notice, title, content, targetType, className, student: studentId ? { _id: studentId, fullName: notice.student?.fullName || 'Student' } : null, isEvent, eventDate: isEvent ? (eventDate ? new Date(eventDate).toISOString() : null) : null, eventType: isEvent ? (eventType || 'General') : null })
-    } catch (e) {
+    } catch (_e) {
       // no-op basic error display for now
       alert('Failed to update notice')
     } finally { setSaving(false) }

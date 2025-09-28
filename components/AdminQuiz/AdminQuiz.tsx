@@ -9,6 +9,7 @@ type Quiz = {
   _id: string
   title: string
   subject: string
+  examKey?: string
   targetType: 'all' | 'class' | 'student'
   className?: string
   student?: { _id: string; fullName: string }
@@ -28,7 +29,6 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [workingId, setWorkingId] = useState<string | null>(null)
-  const [editing, setEditing] = useState<Quiz | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editDraft, setEditDraft] = useState<any>(null)
   const genId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? (crypto as any).randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,8)}`)
@@ -52,8 +52,8 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   }, [onLoadingChange])
 
   type TargetType = 'all'|'class'|'student'
-  const [form, setForm] = useState<{ title: string; subject: string; targetType: TargetType; className?: string; studentId?: string; durationMinutes?: number | '' ; questionLimit?: number | '' ; questions: ({ _key: string; question: string; options: string[]; correctIndex: number; difficulty?: 'easy'|'medium'|'hard' })[] }>({
-    title: '', subject: '', targetType: 'all', className: '', studentId: '', durationMinutes: '', questionLimit: '', questions: [ { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' } ]
+  const [form, setForm] = useState<{ title: string; subject: string; examKey: string; targetType: TargetType; className?: string; studentId?: string; durationMinutes?: number | '' ; questionLimit?: number | '' ; questions: ({ _key: string; question: string; options: string[]; correctIndex: number; difficulty?: 'easy'|'medium'|'hard' })[] }>({
+    title: '', subject: '', examKey: '', targetType: 'all', className: '', studentId: '', durationMinutes: '', questionLimit: '', questions: [ { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' } ]
   })
 
   const addQuestion = () => setForm(f => ({ ...f, questions: [...f.questions, { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' }] }))
@@ -65,6 +65,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const submit = async () => {
     if (!form.title.trim()) return alert('Title is required')
     if (!form.subject.trim()) return alert('Subject is required')
+    if (!form.examKey.trim()) return alert('Exam Key is required')
     if (form.targetType === 'class' && !form.className) return alert('Class is required')
     if (form.targetType === 'student' && !form.studentId) return alert('Student is required')
     if (typeof form.questionLimit !== 'number' || !(form.questionLimit >= 1 && form.questionLimit <= 200)) return alert('Total Questions is required (1-200)')
@@ -74,7 +75,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
     setSaving(true)
     try {
       const res = await fetch('/api/quizzes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        title: form.title, subject: form.subject, targetType: form.targetType, className: form.className || undefined, studentId: form.studentId || undefined, questions: form.questions,
+        title: form.title, subject: form.subject, examKey: form.examKey, targetType: form.targetType, className: form.className || undefined, studentId: form.studentId || undefined, questions: form.questions,
         durationMinutes: typeof form.durationMinutes === 'number' ? form.durationMinutes : undefined,
         questionLimit: form.questionLimit,
       }) })
@@ -85,7 +86,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
       const listJson = await list.json()
       if (listJson?.ok) setItems(listJson.data)
       // reset form
-      setForm({ title: '', subject: '', targetType: 'all', className: '', studentId: '', durationMinutes: '', questionLimit: '', questions: [ { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' } ] })
+      setForm({ title: '', subject: '', examKey: '', targetType: 'all', className: '', studentId: '', durationMinutes: '', questionLimit: '', questions: [ { _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' } ] })
     } catch (e: any) {
       alert(e?.message || 'Failed to create quiz')
     } finally { setSaving(false) }
@@ -123,6 +124,10 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
             <div>
               <label className="block text-sm mb-1">Subject</label>
               <input value={editDraft.subject} onChange={e=>setEditDraft((d:any)=>({ ...d, subject: e.target.value }))} className="w-full border rounded px-3 py-2" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm mb-1">Exam Key (required)</label>
+              <input value={(editDraft as any).examKey || ''} onChange={e=>setEditDraft((d:any)=>({ ...d, examKey: e.target.value }))} className="w-full border rounded px-3 py-2" placeholder="Enter Exam Key" />
             </div>
             <div>
               <label className="block text-sm mb-1">Duration (minutes)</label>
@@ -230,7 +235,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <button onClick={()=>setShowEditModal(false)} className="px-3 py-2 border rounded">Cancel</button>
-            <button onClick={async ()=>{ try { if (typeof editDraft.questionLimit !== 'number' || !(editDraft.questionLimit >= 1 && editDraft.questionLimit <= 200)) { alert('Total Questions is required (1-200)'); return } setSaving(true); const res = await fetch('/api/quizzes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editDraft._id, title: editDraft.title, subject: editDraft.subject, targetType: editDraft.targetType, className: editDraft.className || undefined, studentId: editDraft.studentId || undefined, durationMinutes: editDraft.durationMinutes || undefined, questionLimit: editDraft.questionLimit, questions: (editDraft.questions||[]).map((q:any)=>({ question: q.question, options: q.options, correctIndex: q.correctIndex, difficulty: q.difficulty || 'easy' })) }) }); const j = await res.json(); if (!j?.ok) throw new Error(j?.error || 'Failed'); setItems(prev => prev.map(it => it._id === editDraft._id ? { ...it, ...editDraft, student: editDraft.studentId ? { _id: editDraft.studentId, fullName: it.student?.fullName || 'Student' } : undefined } : it)); setShowEditModal(false) } catch (e:any) { alert(e?.message || 'Failed to update') } finally { setSaving(false) } }} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded inline-flex items-center gap-2">{saving ? <Loader2 className="animate-spin" size={16}/> : <Edit2 size={16}/>} Save</button>
+            <button onClick={async ()=>{ try { if (typeof editDraft.questionLimit !== 'number' || !(editDraft.questionLimit >= 1 && editDraft.questionLimit <= 200)) { alert('Total Questions is required (1-200)'); return } if(!(editDraft as any).examKey || String((editDraft as any).examKey).trim()===''){ alert('Exam Key is required'); return } setSaving(true); const res = await fetch('/api/quizzes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editDraft._id, title: editDraft.title, subject: editDraft.subject, examKey: (editDraft as any).examKey, targetType: editDraft.targetType, className: editDraft.className || undefined, studentId: editDraft.studentId || undefined, durationMinutes: editDraft.durationMinutes || undefined, questionLimit: editDraft.questionLimit, questions: (editDraft.questions||[]).map((q:any)=>({ question: q.question, options: q.options, correctIndex: q.correctIndex, difficulty: q.difficulty || 'easy' })) }) }); const j = await res.json(); if (!j?.ok) throw new Error(j?.error || 'Failed'); setItems(prev => prev.map(it => it._id === editDraft._id ? { ...it, ...editDraft, student: editDraft.studentId ? { _id: editDraft.studentId, fullName: it.student?.fullName || 'Student' } : undefined } : it)); setShowEditModal(false) } catch (e:any) { alert(e?.message || 'Failed to update') } finally { setSaving(false) } }} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded inline-flex items-center gap-2">{saving ? <Loader2 className="animate-spin" size={16}/> : <Edit2 size={16}/>} Save</button>
           </div>
         </div>
       </div>
@@ -243,6 +248,10 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
           <div>
             <label className="block text-sm font-medium mb-1">Subject</label>
             <input value={form.subject} onChange={e=>setForm({ ...form, subject: e.target.value })} className="w-full border rounded px-3 py-2" placeholder="e.g. Physics" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium mb-1">Exam Key (required)</label>
+            <input value={form.examKey} onChange={e=>setForm({ ...form, examKey: e.target.value })} className="w-full border rounded px-3 py-2" placeholder="e.g. SPRING-2025" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Duration (minutes)</label>

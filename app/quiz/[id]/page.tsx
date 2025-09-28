@@ -7,6 +7,7 @@ type Quiz = {
   _id: string
   title: string
   subject: string
+  examKey?: string
   questions: { question: string; options: string[]; correctIndex: number; difficulty?: 'easy'|'medium'|'hard' }[]
   resultsAnnounced?: boolean
   durationMinutes?: number
@@ -33,6 +34,8 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const [starting, setStarting] = useState<boolean>(false)
   const [nextLoading, setNextLoading] = useState<boolean>(false)
   const [toasts, setToasts] = useState<{ id: number; type: 'info'|'success'|'warning'|'error'; text: string }[]>([])
+  const [examKeyInput, setExamKeyInput] = useState<string>('')
+  const [examKeyValidated, setExamKeyValidated] = useState<boolean>(false)
 
   const id = params.id
 
@@ -129,10 +132,23 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2500)
   }
 
+  const validateExamKey = () => {
+    const expected = (quiz?.examKey || '').trim()
+    const got = (examKeyInput || '').trim()
+    if (!expected) { setExamKeyValidated(true); return } // if key not set, allow
+    if (expected === got) {
+      setExamKeyValidated(true)
+      pushToast('Key matched', 'success')
+    } else {
+      setExamKeyValidated(false)
+      pushToast('Key match nahi ho rahi.', 'error')
+    }
+  }
+
   const submit = async () => {
     const studentSession = typeof window !== 'undefined' ? localStorage.getItem('studentSession') : null
     if (!studentSession) { alert('Please login from Student Portal to take the quiz.'); router.push('/student-portal'); return }
-    const { bFormOrCnic, grNumber } = JSON.parse(studentSession)
+    const { bFormOrCnic: _bFormOrCnic, grNumber: _grNumber } = JSON.parse(studentSession)
 
     // Ensure we have studentId
     let sid = studentId || (typeof window !== 'undefined' ? (localStorage.getItem('studentId') || '') : '')
@@ -167,7 +183,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     }
     const t = window.setTimeout(() => setTimeLeft(s => (s == null ? s : s - 1)), 1000)
     return () => window.clearTimeout(t)
-  }, [timeLeft, submitted, started])
+  }, [timeLeft, submitted, started, submit])
 
   // Start timer when user clicks Continue (if duration is set)
   useEffect(() => {
@@ -225,42 +241,55 @@ export default function QuizPage({ params }: { params: { id: string } }) {
             <div key={t.id} className={`px-3 py-2 rounded shadow text-sm ${t.type==='success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : t.type==='warning' ? 'bg-amber-50 text-amber-800 border border-amber-200' : t.type==='error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-gray-50 text-gray-800 border border-gray-200'}`}>{t.text}</div>
           ))}
         </div>
-        {/* Terms & Conditions Pre-screen */}
+        {/* Exam Key Gate + Terms & Conditions Pre-screen */}
         {/* Centered wrapper below header (stack children vertically) */}
         <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center">
         {!started && !submitted && (
           <div className="border rounded-2xl p-6 sm:p-8 bg-white shadow-lg w-full max-w-2xl">
-            <h2 className="text-lg font-semibold mb-3">Terms & Conditions</h2>
-            <ul className="list-disc pl-6 text-sm text-gray-700 space-y-2">
-              <li>Do not refresh, navigate away, or close the tab during the quiz.</li>
-              <li>Each question has a single correct answer. Select carefully.</li>
-              <li>Timer will auto-submit when time completes.</li>
-              <li>Use your own knowledge. External help is not allowed.</li>
-            </ul>
-            <div className="mt-4 flex items-center gap-2">
-              <input id="agree" type="checkbox" className="h-4 w-4" onChange={(e)=>setAcceptedChecked(e.target.checked)} />
-              <label htmlFor="agree" className="text-sm text-gray-700">I have read and agree to the terms.</label>
-            </div>
-            <div className="mt-4">
-              <button
-                onClick={async ()=>{
-                  if (!acceptedChecked || starting) return
-                  setStarting(true)
-                  try { await document.documentElement.requestFullscreen?.() } catch {}
-                  setTimeout(() => {
-                    setStarted(true)
-                    setStarting(false)
-                    if (typeof initialSeconds === 'number') setTimeLeft(initialSeconds)
-                    pushToast('Quiz started', 'success')
-                  }, 1000)
-                }}
-                disabled={!acceptedChecked || starting}
-                className="px-5 py-2 bg-indigo-600 text-white rounded disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                {starting && <span className="inline-block w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin"/>}
-                <span>Continue</span>
-              </button>
-            </div>
+            {!examKeyValidated ? (
+              <>
+                <h2 className="text-lg font-semibold mb-3">Enter Exam Key</h2>
+                <input value={examKeyInput} onChange={(e)=>setExamKeyInput(e.target.value)} className="w-full border rounded px-3 py-2 mb-3" placeholder="Enter Exam Key" />
+                <div className="flex justify-between">
+                  <button onClick={()=>router.back()} className="px-5 py-2 border rounded">Back</button>
+                  <button onClick={validateExamKey} className="px-5 py-2 bg-indigo-600 text-white rounded">Validate</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-semibold mb-3">Terms & Conditions</h2>
+                <ul className="list-disc pl-6 text-sm text-gray-700 space-y-2">
+                  <li>Do not refresh, navigate away, or close the tab during the quiz.</li>
+                  <li>Each question has a single correct answer. Select carefully.</li>
+                  <li>Timer will auto-submit when time completes.</li>
+                  <li>Use your own knowledge. External help is not allowed.</li>
+                </ul>
+                <div className="mt-4 flex items-center gap-2">
+                  <input id="agree" type="checkbox" className="h-4 w-4" onChange={(e)=>setAcceptedChecked(e.target.checked)} />
+                  <label htmlFor="agree" className="text-sm text-gray-700">I have read and agree to the terms.</label>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={async ()=>{
+                      if (!acceptedChecked || starting) return
+                      setStarting(true)
+                      try { await document.documentElement.requestFullscreen?.() } catch {}
+                      setTimeout(() => {
+                        setStarted(true)
+                        setStarting(false)
+                        if (typeof initialSeconds === 'number') setTimeLeft(initialSeconds)
+                        pushToast('Quiz started', 'success')
+                      }, 1000)
+                    }}
+                    disabled={!acceptedChecked || starting}
+                    className="px-5 py-2 bg-indigo-600 text-white rounded disabled:opacity-50 inline-flex items-center gap-2"
+                  >
+                    {starting && <span className="inline-block w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin"/>}
+                    <span>Continue</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -286,58 +315,52 @@ export default function QuizPage({ params }: { params: { id: string } }) {
               {orderedQuestions.length > 0 && (
                 <div className="w-full max-w-3xl">
                   <div className="space-y-6">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <div>Question {current + 1} of {orderedQuestions.length}</div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
-                      <span className="capitalize">{orderedQuestions[current]?.difficulty || 'easy'}</span>
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <div>Question {current + 1} of {orderedQuestions.length}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
+                        <span className="capitalize">{orderedQuestions[current]?.difficulty || 'easy'}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="border rounded-2xl p-6 bg-gray-50">
-                    <div className="font-semibold text-gray-800 mb-4 text-lg">Q{current + 1}. {orderedQuestions[current].question}</div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {orderedQuestions[current].options.map((opt, oi) => (
-                        <label key={oi} className={`flex items-center gap-2 border rounded-xl px-3 py-3 cursor-pointer transition ${answers[current] === oi ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-300' : 'hover:bg-gray-100'}`}>
-                          <input type="radio" className="mt-0.5" name={`q-${current}`} checked={answers[current] === oi} onChange={() => setAnswers(a => a.map((v, idx) => idx===current ? oi : v))} />
-                          <span>{String.fromCharCode(65+oi)}. {opt}</span>
-                        </label>
-                      ))}
+                    <div className="border rounded-2xl p-6 bg-gray-50">
+                      <div className="font-semibold text-gray-800 mb-4 text-lg">Q{current + 1}. {orderedQuestions[current].question}</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {orderedQuestions[current].options.map((opt, oi) => (
+                          <label key={oi} className={`flex items-center gap-2 border rounded-xl px-3 py-3 cursor-pointer transition ${answers[current] === oi ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-300' : 'hover:bg-gray-100'}`}>
+                            <input type="radio" className="mt-0.5" name={`q-${current}`} checked={answers[current] === oi} onChange={() => setAnswers(a => a.map((v, idx) => idx===current ? oi : v))} />
+                            <span>{String.fromCharCode(65+oi)}. {opt}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
                   </div>
                 </div>
               )}
-
-              <div className="mt-6 flex items-center justify-between w-full max-w-3xl">
-                <button onClick={() => router.back()} className="px-4 py-2 border rounded">Back</button>
-                <div>
-                  {submitted ? (
-                    <button onClick={() => router.push('/student-portal')} className="px-4 py-2 bg-indigo-600 text-white rounded">Go to Dashboard</button>
-                  ) : current < orderedQuestions.length - 1 ? (
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => setCurrent(c => Math.max(0, c - 1))} disabled={current===0} className="px-4 py-2 border rounded disabled:opacity-50">Previous</button>
-                      <button onClick={() => {
-                        if (answers[current] < 0 || nextLoading) return
-                        setNextLoading(true)
-                        setTimeout(() => {
-                          setCurrent(c => Math.min(orderedQuestions.length - 1, c + 1))
-                          setNextLoading(false)
-                          pushToast('Answer saved', 'success')
-                        }, 300)
-                      }} disabled={answers[current] < 0 || nextLoading} className="px-4 py-2 bg-indigo-600 text-white rounded disabled:opacity-50 inline-flex items-center gap-2">
-                        {nextLoading && <span className="inline-block w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin"/>}
-                        <span>Next</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => setCurrent(c => Math.max(0, c - 1))} disabled={current===0} className="px-4 py-2 border rounded disabled:opacity-50">Previous</button>
-                      <button onClick={submit} disabled={!canSubmit || submitting} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50">{submitting ? 'Submitting...' : 'Submit'}</button>
-                    </div>
-                  )}
-                </div>
+              <div className="mt-6 flex items-center justify-end w-full max-w-3xl">
+                {current < orderedQuestions.length - 1 ? (
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setCurrent(c => Math.max(0, c - 1))} disabled={current===0} className="px-4 py-2 border rounded disabled:opacity-50">Previous</button>
+                    <button onClick={() => {
+                      if (answers[current] < 0 || nextLoading) return
+                      setNextLoading(true)
+                      setTimeout(() => {
+                        setCurrent(c => Math.min(orderedQuestions.length - 1, c + 1))
+                        setNextLoading(false)
+                        pushToast('Answer saved', 'success')
+                      }, 300)
+                    }} disabled={answers[current] < 0 || nextLoading} className="px-4 py-2 bg-indigo-600 text-white rounded disabled:opacity-50 inline-flex items-center gap-2">
+                      {nextLoading && <span className="inline-block w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin"/>}
+                      <span>Next</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setCurrent(c => Math.max(0, c - 1))} disabled={current===0} className="px-4 py-2 border rounded disabled:opacity-50">Previous</button>
+                    <button onClick={submit} disabled={!canSubmit || submitting} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50">{submitting ? 'Submitting...' : 'Submit'}</button>
+                  </div>
+                )}
               </div>
-
+            
               <div className="mt-4 w-full max-w-3xl">
                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                   <div className="h-2 bg-indigo-500" style={{ width: `${((current+1)/Math.max(1, orderedQuestions.length))*100}%` }}></div>

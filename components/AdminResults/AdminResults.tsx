@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { RefreshCw, Eye, EyeOff, Download, Trash2 } from 'lucide-react'
 
 type Quiz = { _id: string; title: string; subject: string; resultsAnnounced?: boolean; _createdAt?: string; createdAt?: string }
@@ -32,15 +32,43 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const [percent, setPercent] = useState<number | null>(null)
   const [grade, setGrade] = useState<string>('')
   const [rankInfo, setRankInfo] = useState<{ rank: number; total: number } | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const loadQuizzes = async () => {
-    setLoading(true); onLoadingChange?.(true)
+  const loadQuizzes = useCallback(async () => {
+    setLoading(true); onLoadingChange?.(true); setError(null)
     try {
       const res = await fetch('/api/quizzes?limit=200', { cache: 'no-store' })
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      }
       const json = await res.json()
-      if (json?.ok) setQuizzes(json.data)
+      if (json?.ok) {
+        setQuizzes(json.data)
+      } else {
+        throw new Error(json?.error || 'Failed to load quizzes')
+      }
+    } catch (err: any) {
+      console.error('Error loading quizzes:', err)
+      const errorMsg = err?.message || 'Failed to fetch quizzes'
+      
+      if (errorMsg.includes('Failed to fetch')) {
+        // Check system health for better error diagnosis
+        try {
+          const healthRes = await fetch('/api/health')
+          const healthData = await healthRes.json()
+          if (!healthData.ok) {
+            setError(`Configuration Error: ${healthData.message}\n\nMissing: ${healthData.missingVars?.join(', ') || 'Unknown'}\n\nPlease check your .env.local file.`)
+          } else {
+            setError('Unable to connect to the server. Please ensure the development server is running.')
+          }
+        } catch {
+          setError('Unable to connect to the server. Please ensure:\n1. The development server is running\n2. Sanity environment variables are configured in .env.local')
+        }
+      } else {
+        setError(errorMsg)
+      }
     } finally { setLoading(false); onLoadingChange?.(false) }
-  }
+  }, [onLoadingChange])
 
   const deleteOne = async (id: string) => {
     if (!id) return
@@ -55,18 +83,28 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     } finally { setWorking(null) }
   }
 
-  const loadResults = async (quizId: string) => {
+  const loadResults = useCallback(async (quizId: string) => {
     if (!quizId) { setResults([]); return }
-    setLoading(true); onLoadingChange?.(true)
+    setLoading(true); onLoadingChange?.(true); setError(null)
     try {
       const res = await fetch(`/api/quiz-results?quizId=${encodeURIComponent(quizId)}&limit=500`, { cache: 'no-store' })
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      }
       const json = await res.json()
-      if (json?.ok) setResults(json.data)
+      if (json?.ok) {
+        setResults(json.data)
+      } else {
+        throw new Error(json?.error || 'Failed to load results')
+      }
+    } catch (err: any) {
+      console.error('Error loading results:', err)
+      setError(err?.message || 'Failed to fetch quiz results')
     } finally { setLoading(false); onLoadingChange?.(false) }
-  }
+  }, [onLoadingChange])
 
-  useEffect(() => { loadQuizzes() }, [])
-  useEffect(() => { loadResults(selectedQuiz) }, [selectedQuiz])
+  useEffect(() => { loadQuizzes() }, [loadQuizzes])
+  useEffect(() => { loadResults(selectedQuiz) }, [selectedQuiz, loadResults])
 
   // Fetch quiz details when a result is selected (for detailed popup)
   useEffect(() => {
@@ -185,7 +223,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       const buffer = await wb.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       ;(fileSaver as any).saveAs(blob, `quiz_results_${quiz.title.replace(/\s+/g,'_')}.xlsx`)
-    } catch (e) {
+    } catch (_e) {
       // Fallback: CSV export to ensure the user still gets a file if ExcelJS is unavailable in runtime
       try {
         // Pre-compute positions for CSV as well
@@ -248,6 +286,12 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           <h3 className="text-base sm:text-lg font-bold text-gray-800">Quiz Results Control</h3>
           <button onClick={loadQuizzes} className="px-3 py-1.5 border rounded text-sm inline-flex items-center gap-2"><RefreshCw size={14}/> Refresh</button>
         </div>
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="text-red-800 text-sm font-medium mb-1">Error</div>
+            <div className="text-red-700 text-sm whitespace-pre-line">{error}</div>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Select Quiz</label>

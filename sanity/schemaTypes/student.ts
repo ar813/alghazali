@@ -19,6 +19,12 @@ export default defineType({
       validation: Rule => Rule.required()
     }),
     defineField({
+      name: 'fatherCnic',
+      title: "Father's CNIC Number",
+      type: 'string',
+      validation: Rule => Rule.required()
+    }),
+    defineField({
       name: 'dob',
       title: 'Date of Birth',
       type: 'date',
@@ -55,7 +61,7 @@ export default defineType({
       type: 'string',
       options: {
         list: [
-          '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'
+          'KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'
         ],
       },
       validation: Rule => Rule.required()
@@ -89,29 +95,32 @@ export default defineType({
       name: 'cnicOrBform',
       title: "Student's CNIC / B-Form Number",
       type: 'string',
-      validation: Rule => Rule.required()
     }),
 
     // 📱 Contact Information
     defineField({
       name: 'email',
       title: 'Email Address',
-      type: 'string'
+      type: 'string',
+      validation: Rule => Rule.required()
     }),
     defineField({
       name: 'phoneNumber',
       title: 'Phone Number',
-      type: 'string'
+      type: 'string',
+      validation: Rule => Rule.required()
     }),
     defineField({
       name: 'whatsappNumber',
       title: 'WhatsApp Number',
-      type: 'string'
+      type: 'string',
+      validation: Rule => Rule.required()
     }),
     defineField({
       name: 'address',
       title: 'Address',
-      type: 'text'
+      type: 'text',
+      validation: Rule => Rule.required()
     }),
 
     // 📚 Academic Information
@@ -121,7 +130,7 @@ export default defineType({
       type: 'string',
       options: {
         list: [
-          '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'
+          'KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'
         ],
       }
     }),

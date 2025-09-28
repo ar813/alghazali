@@ -1,6 +1,5 @@
-import { Users, TrendingUp, Activity, Calendar, Sparkles } from 'lucide-react';
+import { Users, TrendingUp, Calendar, Sparkles } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
-import { client } from '@/sanity/lib/client';
 
 const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
     // Stats
@@ -9,41 +8,34 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
     const [totalQuizzes, setTotalQuizzes] = useState<number>(0)
     const [resultsLast30, setResultsLast30] = useState<number>(0)
     const [totalNotices, setTotalNotices] = useState<number>(0)
-    type RecentAdmission = { _id: string; fullName: string; admissionFor?: string; _createdAt: string }
-    const [recentAdmissions, setRecentAdmissions] = useState<RecentAdmission[]>([])
     const [loading, setLoading] = useState<boolean>(true)
+    const [error, setError] = useState<string | null>(null)
 
     // Data fetching for dashboard
     useEffect(() => {
         const fetchStats = async () => {
             onLoadingChange?.(true)
             setLoading(true)
-            // Count total students
-            const total: number = await client.fetch('count(*[_type == "student"])')
-
-            // Admissions in last 365 days using _createdAt
-            const last365Query = `count(*[_type == "student" && dateTime(_createdAt) >= dateTime(now()) - 60*60*24*365])`
-            const last365: number = await client.fetch(last365Query)
-
-            // Recent admissions list (latest 6)
-            const recents: RecentAdmission[] = await client.fetch(`*[_type == "student"]|order(_createdAt desc)[0...6]{ _id, fullName, admissionFor, _createdAt }`)
-
-            // Total quizzes
-            const quizzes: number = await client.fetch('count(*[_type == "quiz"])')
-            // Results in last 30 days
-            const last30Query = `count(*[_type == "quizResult" && dateTime(coalesce(submittedAt, _createdAt)) >= dateTime(now()) - 60*60*24*30])`
-            const res30: number = await client.fetch(last30Query)
-            // Total notices
-            const notices: number = await client.fetch('count(*[_type == "notice"])')
-
-            setTotalStudents(total)
-            setAdmissionsLast365(last365)
-            setRecentAdmissions(recents)
-            setTotalQuizzes(quizzes)
-            setResultsLast30(res30)
-            setTotalNotices(notices)
-            onLoadingChange?.(false)
-            setLoading(false)
+            setError(null)
+            try {
+                const res = await fetch('/api/stats')
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}))
+                    throw new Error(err?.details || err?.error || `HTTP ${res.status}`)
+                }
+                const json = await res.json()
+                const data = json?.data || {}
+                setTotalStudents(data.totalStudents || 0)
+                setAdmissionsLast365(data.admissionsLast365 || 0)
+                setTotalQuizzes(data.totalQuizzes || 0)
+                setResultsLast30(data.resultsLast30 || 0)
+                setTotalNotices(data.totalNotices || 0)
+            } catch (e: any) {
+                setError(e?.message || 'Failed to load stats')
+            } finally {
+                onLoadingChange?.(false)
+                setLoading(false)
+            }
         }
         fetchStats()
     }, [onLoadingChange])
@@ -64,18 +56,14 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
         </div>
     )
 
-    const Section = ({ title, icon: Icon, children, actions }: { title: string; icon: React.ElementType; children: React.ReactNode; actions?: React.ReactNode }) => (
-        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Icon size={18} /> {title}</h3>
-                <div className="flex items-center gap-2">{actions}</div>
-            </div>
-            {children}
-        </div>
-    )
 
     return (
         <div className="space-y-6 sm:space-y-8">
+            {error && (
+                <div className="bg-rose-50 text-rose-700 border border-rose-200 rounded-xl p-3 text-sm">
+                    Failed to load stats: {error}
+                </div>
+            )}
             {/* Key Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {loading ? (

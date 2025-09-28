@@ -4,11 +4,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
 import type { Student } from '@/types/student'
-import type { Fee, FeeStatus } from '@/types/fees'
+import type { FeeStatus } from '@/types/fees'
 import { Check, Edit, Loader2, Plus, Save, Search, Trash2, X, Upload, Download, RotateCw } from 'lucide-react'
 
 const MONTHS = ['Month','January','February','March','April','May','June','July','August','September','October','November','December','admission'] as const
-const STATUSES: FeeStatus[] = ['paid','partial','unpaid']
 
 const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
   const [students, setStudents] = useState<Student[]>([])

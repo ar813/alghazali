@@ -3,6 +3,7 @@ export const getAllStudentsQuery = `*[_type == "student"]{
   _id,
   fullName,
   fatherName,
+  fatherCnic,
   dob,
   rollNumber,
   grNumber,
@@ -45,8 +46,28 @@ export const getScheduleByClassQuery = (className: string) => `*[_type == "sched
 }[0]`
 
 export const getStudentByIdentifiers = (cnicOrBform: string, grNumber: string) => `*[_type == "student" && cnicOrBform == "${cnicOrBform}" && grNumber == "${grNumber}"][0]{
+  _id,
   fullName,
+  fatherName,
+  fatherCnic,
+  dob,
+  rollNumber,
+  grNumber,
+  gender,
   admissionFor,
+  nationality,
+  medicalCondition,
   cnicOrBform,
-  grNumber
+  email,
+  phoneNumber,
+  whatsappNumber,
+  address,
+  formerEducation,
+  previousInstitute,
+  lastExamPercentage,
+  guardianName,
+  guardianContact,
+  guardianCnic,
+  guardianRelation,
+  "photoUrl": photo.asset->url
 }`

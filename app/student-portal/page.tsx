@@ -8,7 +8,6 @@ import type { Student } from '@/types/student';
 import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import Footer from '@/components/Footer/Footer';
 import NavBar from '@/components/NavBar/NavBar';
 import StudentDashboard from '@/components/StudentDashboard/StudentDashboard';
 import StudentProfile from '@/components/StudentProfile/StudentProfile';
@@ -20,6 +19,17 @@ import StudentFees from '@/components/StudentFees/StudentFees';
 import StudentQuizzes from '@/components/StudentQuizzes/StudentQuizzes';
 import StudentResults from '@/components/StudentResults/StudentResults';
 
+// Helpers: CNIC formatting and normalization
+const onlyDigits = (s: string) => (s || '').replace(/\D+/g, '').slice(0, 13)
+const formatCnic = (s: string) => {
+  const d = onlyDigits(s)
+  const p1 = d.slice(0, 5)
+  const p2 = d.slice(5, 12)
+  const p3 = d.slice(12, 13)
+  if (d.length <= 5) return p1
+  if (d.length <= 12) return `${p1}-${p2}`
+  return `${p1}-${p2}-${p3}`
+}
 
 export default function StylishStudentPortal() {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -73,18 +83,20 @@ export default function StylishStudentPortal() {
     } catch {
       setIsLoading(false)
     }
-  }, [])
+  }, [sessionDuration])
 
   // Once students load and we have a valid session, match the student
   useEffect(() => {
     if (!sessionData) return
     if (students.length === 0) return
     const { bFormOrCnic, grNumber } = sessionData
+    const target = onlyDigits(String(bFormOrCnic))
     const result = students.filter((s: Student) => {
-      const docId = String((s as any).cnicOrBform ?? '').trim()
-      const guardian = String((s as any).guardianCnic ?? '').trim()
+      const docId = onlyDigits(String((s as any).cnicOrBform ?? ''))
+      const guardian = onlyDigits(String((s as any).guardianCnic ?? ''))
+      const father = onlyDigits(String((s as any).fatherCnic ?? ''))
       const gr = String((s as any).grNumber ?? '').trim()
-      return (docId === bFormOrCnic || guardian === bFormOrCnic) && gr === grNumber
+      return (docId === target || guardian === target || father === target) && gr === grNumber
     })
     if (result.length > 0) {
       setFiltered(result)
@@ -103,7 +115,7 @@ export default function StylishStudentPortal() {
   }, [students, sessionData])
 
   const handleSearch = () => {
-    const bForm = searchBFormNumber.trim();
+    const bForm = onlyDigits(searchBFormNumber);
     const grNo = searchGRNumber.trim();
 
     if (!bForm || !grNo) {
@@ -112,10 +124,11 @@ export default function StylishStudentPortal() {
     }
 
     const result = students.filter((s: Student) => {
-      const docId = String((s as any).cnicOrBform ?? '').trim()
-      const guardian = String((s as any).guardianCnic ?? '').trim()
+      const docId = onlyDigits(String((s as any).cnicOrBform ?? ''))
+      const guardian = onlyDigits(String((s as any).guardianCnic ?? ''))
+      const father = onlyDigits(String((s as any).fatherCnic ?? ''))
       const gr = String((s as any).grNumber ?? '').trim()
-      return (docId === bForm || guardian === bForm) && gr === grNo
+      return (docId === bForm || guardian === bForm || father === bForm) && gr === grNo
     });
 
     if (result.length === 0) {
@@ -197,7 +210,7 @@ export default function StylishStudentPortal() {
               type="text"
               placeholder="CNIC/B-Form Number"
               value={searchBFormNumber}
-              onChange={(e) => setSearchBFormNumber(e.target.value)}
+              onChange={(e) => setSearchBFormNumber(formatCnic(e.target.value))}
               className="w-full border p-2.5 rounded-lg text-sm sm:text-base mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
@@ -362,7 +375,6 @@ export default function StylishStudentPortal() {
 
       </div>
 
-      <Footer />
     </div>
   );
 }

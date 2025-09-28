@@ -7,6 +7,7 @@ export default defineType({
   fields: [
     defineField({ name: 'title', title: 'Title', type: 'string', validation: r => r.required() }),
     defineField({ name: 'subject', title: 'Subject', type: 'string', validation: r => r.required() }),
+    defineField({ name: 'examKey', title: 'Exam Key', type: 'string', validation: r => r.required() }),
     defineField({ name: 'createdAt', title: 'Created At', type: 'datetime', initialValue: () => new Date().toISOString() }),
     defineField({ name: 'durationMinutes', title: 'Duration (minutes)', type: 'number', validation: r => r.min(1).max(600) }),
     defineField({ name: 'questionLimit', title: 'Question Limit (show only this many to student)', type: 'number', validation: r => r.min(1).max(200) }),

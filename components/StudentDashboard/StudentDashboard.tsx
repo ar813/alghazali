@@ -70,7 +70,7 @@ const StudentDashboard = ({data}:{data: Student}) => {
                         <img
                             src={data.photoUrl}
                             alt="Student Avatar"
-                            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 sm:border-4 border-white/30 shadow-lg cursor-zoom-in"
+                            className="max-h-16 w-auto sm:max-h-20 md:max-h-24 object-contain rounded-md border-2 sm:border-4 border-white/30 shadow-lg cursor-zoom-in"
                             onClick={() => data.photoUrl && setImgOpen(true)}
                             title="Click to enlarge"
                         />

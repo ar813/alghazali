@@ -7,6 +7,7 @@ import { client } from "@/sanity/lib/client";
 import { getAllStudentsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
 import ImageModal from '@/components/ImageModal/ImageModal'
+import ImageCropper from '@/components/ImageCropper/ImageCropper'
 
 // Reusable info row renderer (kept at top to avoid any scoping issues)
 const Info = ({ label, value }: { label: string; value?: any }) => {
@@ -43,6 +44,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [newStudent, setNewStudent] = useState<any>({
     fullName: '',
     fatherName: '',
+    fatherCnic: '',
     dob: '',
     rollNumber: '',
     grNumber: '',
@@ -52,18 +54,26 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     medicalCondition: 'no',
     cnicOrBform: '',
     email: '',
-    phoneNumber: '',
-    whatsappNumber: '',
+    phoneNumber: '0',
+    whatsappNumber: '0',
     address: '',
     formerEducation: '',
     previousInstitute: '',
     lastExamPercentage: '',
     guardianName: '',
-    guardianContact: '',
+    guardianContact: '0',
     guardianCnic: '',
     guardianRelation: '',
     photoFile: null as File | null,
   })
+
+  // Sorting helpers will be applied after filteredStudents is computed below
+
+  // Image cropper state
+  const [showCropperAdd, setShowCropperAdd] = useState(false)
+  const [cropSourceAdd, setCropSourceAdd] = useState<string | null>(null)
+  const [showCropperEdit, setShowCropperEdit] = useState(false)
+  const [cropSourceEdit, setCropSourceEdit] = useState<string | null>(null)
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingStudent, setEditingStudent] = useState<any | null>(null)
@@ -131,6 +141,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       _id: s._id,
       fullName: cellToString(s.fullName),
       fatherName: cellToString(s.fatherName),
+      fatherCnic: cellToString(s.fatherCnic),
       dob: cellToString(s.dob),
       rollNumber: cellToString(s.rollNumber),
       grNumber: cellToString(s.grNumber),
@@ -216,6 +227,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       setNewStudent({
         fullName: '',
         fatherName: '',
+        fatherCnic: '',
         dob: '',
         rollNumber: '',
         grNumber: '',
@@ -225,14 +237,14 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         medicalCondition: 'no',
         cnicOrBform: '',
         email: '',
-        phoneNumber: '',
-        whatsappNumber: '',
+        phoneNumber: '0',
+        whatsappNumber: '0',
         address: '',
         formerEducation: '',
         previousInstitute: '',
         lastExamPercentage: '',
         guardianName: '',
-        guardianContact: '',
+        guardianContact: '0',
         guardianCnic: '',
         guardianRelation: '',
         photoFile: null,
@@ -384,6 +396,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       ws.columns = [
         { header: 'Full Name', key: 'fullName', width: 25 },
         { header: "Father's Name", key: 'fatherName', width: 25 },
+        { header: "Father CNIC", key: 'fatherCnic', width: 18 },
         { header: 'DOB', key: 'dob', width: 15 },
         { header: 'Roll No', key: 'rollNumber', width: 12 },
         { header: 'GR Number', key: 'grNumber', width: 15 },
@@ -411,6 +424,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         ws.addRow({
           fullName: student.fullName || '',
           fatherName: student.fatherName || '',
+          fatherCnic: (student as any).fatherCnic || '',
           dob: student.dob || '',
           rollNumber: student.rollNumber || '',
           grNumber: student.grNumber || '',
@@ -567,6 +581,25 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     return safeVal(raw).includes(term)
   })
 
+  // Sorting: Class order (KG, 1..8, SSCI, SSCII) then numeric Roll No
+  const classOrder = ['KG','1','2','3','4','5','6','7','8','SSCI','SSCII']
+  const classIndex = (cls: string) => {
+    const c = (cls || '').toString()
+    const idx = classOrder.indexOf(c)
+    if (idx >= 0) return idx
+    const n = parseInt(c, 10)
+    return isNaN(n) ? 999 : n
+  }
+  const numOrInf = (v: string) => {
+    const n = parseInt((v || '').toString().replace(/[^0-9]/g, ''), 10)
+    return isNaN(n) ? Number.POSITIVE_INFINITY : n
+  }
+  const sortedStudents: Student[] = [...filteredStudents].sort((a, b) => {
+    const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
+    if (byClass !== 0) return byClass
+    return numOrInf(a.rollNumber) - numOrInf(b.rollNumber)
+  })
+
   // Note: Delete All handled via confirmation modal below
 
   return (
@@ -701,8 +734,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <div>
                 <label className="block text-sm font-medium mb-1">Class</label>
                 <select value={newStudent.admissionFor} onChange={(e) => setNewStudent({ ...newStudent, admissionFor: e.target.value })} className="w-full border rounded px-3 py-2">
-                  {['1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                  {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Father CNIC</label>
+                <input value={newStudent.fatherCnic} onChange={(e) => setNewStudent({ ...newStudent, fatherCnic: e.target.value })} className="w-full border rounded px-3 py-2" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Gender</label>
@@ -736,11 +773,21 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Phone Number</label>
-                <input value={newStudent.phoneNumber} onChange={(e) => setNewStudent({ ...newStudent, phoneNumber: e.target.value })} className="w-full border rounded px-3 py-2" />
+                <input value={newStudent.phoneNumber} onChange={(e) => {
+                  const raw = e.target.value || ''
+                  const sanitized = raw.replace(/[^0-9]/g, '')
+                  const withZero = sanitized.startsWith('0') ? sanitized : ('0' + sanitized)
+                  setNewStudent({ ...newStudent, phoneNumber: withZero })
+                }} className="w-full border rounded px-3 py-2" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">WhatsApp Number</label>
-                <input value={newStudent.whatsappNumber} onChange={(e) => setNewStudent({ ...newStudent, whatsappNumber: e.target.value })} className="w-full border rounded px-3 py-2" />
+                <input value={newStudent.whatsappNumber} onChange={(e) => {
+                  const raw = e.target.value || ''
+                  const sanitized = raw.replace(/[^0-9]/g, '')
+                  const withZero = sanitized.startsWith('0') ? sanitized : ('0' + sanitized)
+                  setNewStudent({ ...newStudent, whatsappNumber: withZero })
+                }} className="w-full border rounded px-3 py-2" />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium mb-1">Address</label>
@@ -752,7 +799,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 <label className="block text-sm font-medium mb-1">Former Education</label>
                 <select value={newStudent.formerEducation} onChange={(e) => setNewStudent({ ...newStudent, formerEducation: e.target.value })} className="w-full border rounded px-3 py-2">
                   <option value="">Select</option>
-                  {['1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                  {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
               </div>
               <div>
@@ -771,7 +818,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Guardian Contact</label>
-                <input value={newStudent.guardianContact} onChange={(e) => setNewStudent({ ...newStudent, guardianContact: e.target.value })} className="w-full border rounded px-3 py-2" />
+                <input value={newStudent.guardianContact} onChange={(e) => {
+                  const raw = e.target.value || ''
+                  const sanitized = raw.replace(/[^0-9]/g, '')
+                  const withZero = sanitized.startsWith('0') ? sanitized : ('0' + sanitized)
+                  setNewStudent({ ...newStudent, guardianContact: withZero })
+                }} className="w-full border rounded px-3 py-2" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Guardian CNIC</label>
@@ -789,7 +841,14 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               {/* Photo */}
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium mb-1">Student Photo</label>
-                <input type="file" accept="image/*" onChange={(e) => setNewStudent({ ...newStudent, photoFile: e.target.files?.[0] || null })} className="w-full border rounded px-3 py-2" />
+                <input type="file" accept="image/*" onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) {
+                    const reader = new FileReader()
+                    reader.onload = () => { setCropSourceAdd(String(reader.result || '')) ; setShowCropperAdd(true) }
+                    reader.readAsDataURL(f)
+                  }
+                }} className="w-full border rounded px-3 py-2" />
               </div>
             </div>
             <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2">
@@ -833,8 +892,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <div>
                 <label className="block text-sm font-medium mb-1">Class</label>
                 <select value={editingStudent.admissionFor || ''} onChange={(e) => setEditingStudent({ ...editingStudent, admissionFor: e.target.value })} className="w-full border rounded px-3 py-2">
-                  {['1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                  {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Father CNIC</label>
+                <input value={editingStudent.fatherCnic || ''} onChange={(e) => setEditingStudent({ ...editingStudent, fatherCnic: e.target.value })} className="w-full border rounded px-3 py-2" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Gender</label>
@@ -884,7 +947,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 <label className="block text-sm font-medium mb-1">Former Education</label>
                 <select value={editingStudent.formerEducation || ''} onChange={(e) => setEditingStudent({ ...editingStudent, formerEducation: e.target.value })} className="w-full border rounded px-3 py-2">
                   <option value="">Select</option>
-                  {['1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                  {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
               </div>
               <div>
@@ -921,7 +984,14 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               {/* Photo */}
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium mb-1">Student Photo</label>
-                <input type="file" accept="image/*" onChange={(e) => setEditingPhotoFile(e.target.files?.[0] || null)} className="w-full border rounded px-3 py-2" />
+                <input type="file" accept="image/*" onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) {
+                    const reader = new FileReader()
+                    reader.onload = () => { setCropSourceEdit(String(reader.result || '')) ; setShowCropperEdit(true) }
+                    reader.readAsDataURL(f)
+                  }
+                }} className="w-full border rounded px-3 py-2" />
               </div>
             </div>
             <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2">
@@ -969,6 +1039,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <Info label="Full Name" value={selectedStudent.fullName} />
               <Info label="Father's Name" value={selectedStudent.fatherName} />
               <Info label="Date of Birth" value={selectedStudent.dob} />
+              <Info label="Father CNIC" value={(selectedStudent as any).fatherCnic} />
               <Info label="Roll Number" value={selectedStudent.rollNumber} />
               <Info label="GR Number" value={selectedStudent.grNumber} />
               <Info label="Gender" value={selectedStudent.gender} />
@@ -1045,8 +1116,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                   </td>
                 </tr>
               ) : (
-                filteredStudents
-                  .map((student, index) => (
+                sortedStudents
+                  .map((student: Student, index: number) => (
                     <tr
                       key={student.grNumber}
                       className="hover:bg-gray-50 cursor-pointer"
@@ -1059,7 +1130,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                             <img
                               src={student.photoUrl}
                               alt={student.fullName}
-                              className="w-8 h-8 rounded-full object-cover"
+                              className="max-h-10 w-auto rounded-md object-contain"
                             />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">
@@ -1095,10 +1166,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
             <div className="text-blue-600 font-semibold">Loading students...</div>
           </div>
-        ) : filteredStudents.length === 0 ? (
+        ) : sortedStudents.length === 0 ? (
           <div className="bg-white rounded-2xl shadow p-6 text-center text-gray-500">No students found</div>
         ) : (
-          filteredStudents.map((student, index) => (
+          sortedStudents.map((student: Student, index: number) => (
             <div
               key={student.grNumber}
               className="bg-white rounded-2xl shadow border p-4 cursor-pointer"
@@ -1106,7 +1177,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             >
               <div className="flex items-center gap-3">
                 {student.photoUrl ? (
-                  <img src={student.photoUrl} alt={student.fullName} className="w-12 h-12 rounded-full object-cover" />
+                  <img src={student.photoUrl} alt={student.fullName} className="max-h-12 w-auto rounded-md object-contain" />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-base font-semibold">
                     {getInitial(student.fullName)}
@@ -1147,14 +1218,36 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </div>
       )}
 
-      {/* Delete All Confirm Modal */}
+      {/* Cropper for Add */}
+      {showCropperAdd && cropSourceAdd && (
+        <ImageCropper
+          src={cropSourceAdd}
+          onCancel={() => { setShowCropperAdd(false); setCropSourceAdd(null) }}
+          onCropped={(file) => {
+            setNewStudent((prev: any) => ({ ...prev, photoFile: file }))
+            setShowCropperAdd(false)
+            setCropSourceAdd(null)
+          }}
+        />
+      )}
+
+      {/* Cropper for Edit */}
+      {showCropperEdit && cropSourceEdit && (
+        <ImageCropper
+          src={cropSourceEdit}
+          onCancel={() => { setShowCropperEdit(false); setCropSourceEdit(null) }}
+          onCropped={(file) => {
+            setEditingPhotoFile(file)
+            setShowCropperEdit(false)
+            setCropSourceEdit(null)
+          }}
+        />
+      )}
       {showDeleteAllConfirm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Delete All Students Confirmation">
           <div className="bg-white sm:rounded-xl rounded-none p-6 w-full sm:max-w-sm max-w-none h-auto sm:h-auto shadow-2xl border">
             <h4 className="text-lg font-semibold mb-2">Delete ALL Students</h4>
             <p className="text-sm text-gray-600 mb-4">Is action se tamam students delete ho jayenge. Confirm karne ke liye niche <span className="font-semibold">DELETE</span> type karein.</p>
-            {deleteAllMessage && <div className="mb-3 text-sm text-red-600">{deleteAllMessage}</div>}
-            <input value={deleteAllInput} onChange={(e) => setDeleteAllInput(e.target.value)} placeholder="Type DELETE" className="w-full border rounded px-3 py-2 mb-4" />
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 border rounded" onClick={() => { setShowDeleteAllConfirm(false); setDeleteAllInput(''); setDeleteAllMessage(''); }}>Close</button>
               <button

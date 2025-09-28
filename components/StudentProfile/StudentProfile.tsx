@@ -1,6 +1,6 @@
+import React, { useState } from 'react'
 import { User, Mail, Phone, TrendingUp, Calendar, MapPin, Landmark } from 'lucide-react'
 import { Student } from '@/types/student';
-import React, { useState } from 'react'
 import ImageModal from '@/components/ImageModal/ImageModal'
 
 
@@ -20,7 +20,7 @@ export default function StudentProfile({ student }: { student: Student }) {
                             <img
                                 src={student.photoUrl}
                                 alt="Student Avatar"
-                                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-white/30 shadow-lg object-cover cursor-zoom-in"
+                                className="max-h-24 w-auto sm:max-h-28 rounded-md border-2 sm:border-4 border-white/30 shadow-lg object-contain cursor-zoom-in"
                                 onClick={() => setImgOpen(true)}
                                 title="Click to enlarge"
                             />
@@ -46,6 +46,7 @@ export default function StudentProfile({ student }: { student: Student }) {
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
                             <Info label="Father's Name" value={student.fatherName} />
+                            <Info label="Father CNIC" value={student.fatherCnic || 'N/A'} />
                             <Info label="Date of Birth" value={student.dob} />
                             <Info label="Gender" value={student.gender} />
                             <Info label="Nationality" value={student.nationality} />

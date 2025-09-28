@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
     if (id) {
       const data = await serverClient.fetch(`*[_type=="quiz" && _id == $id][0]{
-        _id, title, subject, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
+        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
         student->{_id, fullName},
         questions[]{ question, options, correctIndex, difficulty },
         createdAt, _createdAt
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     let query: string
     if (!className && !studentId) {
       query = `*[_type == "quiz"] | order(coalesce(createdAt, _createdAt) desc) [0...$limit]{
-        _id, title, subject, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
+        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
         student->{_id, fullName},
         questions[]{ question, options, correctIndex, difficulty },
         createdAt, _createdAt
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       if (studentId) { conditions.push(`(targetType == 'student' && defined(student) && student._ref == $studentId)`); params.studentId = studentId }
       whereParts.push(`(${conditions.join(' || ')})`)
       query = `*[$where] | order(coalesce(createdAt, _createdAt) desc) [0...$limit]{
-        _id, title, subject, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
+        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
         student->{_id, fullName},
         questions[]{ question, options, correctIndex, difficulty },
         createdAt, _createdAt
@@ -55,9 +55,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
     const body = await req.json()
-    const { title, subject, targetType, className, studentId, questions, durationMinutes, questionLimit } = body || {}
-    if (!title || !subject || !targetType || !Array.isArray(questions) || questions.length === 0) {
-      return NextResponse.json({ ok: false, error: 'title, subject, targetType and at least one question are required' }, { status: 400 })
+    const { title, subject, examKey, targetType, className, studentId, questions, durationMinutes, questionLimit } = body || {}
+    if (!title || !subject || !examKey || !targetType || !Array.isArray(questions) || questions.length === 0) {
+      return NextResponse.json({ ok: false, error: 'title, subject, examKey, targetType and at least one question are required' }, { status: 400 })
     }
     if (typeof questionLimit !== 'number' || !(questionLimit >= 1 && questionLimit <= 200)) {
       return NextResponse.json({ ok: false, error: 'questionLimit (Total Questions) is required and must be between 1 and 200' }, { status: 400 })
@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       _type: 'quiz',
       title,
       subject,
+      examKey,
       targetType,
       className: className || undefined,
       resultsAnnounced: false,
@@ -100,7 +101,7 @@ export async function PUT(req: NextRequest) {
     if (!id) return NextResponse.json({ ok: false, error: 'id is required' }, { status: 400 })
 
     const patch: any = {}
-    for (const k of ['title','subject','targetType','className','resultsAnnounced','durationMinutes','questionLimit'] as const) {
+    for (const k of ['title','subject','examKey','targetType','className','resultsAnnounced','durationMinutes','questionLimit'] as const) {
       if (k in rest) patch[k] = (rest as any)[k]
     }
     if ('studentId' in rest) patch.student = rest.studentId ? { _type: 'reference', _ref: rest.studentId } : undefined
