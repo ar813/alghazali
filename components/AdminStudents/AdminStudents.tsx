@@ -1043,7 +1043,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <Info label="Roll Number" value={selectedStudent.rollNumber} />
               <Info label="GR Number" value={selectedStudent.grNumber} />
               <Info label="Gender" value={selectedStudent.gender} />
-              <Info label="Admission For" value={selectedStudent.admissionFor} />
+              <Info label="Class" value={selectedStudent.admissionFor} />
               <Info label="Nationality" value={selectedStudent.nationality} />
               <Info label="Medical Condition" value={selectedStudent.medicalCondition} />
               <Info label="CNIC/B-Form" value={selectedStudent.cnicOrBform} />

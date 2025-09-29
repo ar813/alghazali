@@ -48,7 +48,7 @@ const HeroSection = () => {
                                     </span>
                                 </div>
                                 {/* Animated Content ticker */}
-                                <div className="relative overflow-hidden">
+                                <div className="relative overflow-hidden marquee-wrap">
                                     {/* edge fades to avoid sharp cut */}
                                     <div className="pointer-events-none absolute inset-y-0 left-0 w-6 sm:w-10 bg-gradient-to-r from-rose-50/80 to-transparent" />
                                     <div className="pointer-events-none absolute inset-y-0 right-0 w-6 sm:w-10 bg-gradient-to-l from-rose-50/80 to-transparent" />
@@ -93,6 +93,10 @@ const HeroSection = () => {
                     }
                     @media (prefers-reduced-motion: reduce) {
                         :global(.marquee-track) { animation: none; padding-left: 0; }
+                    }
+                    /* Pause marquee when hovering over the container */
+                    :global(.marquee-wrap:hover .marquee-track) {
+                        animation-play-state: paused;
                     }
                 `}</style>
 

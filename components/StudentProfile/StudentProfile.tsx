@@ -31,7 +31,7 @@ export default function StudentProfile({ student }: { student: Student }) {
                         )}
                         <div>
                             <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2">{student.fullName}</h3>
-                            <p className="text-base sm:text-lg text-blue-100">Admission For: {student.admissionFor}</p>
+                            <p className="text-base sm:text-lg text-blue-100">Class: {student.admissionFor}</p>
                             <p className="text-xs sm:text-sm text-blue-200 mt-1">Roll No: {student.rollNumber}</p>
                         </div>
                     </div>
@@ -52,6 +52,7 @@ export default function StudentProfile({ student }: { student: Student }) {
                             <Info label="Nationality" value={student.nationality} />
                             <Info label="CNIC / B-Form" value={student.cnicOrBform} />
                             <Info label="Medical Condition" value={student.medicalCondition || 'N/A'} />
+                            <Info label="GR Number" value={student.grNumber} />
                         </div>
                     </div>
 

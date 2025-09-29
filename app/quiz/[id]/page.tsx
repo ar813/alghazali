@@ -249,7 +249,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
             {!examKeyValidated ? (
               <>
                 <h2 className="text-lg font-semibold mb-3">Enter Exam Key</h2>
-                <input value={examKeyInput} onChange={(e)=>setExamKeyInput(e.target.value)} className="w-full border rounded px-3 py-2 mb-3" placeholder="Enter Exam Key" />
+                <input type="password" value={examKeyInput} onChange={(e)=>setExamKeyInput(e.target.value)} className="w-full border rounded px-3 py-2 mb-3" placeholder="Enter Exam Key" />
                 <div className="flex justify-between">
                   <button onClick={()=>router.back()} className="px-5 py-2 border rounded">Back</button>
                   <button onClick={validateExamKey} className="px-5 py-2 bg-indigo-600 text-white rounded">Validate</button>

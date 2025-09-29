@@ -1,4 +1,4 @@
-import { Download, Users, PieChart, BarChart2 } from 'lucide-react'
+import { Download, Users, PieChart, BarChart2, Loader2 } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
@@ -8,11 +8,34 @@ type StudentType = {
   fullName: string
   gender?: string
   admissionFor?: string
+  grNumber?: string
+  rollNumber?: string
 }
 
 const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
   const [students, setStudents] = useState<StudentType[]>([])
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+
+  type TargetType = 'all' | 'class' | 'student'
+  const [targetType, setTargetType] = useState<TargetType>('all')
+  const [className, setClassName] = useState<string>('')
+  const [studentId, setStudentId] = useState<string>('')
+  const [studentQuickFilter, setStudentQuickFilter] = useState('')
+
+  // Fee Export target state
+  const [feeExporting, setFeeExporting] = useState(false)
+  const [feeTargetType, setFeeTargetType] = useState<TargetType>('all')
+  const [feeClassName, setFeeClassName] = useState<string>('')
+  const [feeStudentId, setFeeStudentId] = useState<string>('')
+  const [feeStudentQuickFilter, setFeeStudentQuickFilter] = useState('')
+
+  // Student Form (PDF Zip) target state
+  const [zipPreparing, setZipPreparing] = useState(false)
+  const [formTargetType, setFormTargetType] = useState<TargetType>('all')
+  const [formClassName, setFormClassName] = useState<string>('')
+  const [formStudentId, setFormStudentId] = useState<string>('')
+  const [formStudentQuickFilter, setFormStudentQuickFilter] = useState('')
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -25,6 +48,386 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     }
     fetchStudents()
   }, [onLoadingChange])
+
+  const handleExportFeesExcel = async () => {
+    try {
+      setFeeExporting(true)
+      // Build API query based on target
+      const params = new URLSearchParams()
+      if (feeTargetType === 'class') {
+        if (!feeClassName) { alert('Please select a class'); return }
+        params.set('className', feeClassName)
+      } else if (feeTargetType === 'student') {
+        if (!feeStudentId) { alert('Please select a student'); return }
+        const st = (students as any[]).find(s => s._id === feeStudentId)
+        const q = (st?.grNumber || st?.rollNumber || '').toString()
+        if (q) params.set('q', q)
+      }
+
+      const res = await fetch(`/api/fees?${params.toString()}`, { cache: 'no-store' })
+      const json = await res.json()
+      if (!json?.ok) throw new Error(json?.error || 'Failed to load fees')
+      const fees: any[] = json.data || []
+      if (fees.length === 0) { alert('Koi fee records nahi mile export ke liye.'); return }
+
+      const ExcelJS: any = await loadExcel()
+      const fileSaver = await import('file-saver')
+      const saveAs = (fileSaver as any).default?.saveAs || (fileSaver as any).saveAs
+
+      const wb = new ExcelJS.Workbook()
+      const ws = wb.addWorksheet('Fees')
+      ws.columns = [
+        { header: 'Student Name', key: 'studentName', width: 25 },
+        { header: 'GR Number', key: 'grNumber', width: 15 },
+        { header: 'Roll No', key: 'rollNumber', width: 12 },
+        { header: 'Class', key: 'className', width: 10 },
+        { header: 'Month', key: 'month', width: 14 },
+        { header: 'Year', key: 'year', width: 8 },
+        { header: 'Fee Type', key: 'feeType', width: 12 },
+        { header: 'Amount Paid', key: 'amountPaid', width: 12 },
+        { header: 'Paid Date', key: 'paidDate', width: 12 },
+        { header: 'Receipt Number', key: 'receiptNumber', width: 16 },
+        { header: 'Book Number', key: 'bookNumber', width: 14 },
+        { header: 'Notes', key: 'notes', width: 30 },
+      ]
+      fees.forEach((f: any) => {
+        ws.addRow({
+          studentName: f.student?.fullName || '',
+          grNumber: f.student?.grNumber || '',
+          rollNumber: f.student?.rollNumber || '',
+          className: f.className || f.student?.admissionFor || '',
+          month: (f.feeType === 'admission') ? 'admission' : (f.month || ''),
+          year: f.year || '',
+          feeType: f.feeType || '',
+          amountPaid: f.amountPaid ?? 0,
+          paidDate: f.paidDate || '',
+          receiptNumber: f.receiptNumber || '',
+          bookNumber: f.bookNumber || '',
+          notes: f.notes || '',
+        })
+      })
+      const buffer = await wb.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const suffix = feeTargetType === 'all' ? 'all' : feeTargetType === 'class' ? `class_${feeClassName}` : 'single'
+      const fileName = `fees_${suffix}_${new Date().toISOString().split('T')[0]}.xlsx`
+      if (saveAs && typeof saveAs === 'function') saveAs(blob, fileName)
+      else {
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Fee export mein error aaya')
+    } finally {
+      setFeeExporting(false)
+    }
+  }
+
+  const handleDownloadFormsZip = async () => {
+    try {
+      setZipPreparing(true)
+      // Select students per target
+      let list: any[] = []
+      if (formTargetType === 'all') list = students as any[]
+      else if (formTargetType === 'class') list = (students as any[]).filter(s => (s.admissionFor || '') === formClassName)
+      else if (formTargetType === 'student') list = (students as any[]).filter(s => s._id === formStudentId)
+      if (list.length === 0) { alert('Koi student nahi mila.'); return }
+
+      const jsPDFMod: any = await import('jspdf')
+      const { default: JSZip } = await import('jszip') as any
+      const fileSaver = await import('file-saver')
+      const saveAs = (fileSaver as any).default?.saveAs || (fileSaver as any).saveAs
+      const zip = new JSZip()
+
+      // Helper to load image URL into DataURL for jsPDF
+      const fetchImageDataUrl = async (url: string): Promise<string | null> => {
+        try {
+          const res = await fetch(url, { cache: 'no-store' })
+          if (!res.ok) return null
+          const blob = await res.blob()
+          const reader = new FileReader()
+          return await new Promise((resolve) => {
+            reader.onloadend = () => resolve(String(reader.result || ''))
+            reader.readAsDataURL(blob)
+          })
+        } catch { return null }
+      }
+
+      // Professional, single-page A4 Student Form per student
+      for (const s of list) {
+        const doc = new jsPDFMod.jsPDF({ unit: 'pt', format: 'a4' })
+        const pageWidth = doc.internal.pageSize.getWidth() // 595.28
+        const pageHeight = doc.internal.pageSize.getHeight() // 841.89
+        const margin = 50
+        const contentWidth = pageWidth - margin * 2
+        const colGap = 20
+        const colWidth = (contentWidth - colGap) / 2
+        let y = margin + 10
+        const lineH = 16
+        const sectionGap = 25
+
+        // Header with school logo area and title
+        // School Title - Professional styling
+        doc.setFillColor(41, 128, 185) // Professional blue background
+        doc.rect(margin, y - 5, contentWidth, 45, 'F')
+        doc.setTextColor(255, 255, 255) // White text
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(26)
+        doc.text('Al Ghazali High School', pageWidth / 2, y + 20, { align: 'center' })
+        doc.setFontSize(12)
+        doc.text('Student Information Form', pageWidth / 2, y + 35, { align: 'center' })
+        doc.setTextColor(0, 0, 0) // Reset to black
+        y += 60
+        // Add two empty lines below title as per instruction
+        y += lineH * 2
+
+        // Student Photo (professional positioning with border)
+        let photoAdded = false
+        // Hoisted photo metrics so other helpers can respect the reserved area
+        let photoX = 0
+        let photoY = 0
+        let photoW = 0
+        let photoH = 0
+        try {
+          const possibleUrl = (s as any).photoUrl || (s as any).imageUrl || (s as any).pictureUrl || (s as any).avatarUrl
+          if (typeof possibleUrl === 'string' && /^https?:\/\//i.test(possibleUrl)) {
+            const dataUrl = await fetchImageDataUrl(possibleUrl)
+            if (dataUrl) {
+              // Small square image on the LEFT side (fits within 3 lines ≈ 54pt)
+              const imgW = 54, imgH = 54
+              const imgX = margin
+              // move image slightly upward to align with the visual top of the first summary line
+              const imgY = y - 10
+              // store metrics for later layout calculations
+              photoX = imgX
+              photoY = imgY
+              photoW = imgW
+              photoH = imgH
+              
+              // Add photo border
+              doc.setDrawColor(41, 128, 185)
+              doc.setLineWidth(2)
+              doc.rect(imgX - 2, imgY - 2, imgW + 4, imgH + 4, 'S')
+              
+              // Try to infer image type from URL
+              const fmt = /\.png($|\?)/i.test(possibleUrl) ? 'PNG' : 'JPEG'
+              try { 
+                (doc as any).addImage(dataUrl, fmt, imgX, imgY, imgW, imgH)
+                photoAdded = true
+              } catch { /* ignore addImage error */ }
+            }
+          }
+        } catch { /* ignore photo errors */ }
+
+        const section = (title: string) => {
+          // Professional section header with gradient-like effect
+          doc.setFillColor(240, 248, 255) // Light blue background
+          doc.setDrawColor(41, 128, 185) // Blue border
+          doc.setLineWidth(1)
+          // Always full-width header; photo sits outside content grid
+          doc.rect(margin, y - 8, contentWidth, 28, 'FD')
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(14)
+          doc.setTextColor(41, 128, 185) // Blue text
+          doc.text(title, margin + 12, y + 8)
+          doc.setTextColor(0, 0, 0) // Reset to black
+          y += 35
+        }
+
+        // Single-column KV for the top summary block (placed to the RIGHT of photo)
+        const kvSingle = (label: string, value: any, startX: number, maxRightX: number) => {
+          const x = startX
+          const labelWidth = 110
+          const adjustedWidth = Math.max(60, maxRightX - x)
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(10)
+          doc.setTextColor(70, 70, 70)
+          doc.text(label + ':', x, y)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(11)
+          doc.setTextColor(0, 0, 0)
+          const text = (value ?? '—').toString()
+          const maxWidth = Math.max(40, adjustedWidth - labelWidth - 5)
+          const wrapped = doc.splitTextToSize(text, maxWidth)
+          doc.text(wrapped, x + labelWidth, y)
+          const extra = Math.max(0, wrapped.length - 1) * 12
+          y += 18 + extra
+        }
+
+        const kv = (label: string, value: any, col: 0 | 1) => {
+          // Base x for the column
+          const x = margin + (col === 0 ? 0 : (colWidth + colGap))
+          // If we are in right column and within photo's vertical band, clamp the usable width
+          const withinPhotoBand = photoAdded && col === 1 && y <= (photoY + photoH)
+          // Right boundary the text cannot cross (left of photo frame with small padding)
+          const rightLimitX = withinPhotoBand ? (photoX - 10) : (margin + contentWidth)
+          // Maximum width allowed for this column's content area
+          const adjustedColWidth = Math.min(colWidth, Math.max(50, rightLimitX - x))
+          const labelWidth = 110
+          
+          // Label styling
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(10)
+          doc.setTextColor(70, 70, 70) // Dark gray
+          doc.text(label + ':', x, y)
+          
+          // Value styling with text wrapping for long content
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(10)
+          doc.setTextColor(0, 0, 0) // Black
+          const text = (value ?? '—').toString()
+          
+          // Handle long text with proper wrapping
+          const maxWidth = Math.max(40, adjustedColWidth - labelWidth - 5)
+          if (text.length > 25) {
+            const wrappedText = doc.splitTextToSize(text, maxWidth)
+            doc.text(wrappedText, x + labelWidth, y)
+            // Adjust y position if text wrapped to multiple lines
+            if (wrappedText.length > 1) {
+              return Math.max(1, wrappedText.length - 1) * 12 // Return extra height needed
+            }
+          } else {
+            doc.text(text, x + labelWidth, y, { maxWidth: maxWidth })
+          }
+          return 0 // No extra height needed
+        }
+
+        const renderPairs = (pairs: Array<[string, any]>) => {
+          for (let i = 0; i < pairs.length; i += 2) {
+            const extraHeight1 = kv(pairs[i][0], pairs[i][1], 0)
+            let extraHeight2 = 0
+            if (pairs[i + 1]) {
+              extraHeight2 = kv(pairs[i + 1][0], pairs[i + 1][1], 1)
+            }
+            // Use the maximum extra height needed for proper spacing
+            const maxExtraHeight = Math.max(extraHeight1, extraHeight2)
+            y += 18 + maxExtraHeight
+          }
+        }
+
+        // Top summary block next to photo (to its RIGHT): show a few important fields
+        const summaryStartX = photoAdded ? (photoX + photoW + 12) : margin
+        const summaryRightX = margin + contentWidth
+        kvSingle('Full Name', (s as any).fullName, summaryStartX, summaryRightX)
+        kvSingle('Roll Number', (s as any).rollNumber, summaryStartX, summaryRightX)
+        kvSingle('Class', (s as any).admissionFor, summaryStartX, summaryRightX)
+
+        // Move y below the photo block before starting Personal Information
+        if (photoAdded) {
+          y = Math.max(y, photoY + photoH) + 20
+        } else {
+          y += 10
+        }
+
+        // Sections with improved spacing and layout (secondary fields)
+        section('Personal Information')
+        renderPairs([
+          ["Father's Name", (s as any).fatherName],
+          ['GR Number', (s as any).grNumber],
+          ['Gender', (s as any).gender],
+          ['Date of Birth', (s as any).dob ? new Date((s as any).dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : ''],
+          ['Nationality', (s as any).nationality],
+          ['Medical Condition', (s as any).medicalCondition],
+        ])
+        y += sectionGap
+
+        section('Academic Information')
+        renderPairs([
+          ['Class', (s as any).admissionFor],
+          ['Former Education', (s as any).formerEducation],
+          ['Previous Institute', (s as any).previousInstitute],
+          ['Last Exam %', (s as any).lastExamPercentage],
+        ])
+        y += sectionGap
+
+        section('Contact Information')
+        renderPairs([
+          ['Email', (s as any).email],
+          ['Phone', (s as any).phoneNumber],
+          ['WhatsApp', (s as any).whatsappNumber],
+          ['CNIC/B-Form', (s as any).cnicOrBform],
+          ['Address', (s as any).address],
+        ])
+        y += sectionGap
+
+        section('Guardian Information')
+        renderPairs([
+          ['Guardian Name', (s as any).guardianName],
+          ['Guardian Contact', (s as any).guardianContact],
+          ['Guardian CNIC', (s as any).guardianCnic],
+          ['Guardian Relation', (s as any).guardianRelation],
+        ])
+        y += sectionGap
+
+        // Removed Undertaking (Iqrar Nama) section as requested
+
+        // Signature section with professional styling
+        // Footer must be at absolute bottom center with exact text
+        const footerY = pageHeight - 20
+        const footerText = 'Generated by IT Department - Al Ghazali High School | Created on 28 September 2025 at 22:34 PKT'
+
+        // Ensure signatures fit on the page (moved a bit downward for spacing)
+        const sigY = Math.min(y + 60, footerY - 100)
+        
+        // Signature section background
+        doc.setFillColor(248, 249, 250) // Very light background
+        doc.setDrawColor(220, 220, 220)
+        doc.setLineWidth(0.5)
+        doc.rect(margin, sigY - 15, contentWidth, 60, 'FD')
+        
+        // Signature lines with better spacing
+        const sigLineWidth = 140
+        const sigGap = (contentWidth - sigLineWidth * 3) / 2
+        const sigX1 = margin + 20
+        const sigX2 = margin + sigLineWidth + sigGap
+        const sigX3 = margin + (sigLineWidth + sigGap) * 2 - 20
+        const actualSigY = sigY + 20
+        
+        // Draw signature lines
+        doc.setDrawColor(100, 100, 100)
+        doc.setLineWidth(1)
+        doc.line(sigX1, actualSigY, sigX1 + sigLineWidth, actualSigY)
+        doc.line(sigX2, actualSigY, sigX2 + sigLineWidth, actualSigY)
+        doc.line(sigX3, actualSigY, sigX3 + sigLineWidth, actualSigY)
+        
+        // Signature labels
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(80, 80, 80)
+        const labelY = actualSigY + 15
+        doc.text('Student Signature', sigX1 + sigLineWidth/2, labelY, { align: 'center' })
+        doc.text('Parent/Guardian Signature', sigX2 + sigLineWidth/2, labelY, { align: 'center' })
+        doc.text('Principal Signature', sigX3 + sigLineWidth/2, labelY, { align: 'center' })
+
+        // Footer with professional styling (bottom center)
+        doc.setFont('helvetica', 'italic')
+        doc.setFontSize(8)
+        doc.setTextColor(120, 120, 120)
+        doc.text(footerText, pageWidth / 2, footerY, { align: 'center' })
+        doc.setTextColor(0, 0, 0) // Reset to black
+
+        const buffer = doc.output('arraybuffer')
+        const safeName = ((s as any).fullName || 'student').toString().replace(/[^a-z0-9_\-]+/gi, '_')
+        zip.file(`${safeName}_form.pdf`, buffer)
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const suffix = formTargetType === 'all' ? 'all' : formTargetType === 'class' ? `class_${formClassName}` : 'single'
+      const zipName = `student_forms_${suffix}_${new Date().toISOString().split('T')[0]}.zip`
+      if (saveAs && typeof saveAs === 'function') saveAs(zipBlob, zipName)
+      else {
+        const url = window.URL.createObjectURL(zipBlob)
+        const a = document.createElement('a')
+        a.href = url; a.download = zipName; document.body.appendChild(a); a.click(); document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      }
+    } catch (e: any) {
+      alert(e?.message || 'ZIP prepare karte hue error aaya')
+    } finally {
+      setZipPreparing(false)
+    }
+  }
 
   const totals = useMemo(() => {
     const total = students.length
@@ -42,6 +445,117 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     // sort by class label natural-ish
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
   }, [students])
+
+  const classOptions = useMemo(() => {
+    return Array.from(new Set(students.map(s => s.admissionFor).filter(Boolean))).sort() as string[]
+  }, [students])
+
+  const loadExcel = async () => {
+    try {
+      const ExcelJS = await import('exceljs')
+      return (ExcelJS as any).default || ExcelJS
+    } catch (e) {
+      throw new Error('ExcelJS library could not be loaded. Please make sure it is installed.')
+    }
+  }
+
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true)
+
+      // Filter students based on target
+      let selected: any[] = []
+      if (targetType === 'all') selected = students as any[]
+      else if (targetType === 'class') selected = (students as any[]).filter(s => (s.admissionFor || '') === className)
+      else if (targetType === 'student') selected = (students as any[]).filter(s => s._id === studentId)
+
+      if (selected.length === 0) {
+        alert('Koi data nahi mila export ke liye.')
+        return
+      }
+
+      const ExcelJS: any = await loadExcel()
+      const fileSaver = await import('file-saver')
+      const saveAs = (fileSaver as any).default?.saveAs || (fileSaver as any).saveAs
+
+      const wb = new ExcelJS.Workbook()
+      const ws = wb.addWorksheet('Students')
+
+      ws.columns = [
+        { header: 'Full Name', key: 'fullName', width: 25 },
+        { header: "Father's Name", key: 'fatherName', width: 25 },
+        { header: 'Father CNIC', key: 'fatherCnic', width: 18 },
+        { header: 'DOB', key: 'dob', width: 15 },
+        { header: 'Roll No', key: 'rollNumber', width: 12 },
+        { header: 'GR Number', key: 'grNumber', width: 15 },
+        { header: 'Gender', key: 'gender', width: 10 },
+        { header: 'Class', key: 'admissionFor', width: 10 },
+        { header: 'Nationality', key: 'nationality', width: 15 },
+        { header: 'Medical', key: 'medicalCondition', width: 10 },
+        { header: 'CNIC/B-Form', key: 'cnicOrBform', width: 18 },
+        { header: 'Email', key: 'email', width: 25 },
+        { header: 'Phone', key: 'phoneNumber', width: 15 },
+        { header: 'WhatsApp', key: 'whatsappNumber', width: 15 },
+        { header: 'Address', key: 'address', width: 30 },
+        { header: 'Former Edu', key: 'formerEducation', width: 12 },
+        { header: 'Prev Institute', key: 'previousInstitute', width: 20 },
+        { header: 'Last %', key: 'lastExamPercentage', width: 10 },
+        { header: 'Guardian Name', key: 'guardianName', width: 20 },
+        { header: 'Guardian Contact', key: 'guardianContact', width: 18 },
+        { header: 'Guardian CNIC', key: 'guardianCnic', width: 18 },
+        { header: 'Relation', key: 'guardianRelation', width: 12 },
+      ]
+
+      selected.forEach((student) => {
+        ws.addRow({
+          fullName: student.fullName || '',
+          fatherName: (student as any).fatherName || '',
+          fatherCnic: (student as any).fatherCnic || '',
+          dob: (student as any).dob || '',
+          rollNumber: (student as any).rollNumber || '',
+          grNumber: (student as any).grNumber || '',
+          gender: (student as any).gender || '',
+          admissionFor: (student as any).admissionFor || '',
+          nationality: (student as any).nationality || '',
+          medicalCondition: (student as any).medicalCondition || '',
+          cnicOrBform: (student as any).cnicOrBform || '',
+          email: (student as any).email || '',
+          phoneNumber: (student as any).phoneNumber || '',
+          whatsappNumber: (student as any).whatsappNumber || '',
+          address: (student as any).address || '',
+          formerEducation: (student as any).formerEducation || '',
+          previousInstitute: (student as any).previousInstitute || '',
+          lastExamPercentage: (student as any).lastExamPercentage || '',
+          guardianName: (student as any).guardianName || '',
+          guardianContact: (student as any).guardianContact || '',
+          guardianCnic: (student as any).guardianCnic || '',
+          guardianRelation: (student as any).guardianRelation || ''
+        })
+      })
+
+      const buffer = await wb.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+
+      const suffix = targetType === 'all' ? 'all' : targetType === 'class' ? `class_${className}` : 'single'
+      const fileName = `students_${suffix}_${new Date().toISOString().split('T')[0]}.xlsx`
+
+      if (saveAs && typeof saveAs === 'function') saveAs(blob, fileName)
+      else {
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Excel export mein error aaya')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -115,17 +629,175 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           )}
         </div>
 
-        {/* Export block (placeholder) */}
+        {/* Export Student Data */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Export Reports</h3>
-          <div className="space-y-3">
-            <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm">
-              <Download size={16} />
-              <span>Export Students CSV</span>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Export Student Data</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Target</label>
+              <select value={targetType} onChange={e => setTargetType(e.target.value as TargetType)} className="w-full border rounded px-3 py-2">
+                <option value="all">Whole School</option>
+                <option value="class">Class</option>
+                <option value="student">Particular Student</option>
+              </select>
+            </div>
+            {targetType === 'class' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Class</label>
+                <select value={className} onChange={e => setClassName(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Class</option>
+                  {classOptions.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {targetType === 'student' && (
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Student</label>
+                <input
+                  value={studentQuickFilter}
+                  onChange={e => setStudentQuickFilter(e.target.value)}
+                  placeholder="Filter by Roll or GR"
+                  className="w-full border rounded px-3 py-2 mb-2 text-sm"
+                />
+                <select value={studentId} onChange={e => setStudentId(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Student</option>
+                  {(students as any[])
+                    .filter(s => {
+                      const q = studentQuickFilter.trim().toLowerCase()
+                      if (!q) return true
+                      const roll = String((s as any).rollNumber || '').toLowerCase()
+                      const gr = String((s as any).grNumber || '').toLowerCase()
+                      return roll.includes(q) || gr.includes(q)
+                    })
+                    .map(s => (
+                      <option key={s._id} value={s._id}>
+                        {(s as any).fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="mt-4">
+            <button onClick={handleExportExcel} disabled={exporting || (targetType==='class' && !className) || (targetType==='student' && !studentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
+              {exporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              <span>{exporting ? 'Exporting…' : 'Export'}</span>
             </button>
-            <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm">
-              <Download size={16} />
-              <span>Export Class Summary</span>
+          </div>
+        </div>
+
+        {/* Export Student Fee Data */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Export Student Fee Data</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Target</label>
+              <select value={feeTargetType} onChange={e => setFeeTargetType(e.target.value as TargetType)} className="w-full border rounded px-3 py-2">
+                <option value="all">Whole School</option>
+                <option value="class">Class</option>
+                <option value="student">Particular Student</option>
+              </select>
+            </div>
+            {feeTargetType === 'class' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Class</label>
+                <select value={feeClassName} onChange={e => setFeeClassName(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Class</option>
+                  {classOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            {feeTargetType === 'student' && (
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Student</label>
+                <input
+                  value={feeStudentQuickFilter}
+                  onChange={e => setFeeStudentQuickFilter(e.target.value)}
+                  placeholder="Filter by Roll or GR"
+                  className="w-full border rounded px-3 py-2 mb-2 text-sm"
+                />
+                <select value={feeStudentId} onChange={e => setFeeStudentId(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Student</option>
+                  {(students as any[])
+                    .filter(s => {
+                      const q = feeStudentQuickFilter.trim().toLowerCase()
+                      if (!q) return true
+                      const roll = String((s as any).rollNumber || '').toLowerCase()
+                      const gr = String((s as any).grNumber || '').toLowerCase()
+                      return roll.includes(q) || gr.includes(q)
+                    })
+                    .map(s => (
+                      <option key={s._id} value={s._id}>
+                        {(s as any).fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="mt-4">
+            <button onClick={handleExportFeesExcel} disabled={feeExporting || (feeTargetType==='class' && !feeClassName) || (feeTargetType==='student' && !feeStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
+              {feeExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              <span>{feeExporting ? 'Exporting…' : 'Export Fees'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Download Student's Form (in zip file) */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Download Student’s Form (in zip file)</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Target</label>
+              <select value={formTargetType} onChange={e => setFormTargetType(e.target.value as TargetType)} className="w-full border rounded px-3 py-2">
+                <option value="all">Whole School</option>
+                <option value="class">Class</option>
+                <option value="student">Particular Student</option>
+              </select>
+            </div>
+            {formTargetType === 'class' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Class</label>
+                <select value={formClassName} onChange={e => setFormClassName(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Class</option>
+                  {classOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            {formTargetType === 'student' && (
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Student</label>
+                <input
+                  value={formStudentQuickFilter}
+                  onChange={e => setFormStudentQuickFilter(e.target.value)}
+                  placeholder="Filter by Roll or GR"
+                  className="w-full border rounded px-3 py-2 mb-2 text-sm"
+                />
+                <select value={formStudentId} onChange={e => setFormStudentId(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Student</option>
+                  {(students as any[])
+                    .filter(s => {
+                      const q = formStudentQuickFilter.trim().toLowerCase()
+                      if (!q) return true
+                      const roll = String((s as any).rollNumber || '').toLowerCase()
+                      const gr = String((s as any).grNumber || '').toLowerCase()
+                      return roll.includes(q) || gr.includes(q)
+                    })
+                    .map(s => (
+                      <option key={s._id} value={s._id}>
+                        {(s as any).fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="mt-4">
+            <button onClick={handleDownloadFormsZip} disabled={zipPreparing || (formTargetType==='class' && !formClassName) || (formTargetType==='student' && !formStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
+              {zipPreparing ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              <span>{zipPreparing ? 'Preparing…' : 'Download ZIP'}</span>
             </button>
           </div>
         </div>

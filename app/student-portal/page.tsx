@@ -11,7 +11,6 @@ import { useRouter } from 'next/navigation';
 import NavBar from '@/components/NavBar/NavBar';
 import StudentDashboard from '@/components/StudentDashboard/StudentDashboard';
 import StudentProfile from '@/components/StudentProfile/StudentProfile';
-import StudentSubjects from '@/components/StudentSubjects/StudentSubjects';
 import StudentSchedule from '@/components/StudentSchedule/StudentSchedule';
 import StudentNotices from '@/components/StudentNotices/StudentNotices';
 import StudentCard from '@/components/StudentCard/StudentCard';
@@ -168,7 +167,6 @@ export default function StylishStudentPortal() {
   const sidebarItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
     { name: 'Profile', icon: User },
-    { name: 'Subjects', icon: BookOpen },
     { name: 'Schedule', icon: CalendarCheck },
     { name: 'Fees', icon: GraduationCap },
     { name: 'ID Card', icon: QrCode },
@@ -206,30 +204,34 @@ export default function StylishStudentPortal() {
             <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-800 text-center">
               Student Verification
             </h2>
-            <input
-              type="text"
-              placeholder="CNIC/B-Form Number"
-              value={searchBFormNumber}
-              onChange={(e) => setSearchBFormNumber(formatCnic(e.target.value))}
-              className="w-full border p-2.5 rounded-lg text-sm sm:text-base mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-            <input
-              type="text"
-              placeholder="GR Number"
-              value={searchGRNumber}
-              onChange={(e) => setSearchGRNumber(e.target.value)}
-              className="w-full border p-2.5 rounded-lg text-sm sm:text-base mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={handleSearch}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
-              >
-                Search
-              </button>
-            </div>
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
+            >
+              <input
+                type="text"
+                placeholder="CNIC/B-Form Number"
+                value={searchBFormNumber}
+                onChange={(e) => setSearchBFormNumber(formatCnic(e.target.value))}
+                className="w-full border p-2.5 rounded-lg text-sm sm:text-base mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+              <input
+                type="text"
+                placeholder="GR Number"
+                value={searchGRNumber}
+                onChange={(e) => setSearchGRNumber(e.target.value)}
+                className="w-full border p-2.5 rounded-lg text-sm sm:text-base mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                >
+                  Search
+                </button>
+              </div>
+            </form>
             {validationMessage && (
               <div className="mb-4 mt-4 flex items-start gap-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 shadow-sm transform transition-all duration-300 ease-out opacity-100 translate-y-0">
                 <svg
@@ -360,7 +362,6 @@ export default function StylishStudentPortal() {
               <div className="mb-16 md:mb-0">
                 {activeTab === 'Dashboard' && <StudentDashboard data={filtered[0]} />}
                 {activeTab === 'Profile' && <StudentProfile student={filtered[0]} />}
-                {activeTab === 'Subjects' && <StudentSubjects />}
                 {activeTab === 'Schedule' && <StudentSchedule schedule={matchedSchedule} />}
                 {activeTab === 'Notices' && <StudentNotices studentId={String(filtered[0]!._id)} className={String(filtered[0]!.admissionFor || '')} />}
                 {activeTab === 'Quiz' && <StudentQuizzes studentId={String(filtered[0]!._id)} className={String(filtered[0]!.admissionFor || '')} />}
