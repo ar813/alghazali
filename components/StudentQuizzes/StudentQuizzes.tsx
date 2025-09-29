@@ -143,7 +143,7 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
                         <span className="inline-flex items-center gap-1 text-emerald-700 text-xs"><CheckCircle2 size={14}/> Submitted</span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">{new Date((q as any).createdAt || (q as any)._createdAt).toLocaleString()}</div>
+                    <div className="text-xs text-gray-500 mt-1">{new Date((q as any).createdAt || (q as any)._createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: true })}</div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {results[q._id] ? (

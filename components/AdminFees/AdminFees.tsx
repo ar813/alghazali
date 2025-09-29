@@ -558,8 +558,16 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
                       if (!q) return true
                       return (s.rollNumber || '').toLowerCase().includes(q) || (s.grNumber || '').toLowerCase().includes(q)
                     })
+                    .slice()
+                    .sort((a,b)=>{
+                      const ra = parseInt((a.rollNumber||'').replace(/[^0-9]/g,''),10)
+                      const rb = parseInt((b.rollNumber||'').replace(/[^0-9]/g,''),10)
+                      const na = isNaN(ra) ? Infinity : ra
+                      const nb = isNaN(rb) ? Infinity : rb
+                      return na - nb
+                    })
                     .map(s => (
-                      <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber} — Roll {s.rollNumber}</option>
+                      <option key={s._id} value={s._id}> {s.rollNumber} - {s.fullName} - GR {s.grNumber} </option>
                     ))}
                 </select>
               </div>
@@ -580,7 +588,28 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Amount Paid</label>
-                <input type="number" value={form.amountPaid} onChange={e => setForm({ ...form, amountPaid: e.target.value === '' ? '' as any : Number(e.target.value) })} className="w-full border rounded px-3 py-2" required />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={form.amountPaid}
+                    onChange={e => setForm({ ...form, amountPaid: e.target.value === '' ? '' as any : Number(e.target.value) })}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  />
+                  <select
+                    className="border rounded px-2 py-2 text-sm"
+                    onChange={(e) => {
+                      const v = Number(e.target.value)
+                      if (!isNaN(v)) setForm(prev => ({ ...prev, amountPaid: v }))
+                    }}
+                    value={''}
+                  >
+                    <option value="" disabled>Pick</option>
+                    {['800','900','1000','1100','1200','1300','1400','1500','2500','4000'].map(v => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Paid Date</label>

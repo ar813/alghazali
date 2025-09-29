@@ -540,7 +540,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                   />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm text-gray-800 truncate">{s.fullName}</div>
-                    <div className="text-xs text-gray-500 truncate">{s.grNumber} • Class {s.admissionFor}</div>
+                    <div className="text-xs text-gray-500 truncate">Roll {s.rollNumber || '-'} • GR {s.grNumber || '-'} • Class {s.admissionFor || '-'}</div>
                   </div>
                 </label>
               ))

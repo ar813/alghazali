@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Calendar, Plus, Save, Sparkles, Trash2, Upload, Download } from 'lucide-react'
+import { Calendar, Plus, Save, Sparkles, Trash2, Upload, Download, X } from 'lucide-react'
 
 // Types
  type ScheduleDay = { day: string; periods: { subject: string; time: string }[] }
@@ -307,15 +307,15 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
       {/* Overview (second) */}
       <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
             <Calendar size={20} className="text-blue-600"/> 
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">This Week Schedule</span>
           </h3>
-          <div className="flex items-center gap-2">
-            <button onClick={handleExport} className="text-sm inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50"><Download size={16}/> Export</button>
-            <button onClick={onClickImport} disabled={importLoading} className="text-sm inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50"><Upload size={16}/> {importLoading ? 'Importing...' : 'Import'}</button>
-            <button onClick={loadSchedules} className="text-sm inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-200">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <button onClick={handleExport} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Download size={16}/> Export</button>
+            <button onClick={onClickImport} disabled={importLoading} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Upload size={16}/> {importLoading ? 'Importing...' : 'Import'}</button>
+            <button onClick={loadSchedules} className="text-sm inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 w-full sm:w-auto">
               <Sparkles size={16} className="text-blue-600"/> 
               <span className="text-blue-700 font-medium">Refresh</span>
             </button>
@@ -460,7 +460,9 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
           <div className="bg-white sm:rounded-2xl rounded-none p-4 sm:p-6 w-full sm:max-w-xl max-w-none h-full sm:h-auto relative shadow-2xl border border-gray-200 overflow-y-auto sm:max-h-[90vh]">
             <div className="flex items-center justify-between pb-3 border-b">
               <h3 className="text-xl font-semibold">Edit Schedule</h3>
-              <button className="text-gray-500 hover:text-red-600" onClick={() => setShowEditModal(false)}>Close</button>
+              <button className="text-gray-500 hover:text-red-600" onClick={() => setShowEditModal(false)} aria-label="Close">
+                <X size={20} />
+              </button>
             </div>
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">

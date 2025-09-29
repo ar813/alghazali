@@ -312,6 +312,14 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
                     const gr = String((s as any).grNumber || '').toLowerCase();
                     return roll.includes(q) || gr.includes(q);
                   })
+                  .slice()
+                  .sort((a:any,b:any)=>{
+                    const ra = parseInt(String(a.rollNumber||'').replace(/[^0-9]/g,''),10)
+                    const rb = parseInt(String(b.rollNumber||'').replace(/[^0-9]/g,''),10)
+                    const na = isNaN(ra) ? Infinity : ra
+                    const nb = isNaN(rb) ? Infinity : rb
+                    return na - nb
+                  })
                   .map(s => <option key={s._id} value={s._id}>{s.fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}</option>)}
               </select>
             </div>
@@ -419,7 +427,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
                       <span className={`px-2 py-0.5 rounded-full text-xs border ${q.targetType==='all' ? 'bg-blue-50 text-blue-700 border-blue-200' : q.targetType==='class' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>{q.targetType.toUpperCase()}</span>
                       {q.resultsAnnounced ? <span className="inline-flex items-center gap-1 text-emerald-700 text-xs"><CheckCircle2 size={14}/> Results Announced</span> : <span className="text-xs text-amber-700">Results Hidden</span>}
                     </div>
-                    <div className="text-xs text-gray-500">{new Date((q as any).createdAt || (q as any)._createdAt).toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">{new Date((q as any).createdAt || (q as any)._createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: true })}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={()=>{ setEditDraft({ ...q, studentId: q.student?._id || '' }); setShowEditModal(true) }} className="px-2 py-1 text-xs border rounded inline-flex items-center gap-1"><Edit2 size={14}/> Edit</button>

@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   if (!token) {
-    return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_TOKEN' }, { status: 500 })
+    return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
   }
 
   try {
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   if (!token) {
-    return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_TOKEN' }, { status: 500 })
+    return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
   }
 
   try {

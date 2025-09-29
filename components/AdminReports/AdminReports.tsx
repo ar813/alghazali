@@ -1,4 +1,4 @@
-import { Download, Users, PieChart, BarChart2, Loader2 } from 'lucide-react'
+import { Download, Users, PieChart, BarChart2, Loader2, X } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
@@ -16,6 +16,12 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const [students, setStudents] = useState<StudentType[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  // Toasts (similar style as AdminSchedule/AdminStudents)
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ show: true, message, type })
+    window.setTimeout(() => setToast(null), 2200)
+  }
 
   type TargetType = 'all' | 'class' | 'student'
   const [targetType, setTargetType] = useState<TargetType>('all')
@@ -68,7 +74,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to load fees')
       const fees: any[] = json.data || []
-      if (fees.length === 0) { alert('Koi fee records nahi mile export ke liye.'); return }
+      if (fees.length === 0) { showToast('Koi fee records nahi mile export ke liye.', 'error'); return }
 
       const ExcelJS: any = await loadExcel()
       const fileSaver = await import('file-saver')
@@ -118,7 +124,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         window.URL.revokeObjectURL(url)
       }
     } catch (e: any) {
-      alert(e?.message || 'Fee export mein error aaya')
+      showToast(e?.message || 'Fee export mein error aaya', 'error')
     } finally {
       setFeeExporting(false)
     }
@@ -154,6 +160,61 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         } catch { return null }
       }
 
+      // Build a concise QR payload (matches AdminCards style; improves scan reliability)
+      const buildQrData = (s: any) => {
+        const fields: Array<[string, any]> = [
+          ['Name', s.fullName],
+          ['Father Name', s.fatherName],
+          ['GR No', s.grNumber],
+          ['Roll No', s.rollNumber],
+          ['Class', s.admissionFor],
+          ['Phone', s.phoneNumber || s.whatsappNumber]
+        ]
+        return fields.map(([k, v]) => `${k}: ${v ?? ''}`).join('\n')
+      }
+
+      const getQrUrl = (s: any, size: number) => {
+        const data = buildQrData(s)
+        return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`
+      }
+
+      // Helper: apply alpha and cover-fit to watermark image and return PNG dataURL
+      const tintImageAlpha = async (dataUrl: string, alpha: number, drawW: number, drawH: number) => {
+        return new Promise<string>((resolve) => {
+          const img = new Image()
+          img.crossOrigin = 'anonymous'
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas')
+              const cw = Math.max(1, Math.floor(drawW))
+              const ch = Math.max(1, Math.floor(drawH))
+              canvas.width = cw; canvas.height = ch
+              const ctx = canvas.getContext('2d')
+              if (!ctx) { resolve(dataUrl); return }
+              ctx.clearRect(0, 0, cw, ch)
+              ctx.globalAlpha = Math.max(0, Math.min(1, alpha))
+              const iw = img.naturalWidth || img.width
+              const ih = img.naturalHeight || img.height
+              const scale = Math.max(cw / iw, ch / ih)
+              const dw = iw * scale
+              const dh = ih * scale
+              const dx = (cw - dw) / 2
+              const dy = (ch - dh) / 2
+              ctx.drawImage(img, dx, dy, dw, dh)
+              resolve(canvas.toDataURL('image/png'))
+            } catch {
+              resolve(dataUrl)
+            }
+          }
+          img.onerror = () => resolve(dataUrl)
+          img.src = dataUrl
+        })
+      }
+
+      // Preload watermark logo (use /logo.png, fallback to /assets/logo.png)
+      let logoDataUrl = await fetchImageDataUrl('/logo.png')
+      if (!logoDataUrl) logoDataUrl = await fetchImageDataUrl('/assets/logo.png')
+
       // Professional, single-page A4 Student Form per student
       for (const s of list) {
         const doc = new jsPDFMod.jsPDF({ unit: 'pt', format: 'a4' })
@@ -182,13 +243,26 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         // Add two empty lines below title as per instruction
         y += lineH * 2
 
+        // Watermark (background)
+        try {
+          if (logoDataUrl) {
+            const wmW = contentWidth * 0.6
+            const wmH = (pageHeight - margin * 2) * 0.6
+            // Slightly darker watermark per requirement (still subtle)
+            const tint = await tintImageAlpha(logoDataUrl, 0.12, wmW, wmH)
+            const wmX = margin + (contentWidth - wmW) / 2
+            const wmY = margin + ((pageHeight - margin * 2) - wmH) / 2
+            ;(doc as any).addImage(tint, 'PNG', wmX, wmY, wmW, wmH)
+          }
+        } catch {}
+
         // Student Photo (professional positioning with border)
         let photoAdded = false
         // Hoisted photo metrics so other helpers can respect the reserved area
-        let photoX = 0
-        let photoY = 0
-        let photoW = 0
-        let photoH = 0
+        let photoX = margin
+        let photoY = y - 10
+        let photoW = 67
+        let photoH = 67
         try {
           const possibleUrl = (s as any).photoUrl || (s as any).imageUrl || (s as any).pictureUrl || (s as any).avatarUrl
           if (typeof possibleUrl === 'string' && /^https?:\/\//i.test(possibleUrl)) {
@@ -220,6 +294,19 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           }
         } catch { /* ignore photo errors */ }
 
+        // QR Code to the RIGHT of the photo, increased size for better scan
+        try {
+          const qSize = 70 // fixed pixel size in points for sharpness
+          const qUrl = getQrUrl(s, qSize)
+          const qDataUrl = await fetchImageDataUrl(qUrl)
+          if (qDataUrl) {
+            // place towards top-right within content area
+            const qx = pageWidth - margin - qSize
+            const qy = photoY
+            ;(doc as any).addImage(qDataUrl, 'PNG', qx, qy, qSize, qSize)
+          }
+        } catch { /* ignore QR errors */ }
+
         const section = (title: string) => {
           // Professional section header with gradient-like effect
           doc.setFillColor(255, 202, 124) // Light blue background
@@ -238,7 +325,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         // Single-column KV for the top summary block (placed to the RIGHT of photo)
         const kvSingle = (label: string, value: any, startX: number, maxRightX: number) => {
           const x = startX
-          const labelWidth = 110
+          const labelWidth = 80
           const adjustedWidth = Math.max(60, maxRightX - x)
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(10)
@@ -248,11 +335,11 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           doc.setFontSize(11)
           doc.setTextColor(0, 0, 0)
           const text = (value ?? '—').toString()
-          const maxWidth = Math.max(40, adjustedWidth - labelWidth - 5)
+          const maxWidth = Math.max(40, adjustedWidth - labelWidth - 2)
           const wrapped = doc.splitTextToSize(text, maxWidth)
           doc.text(wrapped, x + labelWidth, y)
           const extra = Math.max(0, wrapped.length - 1) * 12
-          y += 18 + extra
+          y += 16 + extra
         }
 
         const kv = (label: string, value: any, col: 0 | 1) => {
@@ -307,7 +394,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         }
 
         // Top summary block next to photo (to its RIGHT): show a few important fields
-        const summaryStartX = photoAdded ? (photoX + photoW + 12) : margin
+        const summaryStartX = photoAdded ? (photoX + photoW + 18) : margin
         const summaryRightX = margin + contentWidth
         kvSingle('Full Name', (s as any).fullName, summaryStartX, summaryRightX)
         kvSingle('Roll Number', (s as any).rollNumber, summaryStartX, summaryRightX)
@@ -369,7 +456,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         // Dynamic date/time in PKT (Asia/Karachi)
         const now = new Date()
         const createdDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Karachi' })
-        const createdTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Karachi' })
+        const createdTime = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Karachi' })
         const footerText = `Generated by IT Department - Al Ghazali High School | Created on ${createdDate} at ${createdTime} PKT`
 
         // Ensure signatures fit on the page (moved a bit downward for spacing)
@@ -428,7 +515,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         window.URL.revokeObjectURL(url)
       }
     } catch (e: any) {
-      alert(e?.message || 'ZIP prepare karte hue error aaya')
+      showToast(e?.message || 'ZIP prepare karte hue error aaya', 'error')
     } finally {
       setZipPreparing(false)
     }
@@ -475,7 +562,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       else if (targetType === 'student') selected = (students as any[]).filter(s => s._id === studentId)
 
       if (selected.length === 0) {
-        alert('Koi data nahi mila export ke liye.')
+        showToast('Koi data nahi mila export ke liye.', 'error')
         return
       }
 
@@ -556,7 +643,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         window.URL.revokeObjectURL(url)
       }
     } catch (e: any) {
-      alert(e?.message || 'Excel export mein error aaya')
+      showToast(e?.message || 'Excel export mein error aaya', 'error')
     } finally {
       setExporting(false)
     }
@@ -807,6 +894,13 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           </div>
         </div>
       </div>
+
+      {/* Toast */}
+      {toast?.show && (
+        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.message}
+        </div>
+      )}
     </div>
   )
 }

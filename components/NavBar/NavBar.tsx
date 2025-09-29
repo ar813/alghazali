@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useState } from 'react'
 
 const NavBar = () => {
@@ -11,8 +11,9 @@ const NavBar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="School Logo" className="w-9 h-9 object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-bold">Al Ghazali High School</h1>
@@ -55,8 +56,9 @@ const NavBar = () => {
           <div className="p-6 flex flex-col h-full">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="School Logo" className="w-7 h-7 object-contain" />
                 </div>
                 <h2 className="font-semibold">Menu</h2>
               </div>

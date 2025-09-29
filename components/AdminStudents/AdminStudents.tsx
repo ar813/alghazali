@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { Search, RotateCw, Upload, Download, Filter } from 'lucide-react'
+import { Search, RotateCw, Upload, Download, Filter, X } from 'lucide-react'
 import { client } from "@/sanity/lib/client";
 import { getAllStudentsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
@@ -708,7 +708,9 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
           <div className="bg-white sm:rounded-2xl rounded-none p-4 sm:p-6 w-full sm:max-w-2xl max-w-none h-full sm:h-auto relative shadow-2xl border border-gray-200 overflow-y-auto sm:max-h-[90vh]">
             <div className="flex items-center justify-between pb-3 border-b">
               <h3 className="text-xl font-semibold">Add Student</h3>
-              <button className="text-gray-500 hover:text-red-600" onClick={() => setShowAddModal(false)}>Close</button>
+              <button className="text-gray-500 hover:text-red-600" onClick={() => setShowAddModal(false)} aria-label="Close">
+                <X size={20} />
+              </button>
             </div>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -866,7 +868,9 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
           <div className="bg-white sm:rounded-2xl rounded-none p-4 sm:p-6 w-full sm:max-w-2xl max-w-none h-full sm:h-auto relative shadow-2xl border border-gray-200 overflow-y-auto sm:max-h-[90vh]">
             <div className="flex items-center justify-between pb-3 border-b">
               <h3 className="text-xl font-semibold">Edit Student</h3>
-              <button className="text-gray-500 hover:text-red-600" onClick={() => setShowEditModal(false)}>Close</button>
+              <button className="text-gray-500 hover:text-red-600" onClick={() => setShowEditModal(false)} aria-label="Close">
+                <X size={20} />
+              </button>
             </div>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -1260,6 +1264,14 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
           <div className="bg-white sm:rounded-xl rounded-none p-6 w-full sm:max-w-sm max-w-none h-auto sm:h-auto shadow-2xl border">
             <h4 className="text-lg font-semibold mb-2">Delete ALL Students</h4>
             <p className="text-sm text-gray-600 mb-4">Is action se tamam students delete ho jayenge. Confirm karne ke liye niche <span className="font-semibold">DELETE</span> type karein.</p>
+            <label className="block text-sm font-medium mb-1" htmlFor="deleteAllInput">Type DELETE to confirm</label>
+            <input
+              id="deleteAllInput"
+              value={deleteAllInput}
+              onChange={(e) => setDeleteAllInput(e.target.value)}
+              placeholder="DELETE"
+              className="w-full border rounded px-3 py-2 mb-3"
+            />
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 border rounded" onClick={() => { setShowDeleteAllConfirm(false); setDeleteAllInput(''); setDeleteAllMessage(''); }}>Close</button>
               <button

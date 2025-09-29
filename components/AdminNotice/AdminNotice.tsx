@@ -113,7 +113,15 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
                     const gr = String(s.grNumber || '').toLowerCase();
                     return roll.includes(q) || gr.includes(q);
                   })
-                  .map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber} — Roll {(s as any).rollNumber}</option>)}
+                  .slice()
+                  .sort((a:any,b:any)=>{
+                    const ra = parseInt(String(a.rollNumber||'').replace(/[^0-9]/g,''),10)
+                    const rb = parseInt(String(b.rollNumber||'').replace(/[^0-9]/g,''),10)
+                    const na = isNaN(ra) ? Infinity : ra
+                    const nb = isNaN(rb) ? Infinity : rb
+                    return na - nb
+                  })
+                  .map(s => <option key={s._id} value={s._id}>{(s as any).rollNumber} - {s.fullName} - GR {s.grNumber}</option>)}
               </select>
             </div>
           )}
@@ -209,7 +217,7 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
                       <span className="px-2 py-0.5 rounded-full text-xs border bg-rose-50 text-rose-700 border-rose-200">HEADLINE</span>
                     )}
                   </div>
-                  <span className="text-xs text-gray-500">{new Date(n.createdAt || n._createdAt).toLocaleString()}</span>
+                  <span className="text-xs text-gray-500">{new Date(n.createdAt || n._createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: true })}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setEditing(n)} className="px-2 py-1 text-xs border rounded inline-flex items-center gap-1"><Edit2 size={14}/> Edit</button>
@@ -219,7 +227,7 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
               <div className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{n.content}</div>
               <div className="text-xs text-gray-500 mt-1">Target: {n.targetType}{n.className ? ` (${n.className})` : ''}{n.student?.fullName ? ` (${n.student.fullName})` : ''}</div>
               {n.isEvent && (
-                <div className="text-xs text-amber-700 mt-1">Event: {n.eventType || 'General'} — {n.eventDate ? new Date(n.eventDate).toLocaleString() : 'No date'}</div>
+                <div className="text-xs text-amber-700 mt-1">Event: {n.eventType || 'General'} — {n.eventDate ? new Date(n.eventDate).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : 'No date'}</div>
               )}
             </div>
           ))}
@@ -336,6 +344,14 @@ const EditModal = ({ notice, onClose, onSaved, students, classOptions }: { notic
                       const roll = String((s as any).rollNumber || '').toLowerCase();
                       const gr = String(s.grNumber || '').toLowerCase();
                       return roll.includes(q) || gr.includes(q);
+                    })
+                    .slice()
+                    .sort((a:any,b:any)=>{
+                      const ra = parseInt(String(a.rollNumber||'').replace(/[^0-9]/g,''),10)
+                      const rb = parseInt(String(b.rollNumber||'').replace(/[^0-9]/g,''),10)
+                      const na = isNaN(ra) ? Infinity : ra
+                      const nb = isNaN(rb) ? Infinity : rb
+                      return na - nb
                     })
                     .map(s => <option key={s._id} value={s._id}>{s.fullName} — {s.grNumber} — Roll {(s as any).rollNumber}</option>)}
                 </select>

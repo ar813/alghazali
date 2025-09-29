@@ -29,8 +29,24 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 setTotalStudents(data.totalStudents || 0)
                 setAdmissionsLast365(data.admissionsLast365 || 0)
                 setTotalQuizzes(data.totalQuizzes || 0)
-                setResultsLast30(data.resultsLast30 || 0)
                 setTotalNotices(data.totalNotices || 0)
+
+                // Compute Announced Results (last 30 days) by filtering announced only
+                try {
+                    const r = await fetch('/api/quiz-results?lastDays=30&limit=1000', { cache: 'no-store' })
+                    const jr = await r.json()
+                    const list = Array.isArray(jr?.data) ? jr.data : []
+                    // Count per-quiz (unique quiz IDs) where quiz.resultsAnnounced is true
+                    const ids = new Set<string>()
+                    for (const it of list) {
+                        const qid = it?.quiz?._id
+                        const announced = !!it?.quiz?.resultsAnnounced
+                        if (qid && announced) ids.add(String(qid))
+                    }
+                    setResultsLast30(ids.size)
+                } catch {
+                    setResultsLast30(0)
+                }
                 // Try health (non-blocking)
                 try {
                     const h = await fetch('/api/health', { cache: 'no-store' })
@@ -99,9 +115,9 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 ) : (
                     <>
                         <StatCard stat={{ title: 'Total Students', value: totalStudents.toLocaleString(), icon: Users, color: 'from-blue-500 to-purple-600' }} />
-                        <StatCard stat={{ title: 'Admissions (365 days)', value: admissionsLast365.toLocaleString(), icon: TrendingUp, color: 'from-pink-500 to-rose-600' }} />
+                        <StatCard stat={{ title: 'Admission Range', value: (() => { const pct = totalStudents ? Math.round((totalStudents / 220) * 100) : 0; return `${pct}%`; })(), icon: TrendingUp, color: 'from-pink-500 to-rose-600' }} />
                         <StatCard stat={{ title: 'Total Quizzes', value: totalQuizzes.toLocaleString(), icon: Calendar, color: 'from-violet-500 to-indigo-600' }} />
-                        <StatCard stat={{ title: 'Results (30 days)', value: resultsLast30.toLocaleString(), icon: Sparkles, color: 'from-emerald-500 to-teal-600' }} />
+                        <StatCard stat={{ title: 'Announced Results', value: resultsLast30.toLocaleString(), icon: Sparkles, color: 'from-emerald-500 to-teal-600' }} />
                     </>
                 )}
             </div>

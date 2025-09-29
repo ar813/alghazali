@@ -1,15 +1,17 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Al Ghazali School Management System
 
-## Getting Started
+Next.js + TypeScript based school management system integrated with Sanity CMS and Tailwind CSS. It includes Admin Panel, Student Portal, dynamic Notices/Events, Quizzes and Results, ID Card generation, and Reports.
 
-### 1. Environment Configuration
+## Tech Stack
+- Next.js (App Router) with TypeScript
+- Sanity CMS (Content and data)
+- Tailwind CSS (UI)
+- ExcelJS, FileSaver (exports)
+- jsPDF (reports/cards)
+- Nodemailer (email from notices)
 
-Create a `.env.local` file in the project root and add the required variables:
-   - Get your Sanity project ID and dataset from [Sanity Dashboard](https://sanity.io/manage)
-   - Create a write token in your Sanity project settings
-   - Configure email settings if you need notification features
-
-Example `.env.local` keys:
+## Setup
+1) Environment variables: create `.env.local` using the keys below (see also `.env.example`)
 
 ```
 NEXT_PUBLIC_SANITY_PROJECT_ID=your_project_id
@@ -19,37 +21,58 @@ EMAIL_USER=your_email_user
 EMAIL_PASS=your_email_pass
 ```
 
-### 2. Run the Development Server
-
-Then, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+2) Install deps and run
 ```
+npm i
+npm run dev
+```
+App runs at http://localhost:3000
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure (key parts)
+- `components/AdminDashboard/AdminDashboard.tsx`: Admin overview cards and quick actions
+- `components/AdminResults/AdminResults.tsx`: Manage/announce results, view/export results, detailed popup
+- `components/AdminCards/AdminCards.tsx`: Generate student ID cards (PDFs) with QR and exact layout
+- `components/StudentDashboard/StudentDashboard.tsx`: Student overview: quizzes, announced results, recent notice
+- `components/StudentResults/StudentResults.tsx`: Student side results with detailed popup
+- `components/HeroSection/HeroSection.tsx`: Homepage hero with headline ticker and full-screen popup
+- `app/api/*`: Backend routes (quizzes, quiz-results, notices, schedule, etc.)
+- `sanity/schemaTypes/*`: Sanity datasets and schema (e.g., quizResult)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Admin Panel Sections (summary)
+- Results Control and Results: select quiz, announce/hide results, view table, open detailed popup, export to Excel/CSV
+- Cards (ID Cards): select students, preview layout, generate PDFs in ZIP
+- Notices: create notices and events; optional emails sent via Nodemailer
+- Dashboard: statistics (Total Students, Admission Range, Total Quizzes, Announced Results), Quick Actions, Health
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Student Portal Sections (summary)
+- Dashboard: available quizzes count, announced results count, total notices; Recent Quizzes/Results; Recent Notice
+- Results: list of announced results; per-result popup includes question-wise details
 
-## Learn More
+## Features and Behaviors
+- Quiz result popup: shows student metadata, score, percentage, grade, submitted time (12-hour format) and question-wise details with ✔ (correct) and ✘ (chosen)
+- Attempted Students lists: class-wise position computed and shown (Admin Results as a separate right section; Student Results alongside when a result is selected)
+- Hero Headline: notice title + animated content fetched from `/api/notices`; click to open a full-screen modal showing that content
+- Exports: Excel/CSV for results; jsPDF for reports/cards
 
-To learn more about Next.js, take a look at the following resources:
+## Admin → Student Mapping
+- Admin Results → Student Results
+  - When admin announces results (`AdminResults`), only then students see those results in `StudentResults` and `StudentDashboard` (Announced Results)
+  - Class-wise position calculated similarly on both sides for consistency
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Admin Notices → Home Hero + Student Dashboard
+  - Latest notice headline and content power the homepage hero headline ticker and its full-screen popup
+  - Student Dashboard “Recent Notice” shows the most recent notice with content
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Admin Cards → Student Identity Cards
+  - Admin prepares/export ID cards; student views not directly, but cards use the same student data (photo, name, class, roll/GR)
 
-## Deploy on Vercel
+## Stats Logic (Admin Dashboard)
+- Announced Results (30 days): count of results whose quiz has `resultsAnnounced = true` within last 30 days
+- Admission Range: percentage based on Total Students vs a capacity baseline (220): `(Total Students ÷ 220) × 100%`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Troubleshooting
+- If fetching fails in Admin Results, use `/api/health` to see missing env vars or Sanity connectivity issues
+- Ensure `.env.local` is present and correct; restart dev server after changes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Contributing
+Open issues or PRs describing the change. Keep code modular, typed, and consistent with Tailwind + React best practices.

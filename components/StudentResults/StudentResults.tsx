@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, X } from 'lucide-react'
 
 type Result = {
   _id: string
@@ -28,6 +28,13 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
   const [percent, setPercent] = useState<number | null>(null)
   const [grade, setGrade] = useState<string>('')
   const [passFail, setPassFail] = useState<'Pass'|'Fail'|''>('')
+
+  const formatDateTime = (iso?: string) => {
+    const d = new Date(iso || '')
+    const date = d.toLocaleDateString()
+    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    return `${date} ${time}`
+  }
 
   const load = async () => {
     setLoading(true)
@@ -117,7 +124,7 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
                   <div className="font-semibold text-gray-800">{r.quiz?.title}</div>
                   <div className="text-sm text-gray-700">Score: {r.score} / {r.quiz?.totalQuestions ?? (Array.isArray(r.answers) ? r.answers.length : '')}</div>
                 </div>
-                <div className="text-xs text-gray-500">{new Date(r.submittedAt || r._createdAt || '').toLocaleString()}</div>
+                <div className="text-xs text-gray-500">{formatDateTime(r.submittedAt || r._createdAt)}</div>
               </button>
             ))}
           </div>
@@ -128,7 +135,9 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-5 max-h-[85vh] overflow-auto">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-lg font-bold">{selected.quiz?.title}</h4>
-              <button onClick={()=>setSelected(null)} className="px-2 py-1 rounded border">Close</button>
+              <button onClick={()=>setSelected(null)} className="text-gray-600 hover:text-red-600" aria-label="Close">
+                <X size={18} />
+              </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div>
@@ -161,7 +170,7 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
               </div>
               <div>
                 <div className="text-gray-500">Submitted</div>
-                <div className="font-semibold">{new Date(selected.submittedAt || selected._createdAt || '').toLocaleString()}</div>
+                <div className="font-semibold">{formatDateTime(selected.submittedAt || selected._createdAt)}</div>
               </div>
               <div>
                 <div className="text-gray-500">Percentage</div>
@@ -200,7 +209,7 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
                           {baseQ.options.map((opt: string, oi: number) => (
                             <div key={oi} className={`px-2 py-1 rounded border ${oi===correct ? 'border-emerald-400 bg-emerald-100' : oi===chosen ? 'border-amber-400 bg-amber-100' : 'border-gray-200 bg-white'}`}>
                               {String.fromCharCode(65+oi)}. {opt}
-                              {oi===correct ? ' (Correct)' : oi===chosen ? ' (Your choice)' : ''}
+                              {oi===correct ? <span className="ml-1 text-emerald-600 font-semibold">✔</span> : oi===chosen ? <span className="ml-1 text-red-600 font-semibold">✘</span> : ''}
                             </div>
                           ))}
                         </div>

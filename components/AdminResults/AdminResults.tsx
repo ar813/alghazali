@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useState } from 'react'
-import { RefreshCw, Eye, EyeOff, Download, Trash2 } from 'lucide-react'
+import { RefreshCw, Eye, EyeOff, Download, Trash2, X } from 'lucide-react'
 
 type Quiz = { _id: string; title: string; subject: string; resultsAnnounced?: boolean; _createdAt?: string; createdAt?: string }
 
@@ -33,6 +33,48 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const [grade, setGrade] = useState<string>('')
   const [rankInfo, setRankInfo] = useState<{ rank: number; total: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Helpers
+  const formatDateTime = (iso?: string) => {
+    const d = new Date(iso || '')
+    const date = d.toLocaleDateString()
+    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    return `${date} ${time}`
+  }
+
+  // Attempted students with percentage and class-wise position
+  const sidebarList = React.useMemo(() => {
+    if (!Array.isArray(results) || results.length === 0) return [] as Array<{ id: string; name: string; roll: number; pct: number; position: number }>
+    // Build class groups for positions
+    const groups: Record<string, Result[]> = {}
+    for (const r of results) {
+      const cls = (r.className || r.student?.admissionFor || '').toString()
+      if (!groups[cls]) groups[cls] = []
+      groups[cls].push(r)
+    }
+    const posMap = new Map<string, number>()
+    Object.values(groups).forEach(list => {
+      list.sort((a, b) => (b.score || 0) - (a.score || 0))
+      list.forEach((r, i) => posMap.set(r._id, i + 1))
+    })
+    const parseRoll = (v?: string) => {
+      const n = parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10)
+      return isNaN(n) ? Number.MAX_SAFE_INTEGER : n
+    }
+    const mapped = results.map(r => {
+      const total = r.quiz?.totalQuestions ?? (Array.isArray(r.answers) ? r.answers.length : 0)
+      const pct = total > 0 ? Math.round((r.score / total) * 100) : 0
+      return {
+        id: r._id,
+        name: r.studentName || r.student?.fullName || '-',
+        roll: parseRoll(r.studentRollNumber),
+        pct,
+        position: posMap.get(r._id) || 0,
+      }
+    })
+    // Sort by Position ascending
+    return mapped.sort((a, b) => (a.position || 999999) - (b.position || 999999))
+  }, [results])
 
   const loadQuizzes = useCallback(async () => {
     setLoading(true); onLoadingChange?.(true); setError(null)
@@ -331,46 +373,68 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         ) : results.length === 0 ? (
           <div className="text-sm text-gray-500">No results yet.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left bg-gray-50">
-                  <th className="p-2">Student</th>
-                  <th className="p-2">GR</th>
-                  <th className="p-2">Roll</th>
-                  <th className="p-2">Class</th>
-                  <th className="p-2">Total Questions</th>
-                  <th className="p-2">Score</th>
-                  <th className="p-2">Submitted</th>
-                  <th className="p-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map(r => (
-                  <tr key={r._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={()=>setSelected(r)}>
-                    <td className="p-2">{r.studentName || r.student?.fullName}</td>
-                    <td className="p-2">{r.studentGrNumber || r.student?.grNumber}</td>
-                    <td className="p-2">{r.studentRollNumber || ''}</td>
-                    <td className="p-2">{r.className || r.student?.admissionFor}</td>
-                    <td className="p-2">{r.quiz?.totalQuestions ?? (Array.isArray(r.answers) ? r.answers.length : '')}</td>
-                    <td className="p-2">{r.score}</td>
-                    <td className="p-2">{new Date(r.submittedAt || r._createdAt || '').toLocaleString()}</td>
-                    <td className="p-2">
-                      <button onClick={(e)=>{ e.stopPropagation(); deleteOne(r._id) }} disabled={working===r._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14}/> {working===r._id ? '...' : 'Delete'}</button>
-                    </td>
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* Table (left) */}
+            <div className="md:col-span-3 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left bg-gray-50">
+                    <th className="p-2">Student</th>
+                    <th className="p-2">GR</th>
+                    <th className="p-2">Roll</th>
+                    <th className="p-2">Class</th>
+                    <th className="p-2">Total Questions</th>
+                    <th className="p-2">Score</th>
+                    <th className="p-2">Submitted</th>
+                    <th className="p-2">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {results.map(r => (
+                    <tr key={r._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={()=>setSelected(r)}>
+                      <td className="p-2">{r.studentName || r.student?.fullName}</td>
+                      <td className="p-2">{r.studentGrNumber || r.student?.grNumber}</td>
+                      <td className="p-2">{r.studentRollNumber || ''}</td>
+                      <td className="p-2">{r.className || r.student?.admissionFor}</td>
+                      <td className="p-2">{r.quiz?.totalQuestions ?? (Array.isArray(r.answers) ? r.answers.length : '')}</td>
+                      <td className="p-2">{r.score}</td>
+                      <td className="p-2">{formatDateTime(r.submittedAt || r._createdAt)}</td>
+                      <td className="p-2">
+                        <button onClick={(e)=>{ e.stopPropagation(); deleteOne(r._id) }} disabled={working===r._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14}/> {working===r._id ? '...' : 'Delete'}</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
+      {/* Attempted Students (separate section, right side, AFTER results) */}
+      {!!selectedQuiz && results.length > 0 && sidebarList.length > 0 && (
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="md:col-span-2"></div>
+          <div className="md:col-span-1 bg-white rounded-2xl shadow p-4 sm:p-6">
+            <div className="text-sm font-semibold text-gray-700 mb-2">Attempted Students (Position ↑)</div>
+            <div className="max-h-[60vh] overflow-auto space-y-2">
+              {sidebarList.map((s) => (
+                <div key={s.id} className="p-2 rounded bg-gray-50 border">
+                  <div className="text-sm font-medium text-gray-800 truncate">{s.name}</div>
+                  <div className="text-xs text-gray-600">Roll: {s.roll === Number.MAX_SAFE_INTEGER ? '-' : s.roll} • {s.pct}% • Pos: {s.position || '-'}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {selected && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-5 max-h-[85vh] overflow-auto">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-lg font-bold">{selected.quiz?.title}</h4>
-              <button onClick={()=>setSelected(null)} className="px-2 py-1 rounded border">Close</button>
+              <button onClick={()=>setSelected(null)} className="text-gray-600 hover:text-red-600" aria-label="Close">
+                <X size={18} />
+              </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div>
@@ -403,7 +467,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
               </div>
               <div>
                 <div className="text-gray-500">Submitted</div>
-                <div className="font-semibold">{new Date(selected.submittedAt || selected._createdAt || '').toLocaleString()}</div>
+                <div className="font-semibold">{formatDateTime(selected.submittedAt || selected._createdAt)}</div>
               </div>
               <div>
                 <div className="text-gray-500">Percentage</div>
@@ -436,7 +500,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                           {baseQ.options.map((opt: string, oi: number) => (
                             <div key={oi} className={`px-2 py-1 rounded border ${oi===correct ? 'border-emerald-400 bg-emerald-100' : oi===chosen ? 'border-amber-400 bg-amber-100' : 'border-gray-200 bg-white'}`}>
                               {String.fromCharCode(65+oi)}. {opt}
-                              {oi===correct ? ' (Correct)' : oi===chosen ? ' (Chosen)' : ''}
+                              {oi===correct ? <span className="ml-1 text-emerald-600 font-semibold">✔</span> : oi===chosen ? <span className="ml-1 text-red-600 font-semibold">✘</span> : ''}
                             </div>
                           ))}
                         </div>
