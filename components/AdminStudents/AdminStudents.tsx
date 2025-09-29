@@ -1137,12 +1137,24 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                               {getInitial(student.fullName)}
                             </div>
                           )}
-                          <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">{renderText(student.fullName)}</div>
+                          <div className="ml-3 min-w-0">
+                            <div
+                              className="text-sm font-medium text-gray-900 max-w-[180px] truncate"
+                              title={renderText(student.fullName)}
+                            >
+                              {renderText(student.fullName)}
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{renderText(student.fatherName)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div
+                          className="max-w-[180px] truncate"
+                          title={renderText(student.fatherName)}
+                        >
+                          {renderText(student.fatherName)}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{renderText(student.grNumber)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{renderText(student.cnicOrBform)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{renderText(student.admissionFor)}</td>
