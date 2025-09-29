@@ -1,4 +1,4 @@
-import { Users, TrendingUp, Calendar, Sparkles } from 'lucide-react';
+import { Users, TrendingUp, Calendar, Sparkles, Activity, ShieldCheck, Wrench, UserCog, FileBarChart2, Bell, Megaphone } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 
 const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
@@ -10,6 +10,7 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
     const [totalNotices, setTotalNotices] = useState<number>(0)
     const [loading, setLoading] = useState<boolean>(true)
     const [error, setError] = useState<string | null>(null)
+    const [health, setHealth] = useState<{ ok?: boolean; issues?: string[]; missingEnv?: string[] } | null>(null)
 
     // Data fetching for dashboard
     useEffect(() => {
@@ -30,6 +31,14 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 setTotalQuizzes(data.totalQuizzes || 0)
                 setResultsLast30(data.resultsLast30 || 0)
                 setTotalNotices(data.totalNotices || 0)
+                // Try health (non-blocking)
+                try {
+                    const h = await fetch('/api/health', { cache: 'no-store' })
+                    const hj = await h.json().catch(() => ({}))
+                    setHealth(hj || null)
+                } catch {
+                    setHealth(null)
+                }
             } catch (e: any) {
                 setError(e?.message || 'Failed to load stats')
             } finally {
@@ -97,6 +106,33 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 )}
             </div>
 
+            {/* Quick Actions */}
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Wrench className="text-blue-600" size={18}/> Quick Actions</h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'students' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100">
+                        <UserCog size={16}/> Manage Students
+                    </button>
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'schedule' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+                        <Calendar size={16}/> Schedule
+                    </button>
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'reports' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                        <FileBarChart2 size={16}/> Reports
+                    </button>
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'notice' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100">
+                        <Megaphone size={16}/> Notices
+                    </button>
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'fees' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100">
+                        <Sparkles size={16}/> Fees
+                    </button>
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'quiz' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100">
+                        <Calendar size={16}/> Quiz
+                    </button>
+                </div>
+            </div>
+
             {/* Notices summary */}
             <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -104,6 +140,28 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                     <div className="text-sm text-gray-600">Total: {totalNotices.toLocaleString()}</div>
                 </div>
                 <div className="text-sm text-gray-500">Manage notices in the Notice tab. Events are auto-synced to the homepage.</div>
+            </div>
+
+            {/* System Health */}
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><ShieldCheck size={18} className="text-emerald-600"/> System Health</h3>
+                </div>
+                {health ? (
+                    <div className="grid sm:grid-cols-3 gap-3 text-sm">
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 text-emerald-700">
+                            <Activity size={16}/> Status: {health.ok ? 'OK' : 'Issues found'}
+                        </div>
+                        <div className="p-3 rounded-lg bg-blue-50 text-blue-700">
+                            Missing ENV: {(health.missingEnv || []).length}
+                        </div>
+                        <div className="p-3 rounded-lg bg-amber-50 text-amber-700">
+                            Warnings: {(health.issues || []).length}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-sm text-gray-500 flex items-center gap-2"><Bell size={16} className="text-gray-400"/> Health endpoint unavailable or disabled.</div>
+                )}
             </div>
 
             {/* Removed: Recent Admissions per request */}

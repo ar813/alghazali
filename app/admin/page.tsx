@@ -68,12 +68,13 @@ const AdminPage = () => {
 
 export default AdminPage;
 
-// ✅ Login Popup Component
+// ✅ Login Popup Component (Enhanced UI)
 const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const adminUsers = [
     { username: 'arsalan', email: 'arsalan@example.com', password: 'admin123' },
@@ -116,74 +117,76 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Admin Login">
-      <div className="relative bg-white sm:rounded-2xl rounded-none shadow-xl p-6 sm:p-8 w-full sm:w-[90%] sm:max-w-md h-full sm:h-auto">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-label="Admin Login">
+      <div className="relative bg-white sm:rounded-2xl rounded-xl shadow-xl p-6 sm:p-8 w-full sm:w-[90%] sm:max-w-md">
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition p-2 rounded-full focus:outline-none focus:ring"
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition p-2 rounded-full focus:outline-none focus:ring focus:ring-gray-200"
           aria-label="Close popup"
         >
           <X size={22} />
         </button>
 
-        <h2 className="text-xl font-bold mb-4 text-gray-800 text-center">
-          Admin Login
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+        <div className="text-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Admin Login</h2>
+          <p className="text-sm text-gray-500 mt-1">Please enter your credentials to continue.</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              Username
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full border rounded-lg px-4 py-3 sm:py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter username"
               required
             />
+            <p className="mt-1 text-xs text-gray-500">Use the configured admin username.</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-lg px-4 py-3 sm:py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter email"
               required
             />
+            <p className="mt-1 text-xs text-gray-500">Your admin email address.</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border rounded-lg px-4 py-3 sm:py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter password"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border rounded-lg px-4 py-2.5 pr-16 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter password"
+                required
+              />
+              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute inset-y-0 right-2 my-1 px-2 text-xs rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100">{showPassword ? 'Hide' : 'Show'}</button>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">Your password is case sensitive.</p>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 sm:py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:opacity-95 transition-all shadow"
           >
             Login
           </button>
+          <div className="text-[11px] text-gray-500 text-center">Tip: You can configure credentials via environment variables.</div>
         </form>
       </div>
     </div>

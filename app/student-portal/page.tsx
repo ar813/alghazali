@@ -191,8 +191,8 @@ export default function StylishStudentPortal() {
     <div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 px-4 sm:px-0">
-          <div className="relative bg-white/80 backdrop-blur-xl border border-white/40 p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-sm mx-4">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-10 px-4">
+          <div className="relative bg-white rounded-xl shadow-xl p-5 sm:p-6 w-full max-w-sm mx-4">
 
             <button
               onClick={() => router.push('/')}
@@ -201,55 +201,49 @@ export default function StylishStudentPortal() {
             >
               <X size={20} />
             </button>
-            <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-800 text-center">
-              Student Verification
-            </h2>
-            <form
-              onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-            >
-              <input
-                type="text"
-                placeholder="CNIC/B-Form Number"
-                value={searchBFormNumber}
-                onChange={(e) => setSearchBFormNumber(formatCnic(e.target.value))}
-                className="w-full border p-2.5 rounded-lg text-sm sm:text-base mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="GR Number"
-                value={searchGRNumber}
-                onChange={(e) => setSearchGRNumber(e.target.value)}
-                className="w-full border p-2.5 rounded-lg text-sm sm:text-base mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
-                >
-                  Search
-                </button>
-              </div>
-            </form>
+            <div className="text-center mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Student Verification</h2>
+              <p className="text-xs text-gray-500 mt-1">Enter CNIC/B-Form and GR Number to access your portal.</p>
+            </div>
             {validationMessage && (
-              <div className="mb-4 mt-4 flex items-start gap-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 shadow-sm transform transition-all duration-300 ease-out opacity-100 translate-y-0">
-                <svg
-                  className="w-5 h-5 mt-0.5 text-red-500"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.054 0 1.658-1.14 1.105-2.05L13.105 4.05c-.553-.91-1.658-.91-2.211 0L4.977 17.95c-.553.91.051 2.05 1.105 2.05z"
-                  />
+              <div className="mb-3 flex items-start gap-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <svg className="w-5 h-5 mt-0.5 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.054 0 1.658-1.14 1.105-2.05L13.105 4.05c-.553-.91-1.658-.91-2.211 0L4.977 17.95c-.553.91.051 2.05 1.105 2.05z" />
                 </svg>
                 <span>{validationMessage}</span>
               </div>
             )}
+            <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CNIC/B-Form Number</label>
+                <input
+                  type="text"
+                  placeholder="xxxxx-xxxxxxx-x"
+                  value={searchBFormNumber}
+                  onChange={(e) => setSearchBFormNumber(formatCnic(e.target.value))}
+                  className="w-full border rounded-lg px-3 py-2.5 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">Enter student CNIC/B-Form or Guardian/Father CNIC.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">GR Number</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 12345"
+                  value={searchGRNumber}
+                  onChange={(e) => setSearchGRNumber(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2.5 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:opacity-95 transition-all shadow"
+              >
+                Verify
+              </button>
+            </form>
 
           </div>
         </div>
