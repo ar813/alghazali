@@ -1,5 +1,7 @@
 import { Users, TrendingUp, Calendar, Sparkles, Activity, ShieldCheck, Wrench, UserCog, FileBarChart2, Bell, Megaphone } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
+import { client } from '@/sanity/lib/client'
+import { getAllStudentsQuery } from '@/sanity/lib/queries'
 
 const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
     // Stats
@@ -19,6 +21,19 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
             setLoading(true)
             setError(null)
             try {
+                // Prefer direct Sanity fetch for accurate Total Students (same as AdminReports)
+                try {
+                    const list: any[] = await client.fetch(getAllStudentsQuery)
+                    setTotalStudents(Array.isArray(list) ? list.length : 0)
+                } catch {
+                    // Fallback to stats API if direct fetch fails
+                    const res = await fetch('/api/stats')
+                    const json = await res.json().catch(() => ({}))
+                    const data = json?.data || {}
+                    setTotalStudents(data.totalStudents || 0)
+                }
+
+                // Load other stats from /api/stats (non-blocking for total students which is already set)
                 const res = await fetch('/api/stats')
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}))
@@ -26,7 +41,6 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 }
                 const json = await res.json()
                 const data = json?.data || {}
-                setTotalStudents(data.totalStudents || 0)
                 setAdmissionsLast365(data.admissionsLast365 || 0)
                 setTotalQuizzes(data.totalQuizzes || 0)
                 setTotalNotices(data.totalNotices || 0)

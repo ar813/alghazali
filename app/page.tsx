@@ -25,7 +25,7 @@ export default function HomePage() {
       <AcademicPrograms />
       <Faculty />
       <StatsSection />
-      <AdmissionDetail />      
+      <AdmissionDetail />     
       <Contact />
       <Footer />
       

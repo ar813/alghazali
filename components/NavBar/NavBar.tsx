@@ -24,6 +24,7 @@ const NavBar = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
             <a href="/" className="hover:text-amber-300 transition-colors font-medium">Home</a>
+            <a href="http://localhost:3000/#admissions" className="hover:text-amber-300 transition-colors font-medium">Fees</a>
             <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
             <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
           </nav>
@@ -69,6 +70,7 @@ const NavBar = () => {
 
             <nav className="mt-8 flex flex-col gap-4">
               <a href="/" className="hover:text-amber-300 transition-colors font-medium">Home</a>
+              <a href="http://localhost:3000/#admissions" className="hover:text-amber-300 transition-colors font-medium">Fees</a>
               <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
               <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
             </nav>

@@ -297,7 +297,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
         doc.setFont('helvetica', 'bold');
         // Python coordinates: c.drawCentredString(90.5, 95, "Level" + "-" + roman_class)
         // Convert Y coordinate: cardH - pythonY = 321 - 95 = 226
-        doc.text(`Level-${intToRoman(s.admissionFor)}`, 90.5, cardH - 95, { align: 'center' });
+        doc.text(`LEVEL-${intToRoman(s.admissionFor)}`, 90.5, cardH - 95, { align: 'center' });
 
         // Secondary values - matching Python positioning exactly
         doc.setTextColor(35, 31, 85);
@@ -595,7 +595,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                           <div className="mb-1 text-[9px] font-bold text-[#231f55] truncate">{(s.fullName || "").toUpperCase()}</div>
                           {/* Background already has 'SON OF' label */}
                           <div className="mt-[11px] text-[9px] font-bold text-[#231f55] truncate">{(s.fatherName || "").toUpperCase()}</div>
-                          <div className="mt-[3.5px] text-[9px] font-bold text-white truncate">Level-{intToRoman(s.admissionFor)}</div>
+                          <div className="mt-[3.5px] text-[9px] font-bold text-white truncate">LEVEL-{intToRoman(s.admissionFor)}</div>
                         </div>
 
                         {/* Secondary values - positioned to match PDF exactly */}
