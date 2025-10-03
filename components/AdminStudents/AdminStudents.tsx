@@ -91,6 +91,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [importResultMessage, setImportResultMessage] = useState('')
   const [deleteAllMessage, setDeleteAllMessage] = useState('')
   const [imgPreviewOpen, setImgPreviewOpen] = useState(false)
+  // Delete by Class UI state
+  const [showDeleteByClassConfirm, setShowDeleteByClassConfirm] = useState(false)
+  const [deleteClassSelected, setDeleteClassSelected] = useState('1')
+  const [deleteClassConfirmText, setDeleteClassConfirmText] = useState('')
   // Toasts (match AdminSchedule style)
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -175,6 +179,9 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         body.photo = imageRef
       }
       delete body.photoFile
+      // Remove projection-only/client-only fields that are not in Sanity schema
+      // Avoids: Unknown field found -> photoUrl
+      if ('photoUrl' in body) delete body.photoUrl
 
       const res = await fetch('/api/students', {
         method: 'PATCH',
@@ -263,7 +270,32 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     try {
       const res = await fetch('/api/students', { method: 'DELETE', body: JSON.stringify({ id }), headers: { 'Content-Type': 'application/json' } })
       const json = await res.json()
-      if (!json.ok) throw new Error(json.error || 'Delete failed')
+      if (!res.ok || !json.ok) {
+        // If conflict due to references, show referencing document IDs/types
+        if (res.status === 409 && (json?.referencing || json?.blocked)) {
+          const refs = (json.referencing || []).map((r: any) => `${r._type}:${r._id}`).join(', ')
+          showToast(`Cannot delete. Referenced by: ${refs || 'other documents'}`, 'error')
+          // Offer force delete
+          const confirmForce = window.confirm('This student is referenced by other documents. Do you want to force delete (will delete related fees/results/quizzes/notices first)?')
+          if (confirmForce) {
+            const res2 = await fetch('/api/students?force=true', { method: 'DELETE', body: JSON.stringify({ id }), headers: { 'Content-Type': 'application/json' } })
+            const json2 = await res2.json()
+            if (!res2.ok || !json2.ok) {
+              if (res2.status === 409 && json2?.referencing) {
+                const refs2 = (json2.referencing || []).map((r: any) => `${r._type}:${r._id}`).join(', ')
+                showToast(`Force delete blocked. Still referenced by: ${refs2 || 'other documents'}`, 'error')
+                return
+              }
+              throw new Error(json2.error || 'Force delete failed')
+            }
+            showToast('Student force deleted successfully', 'success')
+            await refreshStudents()
+            return
+          }
+          return
+        }
+        throw new Error(json.error || 'Delete failed')
+      }
       await refreshStudents()
     } catch (err) {
       console.error('Failed to delete student', err)
@@ -677,6 +709,14 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             </button>
             {/* Hidden file input for import */}
             <input id={fileInputRefId} type="file" accept=".xlsx" className="hidden" onChange={handleImportExcelFile} />
+            {/* Delete by Class */}
+            <button
+              onClick={() => { setDeleteClassSelected('1'); setDeleteClassConfirmText(''); setShowDeleteByClassConfirm(true) }}
+              className="px-4 h-10 md:h-11 border border-amber-300 text-amber-700 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-amber-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
+              title="Delete students by class"
+            >
+              <span className="font-medium">Delete by Class</span>
+            </button>
             {/* Delete All */}
             <button
               onClick={() => {
@@ -859,6 +899,62 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <button onClick={handleCreateStudent} disabled={createLoading} className="px-4 py-2 bg-blue-600 text-white rounded w-full sm:w-auto">{createLoading ? 'Creating...' : 'Create'}</button>
             </div>
             <ImageModal open={imgPreviewOpen} src={selectedStudent?.photoUrl} alt={selectedStudent?.fullName || 'Student Photo'} onClose={() => setImgPreviewOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Delete By Class Confirm Modal */}
+      {showDeleteByClassConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Delete Students By Class Confirmation">
+          <div className="bg-white sm:rounded-xl rounded-none p-6 w-full sm:max-w-sm max-w-none h-auto sm:h-auto shadow-2xl border">
+            <h4 className="text-lg font-semibold mb-2">Delete by Class</h4>
+            <p className="text-sm text-gray-600 mb-3">Kya aap sure hain ke selected class ke tamam students delete karna chahte hain? Ye action wapas nahin hoga.</p>
+            <label className="block text-sm font-medium mb-1" htmlFor="deleteClassSelect">Select Class</label>
+            <select
+              id="deleteClassSelect"
+              value={deleteClassSelected}
+              onChange={(e) => setDeleteClassSelected(e.target.value)}
+              className="w-full border rounded px-3 py-2 mb-3"
+            >
+              {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <label className="block text-sm font-medium mb-1" htmlFor="deleteClassConfirm">Type class name to confirm</label>
+            <input
+              id="deleteClassConfirm"
+              value={deleteClassConfirmText}
+              onChange={(e) => setDeleteClassConfirmText(e.target.value)}
+              placeholder={deleteClassSelected}
+              className="w-full border rounded px-3 py-2 mb-3"
+            />
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 border rounded" onClick={() => { setShowDeleteByClassConfirm(false); setDeleteClassConfirmText(''); }}>Close</button>
+              <button
+                disabled={deleteClassConfirmText.trim() !== deleteClassSelected || loading}
+                onClick={async () => {
+                  setLoading(true)
+                  try {
+                    const cls = encodeURIComponent(deleteClassSelected)
+                    const res = await fetch(`/api/students?class=${cls}`, { method: 'DELETE' })
+                    const json = await res.json()
+                    if (!json.ok) throw new Error(json.error || 'Class delete failed')
+                    await refreshStudents()
+                    showToast(`All students of Class ${deleteClassSelected} have been deleted successfully.`, 'success')
+                  } catch (err) {
+                    console.error('Failed to delete by class', err)
+                    showToast('Class ke students delete karne mein masla aaya.', 'error')
+                  } finally {
+                    setLoading(false)
+                    setShowDeleteByClassConfirm(false)
+                    setDeleteClassConfirmText('')
+                  }
+                }}
+                className={`px-4 py-2 rounded text-white ${deleteClassConfirmText.trim() === deleteClassSelected && !loading ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 cursor-not-allowed'}`}
+              >
+                {loading ? 'Deleting...' : `Yes, Delete Class ${deleteClassSelected}`}
+              </button>
+            </div>
           </div>
         </div>
       )}
