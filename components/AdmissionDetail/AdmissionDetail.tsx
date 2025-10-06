@@ -2,16 +2,16 @@ import { ChevronRight } from 'lucide-react'
 import React from 'react'
 
 const FEE_STRUCTURE_2025: { className: string; amount: number }[] = [
-    { className: 'Class 1', amount: 1500 },
-    { className: 'Class 2', amount: 1600 },
-    { className: 'Class 3', amount: 1700 },
-    { className: 'Class 4', amount: 1800 },
-    { className: 'Class 5', amount: 1900 },
-    { className: 'Class 6', amount: 2000 },
-    { className: 'Class 7', amount: 2100 },
-    { className: 'Class 8', amount: 2200 },
-    { className: 'SSCI', amount: 2500 },
-    { className: 'SSCII', amount: 2700 },
+    { className: 'Admission (New Students)', amount: 4000 },
+    { className: 'Admission (Old Students)', amount: 2500 },
+    { className: 'Class 1', amount: 900 },
+    { className: 'Class 2', amount: 900 },
+    { className: 'Class 3', amount: 1000 },
+    { className: 'Class 4', amount: 1000 },
+    { className: 'Class 5', amount: 1100 },
+    { className: 'Class 6', amount: 1200 },
+    { className: 'SSCI', amount: 1300 },
+    { className: 'SSCII', amount: 1300 },
 ]
 
 const AdmissionDetail = () => {
@@ -40,14 +40,14 @@ const AdmissionDetail = () => {
                                 <ChevronRight className="w-4 sm:w-5 h-4 sm:h-5 text-indigo-600 mt-0.5" />
                                 <div>
                                     <h4 className="font-semibold text-sm sm:text-base">Documents Required</h4>
-                                    <p className="text-gray-600 text-xs sm:text-sm">Birth certificate, previous school records, medical certificate</p>
+                                    <p className="text-gray-600 text-xs sm:text-sm">Birth certificate, B-Form, Father CNIC, previous school records</p>
                                 </div>
                             </div>
                             <div className="flex items-start space-x-3">
                                 <ChevronRight className="w-4 sm:w-5 h-4 sm:h-5 text-indigo-600 mt-0.5" />
                                 <div>
                                     <h4 className="font-semibold text-sm sm:text-base">Admission Test</h4>
-                                    <p className="text-gray-600 text-xs sm:text-sm">Written test and interview for classes 2-10</p>
+                                    <p className="text-gray-600 text-xs sm:text-sm">Written test and interview for classes 1-10</p>
                                 </div>
                             </div>
                         </div>

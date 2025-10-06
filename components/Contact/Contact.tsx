@@ -164,21 +164,21 @@ const Contact = () => {
                                         <MapPin className="w-5 h-5 text-blue-200 mt-1" />
                                         <div>
                                             <h4 className="font-semibold text-sm sm:text-base">Address</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.schoolAddress || 'Block 15, Gulshan-e-Iqbal, Karachi, Sindh, Pakistan'}</p>
+                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.schoolAddress || 'Area 36-B, Double Road, Landhi Town, Korangi, Karachi, Pakistan'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start space-x-3">
                                         <Phone className="w-5 h-5 text-blue-200 mt-1" />
                                         <div>
                                             <h4 className="font-semibold text-sm sm:text-base">Phone</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.phoneNumber || '+92 21 34567890'}</p>
+                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.phoneNumber || '+92 321 9230035'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start space-x-3">
                                         <Mail className="w-5 h-5 text-blue-200 mt-1" />
                                         <div>
                                             <h4 className="font-semibold text-sm sm:text-base">Email</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.email || 'info@alghazalischool.edu.pk'}</p>
+                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.email || 'ar3584158@gmail.com'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -188,9 +188,8 @@ const Contact = () => {
                                 <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">Office Hours</h3>
                                 <div className="space-y-3">
                                     {(settings?.officeHours || [
-                                        { day: 'Monday - Friday', open: '8:00 AM', close: '4:00 PM' },
-                                        { day: 'Saturday', open: '9:00 AM', close: '2:00 PM' },
-                                        { day: 'Sunday', open: 'Closed', close: '' }
+                                        { day: 'Saturday - Thursday', open: '8:00 AM', close: '2:10 PM' },
+                                        { day: 'Friday', open: 'Closed', close: '' }
                                     ]).map((row: any, idx: number) => (
                                         <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
                                             <span className="text-gray-600 text-sm sm:text-base">{row.day}</span>
@@ -203,7 +202,7 @@ const Contact = () => {
                             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-6 sm:p-8">
                                 <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">Follow Us</h3>
                                 <div className="flex space-x-4">
-                                    <a href="#" className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors">
+                                    <a href="https://www.facebook.com/p/Al-Ghazali-High-School-36B-Landhi-Karachi-100071529611065/" target='_blank' className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors">
                                         <Facebook className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </a>
                                     <a href="#" className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-400 rounded-full flex items-center justify-center text-white hover:bg-blue-500 transition-colors">
@@ -243,7 +242,7 @@ const Contact = () => {
                                 School Location
                             </h3>
                             <p className="text-sm sm:text-base text-gray-500 mb-3 sm:mb-4">
-                                Block 15, Gulshan-e-Iqbal, Karachi
+                                Area 36-B, Double Road, Landhi Town, Korangi, Karachi, Pakistan
                             </p>
                             <a
                                 href="https://www.google.com/maps/dir//Al+ghazali+high+school"

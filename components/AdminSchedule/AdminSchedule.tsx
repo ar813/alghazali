@@ -12,7 +12,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   // Form state
   const classOptions = ['1','2','3','4','5','6','7','8','SSCI','SSCII']
   const dayOptions = ['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday']
-  const subjectOptions = ['English','Urdu','Math','Science','Islamiat','Computer','History','Art']
+  const subjectOptions = ['English','Urdu','Math','Science','Islamiat','Computer', 'Nardban', 'Nazra', 'Islamiat']
   const timeOptions = ['08:00 - 08:35','08:35 - 09:10','09:10 - 09:45','09:45 - 10:20','10:20 - 10:55','10:55 - 11:30','11:30 - 12:05','12:05 - 12:40','12:40 - 13:15','13:15 - 13:50']
 
   const [formClass, setFormClass] = useState<string>('')
