@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { Search, RotateCw, Upload, Download, Filter, X } from 'lucide-react'
 import { client } from "@/sanity/lib/client";
@@ -86,17 +86,33 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
   const [deleteAllInput, setDeleteAllInput] = useState('')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
-  const [searchField, setSearchField] = useState<'all' | 'fullName' | 'fatherName' | 'grNumber' | 'admissionFor' | 'rollNumber'>('all')
   const [importResultOpen, setImportResultOpen] = useState(false)
   const [importResultMessage, setImportResultMessage] = useState('')
   const [deleteAllMessage, setDeleteAllMessage] = useState('')
   const [imgPreviewOpen, setImgPreviewOpen] = useState(false)
+  // AdminCards-like class filter
+  const [klass, setKlass] = useState<string>('All')
   // Delete by Class UI state
   const [showDeleteByClassConfirm, setShowDeleteByClassConfirm] = useState(false)
   const [deleteClassSelected, setDeleteClassSelected] = useState('1')
   const [deleteClassConfirmText, setDeleteClassConfirmText] = useState('')
   // Toasts (match AdminSchedule style)
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
+
+  // Dynamic class options based on available data
+  const classOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const s of students) {
+      const c = (s.admissionFor || '').toString().trim()
+      if (c) set.add(c)
+    }
+    return Array.from(set).sort()
+  }, [students])
+  // Classes list for filter dropdown (AdminCards style)
+  const classes = useMemo(() => {
+    const unique = Array.from(new Set(students.map(s => (s.admissionFor || '').toString().trim()).filter(Boolean)))
+    return ['All', ...unique]
+  }, [students])
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ show: true, message, type })
     window.setTimeout(() => setToast(null), 2200)
@@ -406,6 +422,22 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     return String(value)
   }
 
+  // Normalize class strings to a canonical form to avoid leaks due to spacing/case
+  // Examples:
+  //  'Class 5' -> '5'
+  //  ' 5 ' -> '5'
+  //  'ssci' -> 'SSCI'
+  //  'SSC II' -> 'SSCII'
+  const canonicalClass = (v: any): string => {
+    const raw = (v ?? '').toString().trim().toUpperCase()
+    if (!raw) return ''
+    // If contains digits, use just the digits (covers 'CLASS 5', '5TH', etc.)
+    const digits = raw.replace(/[^0-9]/g, '')
+    if (digits) return digits
+    // Collapse spaces for roman/alpha classes like 'SSC II' -> 'SSCII'
+    return raw.replace(/\s+/g, '')
+  }
+
   const handleExportExcel = async () => {
     try {
       console.log('Starting Excel export...')
@@ -602,17 +634,25 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   }
 
   // derive filtered list once to use in both table and cards
-  const filteredStudents = students.filter(student => {
+  // AdminCards-like filtering: by class + term across common fields (memoized)
+  const filteredStudents = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
-    if (!term) return true
-    const safeVal = (v: any) => (v ?? '').toString().toLowerCase()
-    if (searchField === 'all') {
-      return [student.rollNumber, student.fullName, student.fatherName, student.grNumber, student.admissionFor]
-        .some(v => safeVal(v).includes(term))
-    }
-    const raw: any = (student as any)[searchField]
-    return safeVal(raw).includes(term)
-  })
+    const selectedCanonical = canonicalClass(klass === 'All' ? '' : klass)
+    return students.filter((s) => {
+      // Class filtering - canonical exact match to avoid whitespace/case mismatches
+      const studentCanonical = canonicalClass(s.admissionFor)
+      const matchesClass = !selectedCanonical || studentCanonical === selectedCanonical
+
+      // Search term filtering - limit to name, GR, Roll only (as per requirement)
+      const matchesTerm = !term
+        ? true
+        : [s.fullName, s.grNumber, s.rollNumber]
+            .map((v) => (v || '').toString().toLowerCase())
+            .some((v) => v.includes(term))
+
+      return matchesClass && matchesTerm
+    })
+  }, [students, searchTerm, klass])
 
   // Sorting: Class order (KG, 1..8, SSCI, SSCII) then numeric Roll No
   const classOrder = ['KG','1','2','3','4','5','6','7','8','SSCI','SSCII']
@@ -627,11 +667,13 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     const n = parseInt((v || '').toString().replace(/[^0-9]/g, ''), 10)
     return isNaN(n) ? Number.POSITIVE_INFINITY : n
   }
-  const sortedStudents: Student[] = [...filteredStudents].sort((a, b) => {
-    const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
-    if (byClass !== 0) return byClass
-    return numOrInf(a.rollNumber) - numOrInf(b.rollNumber)
-  })
+  const sortedStudents: Student[] = useMemo(() => {
+    return [...filteredStudents].sort((a, b) => {
+      const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
+      if (byClass !== 0) return byClass
+      return numOrInf(a.rollNumber) - numOrInf(b.rollNumber)
+    })
+  }, [filteredStudents])
 
   // Note: Delete All handled via confirmation modal below
 
@@ -645,7 +687,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                placeholder={`Search by ${searchField.replace(/([A-Z])/g, ' $1').toLowerCase()}...`}
+                placeholder="Search by name, father, GR, Roll..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-3 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full"
@@ -661,21 +703,21 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 <span className="hidden sm:inline">Filter</span>
               </button>
               {showFilterMenu && (
-                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-56 p-1 right-0">
-                  <div className="px-3 py-1 text-xs text-gray-500">Filter by</div>
-                  {(['all','rollNumber', 'fullName', 'fatherName', 'grNumber', 'admissionFor'] as const).map(opt => (
-                    <button key={opt} className={`w-full text-left px-3 py-2 rounded hover:bg-gray-50 ${searchField === opt ? 'bg-blue-100 text-blue-700' : ''}`} onClick={() => { setSearchField(opt); setShowFilterMenu(false); }}>
-                      {opt === 'all' && 'All fields'}
-                      {opt === 'fullName' && 'Student Name'}
-                      {opt === 'fatherName' && "Father's Name"}
-                      {opt === 'grNumber' && 'GR Number'}
-                      {opt === 'admissionFor' && 'Class'}
-                      {opt === 'rollNumber' && 'Roll Number'}
-                    </button>
-                  ))}
+                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-56 p-2 right-0 transition-all duration-200 ease-out origin-top scale-100">
+                  <label className="text-xs text-gray-500 px-1">Class</label>
+                  <select
+                    value={klass}
+                    onChange={(e) => { setKlass(e.target.value); setShowFilterMenu(false) }}
+                    className="mt-1 w-full border rounded-lg px-3 py-2"
+                  >
+                    {classes.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               )}
             </div>
+            {/* Reset button removed per requirement; clearing input or selecting 'All' is enough */}
           </div>
         </div>
         {/* Row 2: Actions (full width; wrap nicely; right-aligned) */}
@@ -695,7 +737,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
               title="Export students to Excel"
             >
-              <Download size={16} />
+              <Upload size={16} />
               <span className="hidden sm:inline font-medium">Export</span>
             </button>
             {/* Import Excel */}
@@ -704,7 +746,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
               title="Import students from Excel"
             >
-              <Upload size={16} />
+              <Download size={16} />
               <span className="hidden sm:inline font-medium">Import</span>
             </button>
             {/* Hidden file input for import */}
@@ -916,22 +958,23 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               onChange={(e) => setDeleteClassSelected(e.target.value)}
               className="w-full border rounded px-3 py-2 mb-3"
             >
-              {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (
+              {classOptions.length === 0 ? <option value="" disabled>No classes found</option> : null}
+              {classOptions.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <label className="block text-sm font-medium mb-1" htmlFor="deleteClassConfirm">Type class name to confirm</label>
+            <label className="block text-sm font-medium mb-1" htmlFor="deleteClassConfirm">Type <span className="font-mono font-semibold">DELETE</span> to confirm</label>
             <input
               id="deleteClassConfirm"
               value={deleteClassConfirmText}
               onChange={(e) => setDeleteClassConfirmText(e.target.value)}
-              placeholder={deleteClassSelected}
+              placeholder="DELETE"
               className="w-full border rounded px-3 py-2 mb-3"
             />
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 border rounded" onClick={() => { setShowDeleteByClassConfirm(false); setDeleteClassConfirmText(''); }}>Close</button>
               <button
-                disabled={deleteClassConfirmText.trim() !== deleteClassSelected || loading}
+                disabled={deleteClassConfirmText.trim() !== 'DELETE' || loading}
                 onClick={async () => {
                   setLoading(true)
                   try {
@@ -950,9 +993,9 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                     setDeleteClassConfirmText('')
                   }
                 }}
-                className={`px-4 py-2 rounded text-white ${deleteClassConfirmText.trim() === deleteClassSelected && !loading ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 cursor-not-allowed'}`}
+                className={`px-4 py-2 rounded text-white ${deleteClassConfirmText.trim() === 'DELETE' && !loading ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 cursor-not-allowed'}`}
               >
-                {loading ? 'Deleting...' : `Yes, Delete Class ${deleteClassSelected}`}
+                {loading ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
           </div>
@@ -1216,6 +1259,23 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                     </div>
                   </td>
                 </tr>
+              ) : sortedStudents.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                      <div className="text-lg font-medium mb-2">
+                        {searchTerm.trim() && klass !== 'All'
+                          ? `No students match "${searchTerm}" in Class ${klass}`
+                          : searchTerm.trim()
+                          ? `Student not found: "${searchTerm}"`
+                          : (klass !== 'All' ? `No students found in Class ${klass}` : 'No students found')}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {searchTerm.trim() ? 'Try a different search term' : 'Add some students to get started'}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 sortedStudents
                   .map((student: Student, index: number) => (
@@ -1280,7 +1340,13 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             <div className="text-blue-600 font-semibold">Loading students...</div>
           </div>
         ) : sortedStudents.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow p-6 text-center text-gray-500">No students found</div>
+          <div className="bg-white rounded-2xl shadow p-6 text-center text-gray-500">
+            {searchTerm.trim() && klass !== 'All'
+              ? `No students match "${searchTerm}" in Class ${klass}`
+              : searchTerm.trim()
+              ? `Student not found: "${searchTerm}"`
+              : (klass !== 'All' ? `No students found in Class ${klass}` : 'No students found')}
+          </div>
         ) : (
           sortedStudents.map((student: Student, index: number) => (
             <div

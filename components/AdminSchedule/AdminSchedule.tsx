@@ -33,6 +33,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   }
   // Delete confirm state
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; className: string; day: string } | null>(null)
+  const [deletingDay, setDeletingDay] = useState<boolean>(false)
 
   // Import/Export helpers
   const [importLoading, setImportLoading] = useState(false)
@@ -313,8 +314,8 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">This Week Schedule</span>
           </h3>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-            <button onClick={handleExport} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Download size={16}/> Export</button>
-            <button onClick={onClickImport} disabled={importLoading} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Upload size={16}/> {importLoading ? 'Importing...' : 'Import'}</button>
+            <button onClick={handleExport} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Upload size={16}/> Export</button>
+            <button onClick={onClickImport} disabled={importLoading} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Download size={16}/> {importLoading ? 'Importing...' : 'Import'}</button>
             <button onClick={loadSchedules} className="text-sm inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 w-full sm:w-auto">
               <Sparkles size={16} className="text-blue-600"/> 
               <span className="text-blue-700 font-medium">Refresh</span>
@@ -525,10 +526,21 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 border rounded" onClick={() => setConfirmDelete(null)}>No</button>
               <button
-                className="px-4 py-2 bg-red-600 text-white rounded"
-                onClick={() => { const { className, day } = confirmDelete; setConfirmDelete(null); deleteScheduleDay(className, day) }}
+                className={`px-4 py-2 text-white rounded ${deletingDay ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                disabled={deletingDay}
+                onClick={async () => {
+                  if (!confirmDelete) return
+                  const { className, day } = confirmDelete
+                  try {
+                    setDeletingDay(true)
+                    await deleteScheduleDay(className, day)
+                  } finally {
+                    setDeletingDay(false)
+                    setConfirmDelete(null)
+                  }
+                }}
               >
-                Yes, Delete
+                {deletingDay ? 'Deleting…' : 'Yes, Delete'}
               </button>
             </div>
           </div>

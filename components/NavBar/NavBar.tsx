@@ -22,11 +22,16 @@ const NavBar = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            <a href="/" className="hover:text-amber-300 transition-colors font-medium">Home</a>
-            <a href="/#admissions" className="hover:text-amber-300 transition-colors font-medium">Fees</a>
-            <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
-            <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
+          <nav className="hidden md:flex items-center gap-3">
+            <a href="/" className="px-2 hover:text-amber-300 transition-colors font-medium">Home</a>
+            <a href="/#admissions" className="px-2 hover:text-amber-300 transition-colors font-medium">Fees</a>
+            <a href="/student-portal" className="px-2 hover:text-amber-300 transition-colors font-medium">Student</a>
+            <a href="/admin" target='_blank' className="px-2 hover:text-amber-300 transition-colors font-medium">Admin</a>
+            <a href="/assets/Student_Information_Form.pdf" target="_blank" className="ml-2">
+              <button className="px-4 py-2 bg-white text-indigo-700 rounded-lg font-semibold text-sm hover:bg-gray-100 shadow-sm transition-colors">
+                Admission Form
+              </button>
+            </a>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -73,6 +78,11 @@ const NavBar = () => {
               <a href="/#admissions" className="hover:text-amber-300 transition-colors font-medium">Fees</a>
               <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
               <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
+              <a href="/assets/Student_Information_Form.pdf" target="_blank">
+                <button className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-indigo-700 transition-colors">
+                  Admission Form
+                </button>
+              </a>
             </nav>
 
             <div className="mt-auto text-sm text-gray-500">Al Ghazali High School</div>

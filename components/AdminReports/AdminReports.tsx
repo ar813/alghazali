@@ -1,4 +1,4 @@
-import { Download, Users, PieChart, BarChart2, Loader2, X } from 'lucide-react'
+import { Upload, Users, PieChart, BarChart2, Loader2, X } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
@@ -763,6 +763,14 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                       const gr = String((s as any).grNumber || '').toLowerCase()
                       return roll.includes(q) || gr.includes(q)
                     })
+                    .slice()
+                    .sort((a: any, b: any) => {
+                      const ra = parseInt(String((a as any).rollNumber || '').replace(/[^0-9]/g, ''), 10)
+                      const rb = parseInt(String((b as any).rollNumber || '').replace(/[^0-9]/g, ''), 10)
+                      const na = isNaN(ra) ? Infinity : ra
+                      const nb = isNaN(rb) ? Infinity : rb
+                      return na - nb
+                    })
                     .map(s => (
                       <option key={s._id} value={s._id}>
                         {(s as any).fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}
@@ -774,7 +782,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           </div>
           <div className="mt-4">
             <button onClick={handleExportExcel} disabled={exporting || (targetType==='class' && !className) || (targetType==='student' && !studentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
-              {exporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              {exporting ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
               <span>{exporting ? 'Exporting…' : 'Export'}</span>
             </button>
           </div>
@@ -820,6 +828,14 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                       const gr = String((s as any).grNumber || '').toLowerCase()
                       return roll.includes(q) || gr.includes(q)
                     })
+                    .slice()
+                    .sort((a: any, b: any) => {
+                      const ra = parseInt(String((a as any).rollNumber || '').replace(/[^0-9]/g, ''), 10)
+                      const rb = parseInt(String((b as any).rollNumber || '').replace(/[^0-9]/g, ''), 10)
+                      const na = isNaN(ra) ? Infinity : ra
+                      const nb = isNaN(rb) ? Infinity : rb
+                      return na - nb
+                    })
                     .map(s => (
                       <option key={s._id} value={s._id}>
                         {(s as any).fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}
@@ -831,7 +847,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           </div>
           <div className="mt-4">
             <button onClick={handleExportFeesExcel} disabled={feeExporting || (feeTargetType==='class' && !feeClassName) || (feeTargetType==='student' && !feeStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
-              {feeExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              {feeExporting ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
               <span>{feeExporting ? 'Exporting…' : 'Export Fees'}</span>
             </button>
           </div>
@@ -877,6 +893,14 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                       const gr = String((s as any).grNumber || '').toLowerCase()
                       return roll.includes(q) || gr.includes(q)
                     })
+                    .slice()
+                    .sort((a: any, b: any) => {
+                      const ra = parseInt(String((a as any).rollNumber || '').replace(/[^0-9]/g, ''), 10)
+                      const rb = parseInt(String((b as any).rollNumber || '').replace(/[^0-9]/g, ''), 10)
+                      const na = isNaN(ra) ? Infinity : ra
+                      const nb = isNaN(rb) ? Infinity : rb
+                      return na - nb
+                    })
                     .map(s => (
                       <option key={s._id} value={s._id}>
                         {(s as any).fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}
@@ -888,7 +912,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           </div>
           <div className="mt-4">
             <button onClick={handleDownloadFormsZip} disabled={zipPreparing || (formTargetType==='class' && !formClassName) || (formTargetType==='student' && !formStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
-              {zipPreparing ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              {zipPreparing ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
               <span>{zipPreparing ? 'Preparing…' : 'Download ZIP'}</span>
             </button>
           </div>

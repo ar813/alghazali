@@ -250,8 +250,8 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
                     </nav>
                 </div>
 
-                {/* Sidebar - Desktop */}
-                <aside className={`transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} bg-white/80 backdrop-blur-xl shadow-2xl hidden md:flex flex-col border-r border-white/20`}>
+                {/* Sidebar - Desktop (sticky + independent scroll) */}
+                <aside className={`transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} bg-white/80 backdrop-blur-xl shadow-2xl hidden md:flex flex-col border-r border-white/20 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto`}>
                     {/* Toggle Button */}
                     <div className="flex justify-end p-2">
                         <button onClick={() => setCollapsed(!collapsed)} className="text-gray-600 hover:text-gray-800 transition-all">
@@ -296,7 +296,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
                     </nav>
                 </aside>
 
-                {/* Main Content */}
+                {/* Main Content (separate scroll) */}
                 <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto">
                     <div className="max-w-7xl mx-auto pb-20 md:pb-8">
                         <div className="mb-6 sm:mb-8 pt-4 sm:pt-8 flex items-center justify-between gap-3">

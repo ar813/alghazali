@@ -174,6 +174,14 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
                       const gr = String((s as any).grNumber || '').toLowerCase();
                       return roll.includes(q) || gr.includes(q);
                     })
+                    .slice()
+                    .sort((a:any,b:any)=>{
+                      const ra = parseInt(String((a as any).rollNumber||'').replace(/[^0-9]/g,''),10)
+                      const rb = parseInt(String((b as any).rollNumber||'').replace(/[^0-9]/g,''),10)
+                      const na = isNaN(ra) ? Infinity : ra
+                      const nb = isNaN(rb) ? Infinity : rb
+                      return na - nb
+                    })
                     .map(s => <option key={s._id} value={s._id}>{s.fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}</option>)}
                 </select>
               </div>

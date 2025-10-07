@@ -606,7 +606,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                           <div className="mb-[1px]">
                             <span>{s.grNumber || ""}</span>
                           </div>
-                          <div>
+                          <div className={`${s.grNumber ? "" : "mt-[15px]"}`}>
                             <span>{s.dob ? new Date(s.dob).toLocaleDateString('en-GB', { 
                               day: 'numeric', 
                               month: 'long', 

@@ -401,9 +401,9 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
           <button onClick={handleRefresh} className="px-4 py-2 border rounded-lg bg-white hover:bg-gray-50 text-sm inline-flex items-center gap-2" title="Refresh">
             <RotateCw size={14} className={loading ? 'animate-spin' : ''}/> Refresh
           </button>
-          <button onClick={handleExportFees} className="px-4 py-2 border rounded-lg bg-white hover:bg-indigo-50 text-sm inline-flex items-center gap-2" title="Export fees to Excel"><Download size={14}/> Export</button>
+          <button onClick={handleExportFees} className="px-4 py-2 border rounded-lg bg-white hover:bg-indigo-50 text-sm inline-flex items-center gap-2" title="Export fees to Excel"><Upload size={14}/> Export</button>
           <button onClick={handleImportClick} disabled={importLoading} className="px-4 py-2 border rounded-lg bg-white hover:bg-indigo-50 text-sm inline-flex items-center gap-2" title="Import fees from Excel">
-            <Upload size={14}/> {importLoading ? 'Importing...' : 'Import'}
+            <Download size={14}/> {importLoading ? 'Importing...' : 'Import'}
           </button>
           <input id={feesFileInputId} type="file" accept=".xlsx" className="hidden" onChange={handleImportFile} />
           <button onClick={() => setShowDeleteAll(true)} className="px-4 py-2 border rounded-lg bg-white hover:bg-red-50 border-red-300 text-red-700 text-sm inline-flex items-center gap-2" title="Delete all filtered fees">
