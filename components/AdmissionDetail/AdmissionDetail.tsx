@@ -64,9 +64,11 @@ const AdmissionDetail = () => {
                             ))}
                         </div>
                         <div className="mt-6 sm:mt-8">
-                            <button className="w-full bg-white text-indigo-600 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base hover:bg-gray-100 transition-colors">
-                                Download Admission Form
-                            </button>
+                            <a href="/assets/Student_Information_Form.pdf" target="_blank">
+                                <button className="w-full bg-white text-indigo-600 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base hover:bg-gray-100 transition-colors">
+                                    Download Admission Form
+                                </button>
+                            </a>
                         </div>
                     </div>
                 </div>

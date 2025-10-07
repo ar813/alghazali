@@ -20,15 +20,15 @@ const ClassSchedule = ({ className, schedule }: { className: string; schedule: D
     <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-3xl shadow-lg sm:shadow-2xl p-4 sm:p-6 lg:p-8 border border-white/20 mb-8">
       <div className="flex items-center gap-2 mb-6">
         <GraduationCap className="w-6 h-6 text-blue-500" />
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{className}</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800"> {className !== "SSCI" && className !== "SSCII" ? "Class" : ""}  {className}</h2>
       </div>
       <div className="space-y-4">
         {schedule.map((day, idx) => (
           <div key={idx} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 shadow-md">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            {/* <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <CalendarCheck className="w-5 h-5 text-blue-500" />
               {day.day}
-            </h3>
+            </h3> */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {day.periods.map((period: Period, pIdx: number) => (
                 <div key={pIdx} className="bg-white rounded-lg p-3 shadow-sm">
@@ -62,7 +62,8 @@ const SchedulePage = () => {
     fetchSchedules()
       .then((res) => {
         if (!mounted) return
-        setSchedules(res || [])
+        const sorted = (res || []).sort((a, b) => a.className.localeCompare(b.className, undefined, { numeric: true }))
+        setSchedules(sorted)
         setLoading(false)
       })
       .catch((err) => {
