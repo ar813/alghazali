@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { Search, RotateCw, Upload, Download, Filter, X } from 'lucide-react'
+import { RotateCw, Upload, Download, X, Search, Filter } from 'lucide-react'
 import { client } from "@/sanity/lib/client";
 import { getAllStudentsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
@@ -36,7 +36,10 @@ const Info = ({ label, value }: { label: string; value?: any }) => {
 }
 
 const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  // Search/Filter state (copied pattern from AdminCards)
+  const [search, setSearch] = useState("")
+  const [klass, setKlass] = useState<string>('All')
+  const [showFilter, setShowFilter] = useState(false)
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true); // ⏳ Loading state
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -67,7 +70,20 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     photoFile: null as File | null,
   })
 
-  // Sorting helpers will be applied after filteredStudents is computed below
+  // Sorting state + helpers
+  const [sortField, setSortField] = useState<string>('class')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  // Restrict sorting to 8 core fields only
+  const SORT_FIELDS: Array<{ key: string; label: string; getter: (s: Student) => string }> = [
+    { key: 'class', label: 'Class', getter: (s) => s.admissionFor || '' },
+    { key: 'name', label: 'Name', getter: (s) => s.fullName || '' },
+    { key: 'father', label: "Father's Name", getter: (s) => s.fatherName || '' },
+    { key: 'roll', label: 'Roll Number', getter: (s) => s.rollNumber || '' },
+    { key: 'gr', label: 'GR Number', getter: (s) => s.grNumber || '' },
+    { key: 'dob', label: 'Date of Birth', getter: (s) => s.dob || '' },
+    { key: 'gender', label: 'Gender', getter: (s) => s.gender || '' },
+    { key: 'medicalCondition', label: 'Medical Condition', getter: (s) => s.medicalCondition || '' },
+  ]
 
   // Image cropper state
   const [showCropperAdd, setShowCropperAdd] = useState(false)
@@ -85,13 +101,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [importLoading, setImportLoading] = useState(false)
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
   const [deleteAllInput, setDeleteAllInput] = useState('')
-  const [showFilterMenu, setShowFilterMenu] = useState(false)
+  // Removed: filter dropdown menu state
   const [importResultOpen, setImportResultOpen] = useState(false)
   const [importResultMessage, setImportResultMessage] = useState('')
   const [deleteAllMessage, setDeleteAllMessage] = useState('')
   const [imgPreviewOpen, setImgPreviewOpen] = useState(false)
-  // AdminCards-like class filter
-  const [klass, setKlass] = useState<string>('All')
+  // Removed: class filter selection (show all students)
   // Delete by Class UI state
   const [showDeleteByClassConfirm, setShowDeleteByClassConfirm] = useState(false)
   const [deleteClassSelected, setDeleteClassSelected] = useState('1')
@@ -99,7 +114,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   // Toasts (match AdminSchedule style)
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
 
-  // Dynamic class options based on available data
+  // Dynamic class options (used for filter and delete-by-class)
   const classOptions = useMemo(() => {
     const set = new Set<string>()
     for (const s of students) {
@@ -107,11 +122,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       if (c) set.add(c)
     }
     return Array.from(set).sort()
-  }, [students])
-  // Classes list for filter dropdown (AdminCards style)
-  const classes = useMemo(() => {
-    const unique = Array.from(new Set(students.map(s => (s.admissionFor || '').toString().trim()).filter(Boolean)))
-    return ['All', ...unique]
   }, [students])
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ show: true, message, type })
@@ -131,20 +141,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     fetchStudents();
   }, [onLoadingChange]);
 
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.filter-dropdown')) {
-        setShowFilterMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  // Removed: outside click handler for filter dropdown (filter disabled)
 
   const refreshStudents = async () => {
     setLoading(true)
@@ -422,21 +419,62 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     return String(value)
   }
 
-  // Normalize class strings to a canonical form to avoid leaks due to spacing/case
-  // Examples:
-  //  'Class 5' -> '5'
-  //  ' 5 ' -> '5'
-  //  'ssci' -> 'SSCI'
-  //  'SSC II' -> 'SSCII'
-  const canonicalClass = (v: any): string => {
-    const raw = (v ?? '').toString().trim().toUpperCase()
-    if (!raw) return ''
-    // If contains digits, use just the digits (covers 'CLASS 5', '5TH', etc.)
-    const digits = raw.replace(/[^0-9]/g, '')
-    if (digits) return digits
-    // Collapse spaces for roman/alpha classes like 'SSC II' -> 'SSCII'
-    return raw.replace(/\s+/g, '')
+  // Removed: canonicalClass helper (no filtering by class)
+
+  // Advanced Filters (30+)
+  type FilterDef = { key: string; label: string; predicate: (s: Student) => boolean }
+  const ageFromDob = (dob?: string): number | null => {
+    try {
+      if (!dob) return null
+      const d = new Date(dob)
+      if (isNaN(d.getTime())) return null
+      const years = (Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+      return Math.floor(years)
+    } catch { return null }
   }
+  const nationalityOptions = useMemo(() => {
+    const set = new Set<string>()
+    students.forEach(s=>{ const v=(s.nationality||'').toString().trim(); if(v) set.add(v) })
+    return Array.from(set).sort()
+  }, [students])
+  const FILTERS: FilterDef[] = [
+    { key: 'gender_male', label: 'Gender: Male', predicate: s => (s.gender||'').toLowerCase()==='male' },
+    { key: 'gender_female', label: 'Gender: Female', predicate: s => (s.gender||'').toLowerCase()==='female' },
+    { key: 'has_email', label: 'Has Email', predicate: s => !!s.email },
+    { key: 'has_whatsapp', label: 'Has WhatsApp', predicate: s => !!s.whatsappNumber },
+    { key: 'has_phone', label: 'Has Phone', predicate: s => !!s.phoneNumber },
+    { key: 'has_address', label: 'Has Address', predicate: s => !!s.address },
+    { key: 'has_guardian', label: 'Has Guardian (Name+Contact)', predicate: s => !!s.guardianName && !!s.guardianContact },
+    { key: 'missing_guardian', label: 'Missing Guardian Info', predicate: s => !(s.guardianName && s.guardianContact) },
+    { key: 'has_bform', label: 'Has CNIC/B-Form', predicate: s => !!s.cnicOrBform },
+    { key: 'missing_bform', label: 'Missing CNIC/B-Form', predicate: s => !s.cnicOrBform },
+    { key: 'medical_yes', label: 'Medical: Yes', predicate: s => (s.medicalCondition||'').toLowerCase()==='yes' },
+    { key: 'medical_no', label: 'Medical: No', predicate: s => (s.medicalCondition||'').toLowerCase()==='no' },
+    { key: 'has_photo', label: 'Has Photo', predicate: s => !!s.photoUrl },
+    { key: 'missing_photo', label: 'Missing Photo', predicate: s => !s.photoUrl },
+    { key: 'contact_any', label: 'Any Contact (Phone/WhatsApp)', predicate: s => !!s.phoneNumber || !!s.whatsappNumber },
+    { key: 'contact_none', label: 'No Contact', predicate: s => !s.phoneNumber && !s.whatsappNumber },
+    { key: 'age_lt5', label: 'Age <5', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a<5 } },
+    { key: 'age_5_7', label: 'Age 5-7', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a>=5 && a<=7 } },
+    { key: 'age_8_10', label: 'Age 8-10', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a>=8 && a<=10 } },
+    { key: 'age_11_13', label: 'Age 11-13', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a>=11 && a<=13 } },
+    { key: 'age_14p', label: 'Age 14+', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a>=14 } },
+    { key: 'age_unknown', label: 'Age Unknown', predicate: s => ageFromDob(s.dob)==null },
+    { key: 'roll_present', label: 'Has Roll No', predicate: s => !!s.rollNumber },
+    { key: 'gr_present', label: 'Has GR Number', predicate: s => !!s.grNumber },
+    { key: 'roll_missing', label: 'Missing Roll No', predicate: s => !s.rollNumber },
+    { key: 'gr_missing', label: 'Missing GR Number', predicate: s => !s.grNumber },
+    { key: 'prev_inst', label: 'Has Previous Institute', predicate: s => !!s.previousInstitute },
+    { key: 'former_edu', label: 'Has Former Education', predicate: s => !!s.formerEducation },
+    { key: 'last_pct_ge_60', label: 'Last % ≥ 60', predicate: s => { const n=parseFloat(String(s.lastExamPercentage||'').replace(/[^0-9.]/g,'')); return !isNaN(n) && n>=60 } },
+    { key: 'last_pct_ge_80', label: 'Last % ≥ 80', predicate: s => { const n=parseFloat(String(s.lastExamPercentage||'').replace(/[^0-9.]/g,'')); return !isNaN(n) && n>=80 } },
+    { key: 'address_long', label: 'Address length ≥ 25', predicate: s => (s.address||'').length>=25 },
+    { key: 'name_long', label: 'Long Name (≥ 20)', predicate: s => (s.fullName||'').length>=20 },
+    // Nationality filters dynamically added in UI (handled separately)
+  ]
+  const [selectedFilterKeys, setSelectedFilterKeys] = useState<Set<string>>(new Set())
+  const [selectedNationality, setSelectedNationality] = useState<string>('All')
+  const toggleFilter = (k: string) => setSelectedFilterKeys(prev => { const n=new Set(prev); if(n.has(k)) n.delete(k); else n.add(k); return n })
 
   const handleExportExcel = async () => {
     try {
@@ -633,26 +671,32 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     }
   }
 
-  // derive filtered list once to use in both table and cards
-  // AdminCards-like filtering: by class + term across common fields (memoized)
+  // Apply search + class filter + advanced filters
   const filteredStudents = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase()
-    const selectedCanonical = canonicalClass(klass === 'All' ? '' : klass)
+    const term = search.trim().toLowerCase()
     return students.filter((s) => {
-      // Class filtering - canonical exact match to avoid whitespace/case mismatches
-      const studentCanonical = canonicalClass(s.admissionFor)
-      const matchesClass = !selectedCanonical || studentCanonical === selectedCanonical
-
-      // Search term filtering - limit to name, GR, Roll only (as per requirement)
+      const matchesClass = klass === 'All' || (s.admissionFor || '').toString() === klass
       const matchesTerm = !term
         ? true
-        : [s.fullName, s.grNumber, s.rollNumber]
+        : [s.fullName, s.fatherName, s.grNumber, s.rollNumber]
             .map((v) => (v || '').toString().toLowerCase())
             .some((v) => v.includes(term))
-
-      return matchesClass && matchesTerm
+      // Advanced filters
+      let matchesAdvanced = true
+      // nationality select
+      if (selectedNationality !== 'All') {
+        const nval = (s.nationality || '').toString()
+        if (nval !== selectedNationality) matchesAdvanced = false
+      }
+      if (matchesAdvanced && selectedFilterKeys.size > 0) {
+        for (const k of Array.from(selectedFilterKeys)) {
+          const def = FILTERS.find(f=>f.key===k)
+          if (def && !def.predicate(s)) { matchesAdvanced = false; break }
+        }
+      }
+      return matchesClass && matchesTerm && matchesAdvanced
     })
-  }, [students, searchTerm, klass])
+  }, [students, search, klass, selectedFilterKeys, selectedNationality])
 
   // Sorting: Class order (KG, 1..8, SSCI, SSCII) then numeric Roll No
   const classOrder = ['KG','1','2','3','4','5','6','7','8','SSCI','SSCII']
@@ -668,60 +712,109 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     return isNaN(n) ? Number.POSITIVE_INFINITY : n
   }
   const sortedStudents: Student[] = useMemo(() => {
-    return [...filteredStudents].sort((a, b) => {
+    const sign = sortOrder === 'asc' ? 1 : -1
+    const opt = SORT_FIELDS.find(o => o.key === sortField) || SORT_FIELDS[0]
+    const get = opt.getter
+    const isNumericKey = ['roll','gr','rollNumeric','grNumeric','nameLength','addressLength'].includes(sortField)
+    const s = [...filteredStudents].sort((a, b) => {
+      if (sortField === 'class') {
+        const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
+        if (byClass !== 0) return byClass * sign
+        // secondary: roll numeric
+        return (numOrInf(a.rollNumber) - numOrInf(b.rollNumber)) * sign
+      }
+      const av = get(a)
+      const bv = get(b)
+      if (isNumericKey) {
+        const an = parseInt(String(av).replace(/\D/g,''), 10)
+        const bn = parseInt(String(bv).replace(/\D/g,''), 10)
+        const aa = isNaN(an) ? Number.POSITIVE_INFINITY : an
+        const bb = isNaN(bn) ? Number.POSITIVE_INFINITY : bn
+        if (aa === bb) {
+          // tie-breakers
+          const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
+          if (byClass !== 0) return byClass * sign
+          return String(a.fullName||'').localeCompare(String(b.fullName||'')) * sign
+        }
+        return (aa - bb) * sign
+      }
+      const res = String(av||'').localeCompare(String(bv||''))
+      if (res !== 0) return res * sign
+      // tie-breakers: class then roll
       const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
-      if (byClass !== 0) return byClass
-      return numOrInf(a.rollNumber) - numOrInf(b.rollNumber)
+      if (byClass !== 0) return byClass * sign
+      return (numOrInf(a.rollNumber) - numOrInf(b.rollNumber)) * sign
     })
-  }, [filteredStudents])
+    return s
+  }, [filteredStudents, sortField, sortOrder])
 
   // Note: Delete All handled via confirmation modal below
 
   return (
     <div>
       <div className="space-y-4 pb-14">
-        {/* Row 1: Search and Filter (full width) */}
+        {/* Row 1: Search + Filter (mirrors AdminCards) */}
         <div className="w-full bg-white p-3 rounded-xl shadow sm:bg-transparent sm:p-0 sm:shadow-none">
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
-                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, father, GR, Roll..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-3 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full"
               />
             </div>
-            <div className="relative w-full sm:w-56 filter-dropdown">
+            <div className="relative w-full sm:w-56">
               <button
-                onClick={() => setShowFilterMenu(v => !v)}
+                onClick={() => setShowFilter((v) => !v)}
                 className="px-3 py-3 sm:py-2 border rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 w-full"
-                title="Filter"
               >
                 <Filter size={16} />
                 <span className="hidden sm:inline">Filter</span>
               </button>
-              {showFilterMenu && (
-                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-56 p-2 right-0 transition-all duration-200 ease-out origin-top scale-100">
+              {showFilter && (
+                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-56 p-2 right-0">
                   <label className="text-xs text-gray-500 px-1">Class</label>
                   <select
                     value={klass}
-                    onChange={(e) => { setKlass(e.target.value); setShowFilterMenu(false) }}
+                    onChange={(e) => { setKlass(e.target.value); setShowFilter(false) }}
                     className="mt-1 w-full border rounded-lg px-3 py-2"
                   >
-                    {classes.map((c) => (
+                    {["All", ...classOptions].map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
               )}
             </div>
-            {/* Reset button removed per requirement; clearing input or selecting 'All' is enough */}
           </div>
         </div>
-        {/* Row 2: Actions (full width; wrap nicely; right-aligned) */}
-        <div className="flex flex-wrap items-stretch sm:items-center justify-end gap-2 w-full">
+        {/* Row 2: Actions (sorting + buttons) */}
+        <div className="flex flex-wrap items-stretch sm:items-center justify-between gap-2 w-full">
+            {/* Sorting Controls */}
+            <div className="flex gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 h-10 md:h-11">
+                <label className="text-sm text-gray-600">Sort by</label>
+                <select
+                  value={sortField}
+                  onChange={(e)=>setSortField(e.target.value)}
+                  className="border rounded px-2 py-1 text-sm max-w-[220px]"
+                >
+                  {SORT_FIELDS.map(f => (
+                    <option key={f.key} value={f.key}>{f.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={sortOrder}
+                  onChange={(e)=>setSortOrder(e.target.value as any)}
+                  className="border rounded px-2 py-1 text-sm"
+                >
+                  <option value="asc">Asc</option>
+                  <option value="desc">Desc</option>
+                </select>
+              </div>
+            </div>
             {/* Refresh */}
             <button
               onClick={refreshStudents}
@@ -1264,14 +1357,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                   <td colSpan={8}>
                     <div className="flex flex-col items-center justify-center py-16 text-gray-500">
                       <div className="text-lg font-medium mb-2">
-                        {searchTerm.trim() && klass !== 'All'
-                          ? `No students match "${searchTerm}" in Class ${klass}`
-                          : searchTerm.trim()
-                          ? `Student not found: "${searchTerm}"`
-                          : (klass !== 'All' ? `No students found in Class ${klass}` : 'No students found')}
+                        No students found
                       </div>
                       <div className="text-sm text-gray-400">
-                        {searchTerm.trim() ? 'Try a different search term' : 'Add some students to get started'}
+                        Add some students to get started
                       </div>
                     </div>
                   </td>
@@ -1280,7 +1369,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 sortedStudents
                   .map((student: Student, index: number) => (
                     <tr
-                      key={student.grNumber}
+                      key={(student as any)._id || `${student.grNumber}-${index}`}
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => { setSelectedStudent(student) }}
                     >
@@ -1341,16 +1430,16 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
           </div>
         ) : sortedStudents.length === 0 ? (
           <div className="bg-white rounded-2xl shadow p-6 text-center text-gray-500">
-            {searchTerm.trim() && klass !== 'All'
-              ? `No students match "${searchTerm}" in Class ${klass}`
-              : searchTerm.trim()
-              ? `Student not found: "${searchTerm}"`
+            {search.trim() && klass !== 'All'
+              ? `No students match "${search}" in Class ${klass}`
+              : search.trim()
+              ? `Student not found: "${search}"`
               : (klass !== 'All' ? `No students found in Class ${klass}` : 'No students found')}
           </div>
         ) : (
           sortedStudents.map((student: Student, index: number) => (
             <div
-              key={student.grNumber}
+              key={(student as any)._id || `${student.grNumber}-${index}`}
               className="bg-white rounded-2xl shadow border p-4 cursor-pointer"
               onClick={() => setSelectedStudent(student)}
             >

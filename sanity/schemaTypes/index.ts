@@ -5,7 +5,8 @@ import fees from './fees'
 import notice from './notice'
 import quiz from './quiz'
 import quizResult from './quizResult'
+import examResultSet from './examResultSet'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [student, schedule, fees, notice, quiz, quizResult],
+  types: [student, schedule, fees, notice, quiz, quizResult, examResultSet],
 }

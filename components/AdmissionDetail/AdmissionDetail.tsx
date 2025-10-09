@@ -17,7 +17,7 @@ const FEE_STRUCTURE_2025: { className: string; amount: number }[] = [
 const AdmissionDetail = () => {
     return (
         <section id="admissions" className="py-12 sm:py-20 bg-gradient-to-b from-slate-50 to-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="max-w-7xl mt-10 mx-auto px-4 sm:px-6">
                 <div className="text-center mb-12 sm:mb-16">
                     <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Admissions Open 2025</h2>
                     <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto px-2">

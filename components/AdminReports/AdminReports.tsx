@@ -23,6 +23,9 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     window.setTimeout(() => setToast(null), 2200)
   }
 
+  // Modal to show lists for insights
+  const [insightModal, setInsightModal] = useState<{ open: boolean; title: string; items: any[] }>({ open: false, title: '', items: [] })
+
   type TargetType = 'all' | 'class' | 'student'
   const [targetType, setTargetType] = useState<TargetType>('all')
   const [className, setClassName] = useState<string>('')
@@ -542,12 +545,132 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     return Array.from(new Set(students.map(s => s.admissionFor).filter(Boolean))).sort() as string[]
   }, [students])
 
+  // Extra insights and data quality metrics
+  const insights = useMemo(() => {
+    const total = students.length
+    const uniqClasses = new Set<string>()
+    let withEmail = 0, withWhatsapp = 0, withPhone = 0
+    let medicalYes = 0
+    let missingBForm = 0
+    let missingGuardian = 0
+    let withPhoto = 0
+    let male = 0, female = 0
+    const nationalityMap = new Map<string, number>()
+    const classMap = new Map<string, number>()
+    const ageBuckets = { '<5': 0, '5-7': 0, '8-10': 0, '11-13': 0, '14+': 0 } as Record<string, number>
+
+    const ageFromDob = (dob: any) => {
+      try {
+        if (!dob) return null
+        const d = new Date(dob)
+        if (isNaN(d.getTime())) return null
+        const diff = Date.now() - d.getTime()
+        const years = diff / (365.25 * 24 * 60 * 60 * 1000)
+        return Math.floor(years)
+      } catch { return null }
+    }
+
+    for (const s of students as any[]) {
+      const cls = (s.admissionFor || '—').toString()
+      uniqClasses.add(cls)
+      classMap.set(cls, (classMap.get(cls) || 0) + 1)
+
+      const nat = (s.nationality || '—').toString().toLowerCase()
+      nationalityMap.set(nat, (nationalityMap.get(nat) || 0) + 1)
+
+      if (s.email) withEmail++
+      if (s.whatsappNumber) withWhatsapp++
+      if (s.phoneNumber) withPhone++
+      if ((s.medicalCondition || '').toString().toLowerCase() === 'yes') medicalYes++
+      if (!s.cnicOrBform) missingBForm++
+      if (!s.guardianName || !s.guardianContact) missingGuardian++
+      if (s.photoUrl || s.imageUrl) withPhoto++
+      if ((s.gender || '').toString().toLowerCase() === 'male') male++
+      if ((s.gender || '').toString().toLowerCase() === 'female') female++
+
+      const age = ageFromDob(s.dob)
+      if (age == null) {/* ignore */}
+      else if (age < 5) ageBuckets['<5']++
+      else if (age <= 7) ageBuckets['5-7']++
+      else if (age <= 10) ageBuckets['8-10']++
+      else if (age <= 13) ageBuckets['11-13']++
+      else ageBuckets['14+']++
+    }
+
+    const topClasses = Array.from(classMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    const topNationalities = Array.from(nationalityMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
+
+    return {
+      total,
+      uniqClassCount: uniqClasses.size,
+      withEmail, withWhatsapp, withPhone,
+      medicalYes,
+      missingBForm,
+      missingGuardian,
+      withPhoto,
+      male, female,
+      ageBuckets,
+      topClasses,
+      topNationalities,
+    }
+  }, [students])
+
   const loadExcel = async () => {
     try {
       const ExcelJS = await import('exceljs')
       return (ExcelJS as any).default || ExcelJS
     } catch (e) {
       throw new Error('ExcelJS library could not be loaded. Please make sure it is installed.')
+    }
+  }
+
+  // Build list for a selected insight key
+  const getInsightItems = (key: string): any[] => {
+    const list = students as any[]
+    switch (key) {
+      case 'Unique Classes': {
+        const m = new Map<string, number>()
+        for (const s of list) { const c = (s.admissionFor || '—').toString(); m.set(c, (m.get(c) || 0) + 1) }
+        return Array.from(m.entries()).map(([cls, cnt]) => ({ _id: cls, fullName: `Class ${cls}`, count: cnt }))
+      }
+      case 'With Email':
+        return list.filter(s => !!s.email)
+      case 'With WhatsApp':
+        return list.filter(s => !!s.whatsappNumber)
+      case 'With Phone':
+        return list.filter(s => !!s.phoneNumber)
+      case 'Medical Cases':
+        return list.filter(s => String(s.medicalCondition || '').toLowerCase() === 'yes')
+      case 'Missing B-Form':
+        return list.filter(s => !s.cnicOrBform)
+      case 'Missing Guardian':
+        return list.filter(s => !s.guardianName || !s.guardianContact)
+      case 'Male':
+        return list.filter(s => String(s.gender || '').toLowerCase() === 'male')
+      case 'Female':
+        return list.filter(s => String(s.gender || '').toLowerCase() === 'female')
+      case 'Age <5': {
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a<5 }
+        return list.filter(f)
+      }
+      case 'Age 5-7': {
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a>=5 && a<=7 }
+        return list.filter(f)
+      }
+      case 'Age 8-10': {
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a>=8 && a<=10 }
+        return list.filter(f)
+      }
+      case 'Age 11-13': {
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a>=11 && a<=13 }
+        return list.filter(f)
+      }
+      case 'Age 14+': {
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a>=14 }
+        return list.filter(f)
+      }
+      default:
+        return []
     }
   }
 
@@ -649,6 +772,21 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     }
   }
 
+  // Small card for insight metrics (clickable)
+  const InsightCard = ({ label, value }: { label: string; value: number | string }) => (
+    <button
+      type="button"
+      onClick={() => {
+        const items = getInsightItems(label)
+        setInsightModal({ open: true, title: label, items })
+      }}
+      className="p-4 border rounded-xl bg-white shadow-sm text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      <div className="text-xs text-gray-500 mb-1">{label}</div>
+      <div className="text-lg font-bold text-gray-800">{String(value)}</div>
+    </button>
+  )
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-800">Reports</h2>
@@ -689,6 +827,74 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                 <p className="text-2xl font-bold">{totals.female.toLocaleString()}</p>
               </div>
               <PieChart className="text-pink-600" />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Data Insights (15+ quick metrics) */}
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Data Insights</h3>
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-pulse">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div key={i} className="p-4 border rounded-xl">
+                <div className="h-3 w-24 bg-gray-200 rounded mb-2" />
+                <div className="h-6 w-12 bg-gray-200 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <InsightCard label="Unique Classes" value={insights.uniqClassCount} />
+              <InsightCard label="With Email" value={insights.withEmail} />
+              <InsightCard label="With WhatsApp" value={insights.withWhatsapp} />
+              <InsightCard label="With Phone" value={insights.withPhone} />
+              <InsightCard label="Medical Cases" value={insights.medicalYes} />
+              <InsightCard label="Photos Available" value={insights.withPhoto} />
+              <InsightCard label="Missing B-Form" value={insights.missingBForm} />
+              <InsightCard label="Missing Guardian" value={insights.missingGuardian} />
+              <InsightCard label="Male" value={insights.male} />
+              <InsightCard label="Female" value={insights.female} />
+              <InsightCard label="Age <5" value={insights.ageBuckets['<5']} />
+              <InsightCard label="Age 5-7" value={insights.ageBuckets['5-7']} />
+              <InsightCard label="Age 8-10" value={insights.ageBuckets['8-10']} />
+              <InsightCard label="Age 11-13" value={insights.ageBuckets['11-13']} />
+              <InsightCard label="Age 14+" value={insights.ageBuckets['14+']} />
+              <InsightCard label="Top Classes Listed" value={insights.topClasses.length} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <h4 className="font-semibold text-gray-800 mb-2">Top Classes by Strength</h4>
+                <div className="divide-y">
+                  {insights.topClasses.length === 0 ? (
+                    <div className="text-sm text-gray-500">No data</div>
+                  ) : (
+                    insights.topClasses.map(([cls, cnt]) => (
+                      <div key={String(cls)} className="flex items-center justify-between py-2">
+                        <span className="text-gray-700">Class {String(cls)}</span>
+                        <span className="font-semibold">{cnt}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-800 mb-2">Top Nationalities</h4>
+                <div className="divide-y">
+                  {insights.topNationalities.length === 0 ? (
+                    <div className="text-sm text-gray-500">No data</div>
+                  ) : (
+                    insights.topNationalities.map(([nat, cnt]) => (
+                      <div key={String(nat)} className="flex items-center justify-between py-2">
+                        <span className="text-gray-700">{String(nat).toUpperCase()}</span>
+                        <span className="font-semibold">{cnt}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </>
         )}
@@ -918,6 +1124,43 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           </div>
         </div>
       </div>
+
+      {/* Insight List Modal */}
+      {insightModal.open && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Insight Details">
+          <div className="bg-white sm:rounded-2xl rounded-none p-4 sm:p-6 w-full sm:max-w-2xl max-w-none h-full sm:h-auto relative shadow-2xl border border-gray-200 overflow-y-auto sm:max-h-[90vh]">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <h3 className="text-xl font-semibold">{insightModal.title}</h3>
+              <button className="text-gray-500 hover:text-red-600" onClick={() => setInsightModal({ open: false, title: '', items: [] })}><X/></button>
+            </div>
+            <div className="mt-4">
+              {insightModal.title === 'Unique Classes' ? (
+                <div className="divide-y">
+                  {insightModal.items.length === 0 ? <div className="text-sm text-gray-500">No data</div> : insightModal.items.map((it: any) => (
+                    <div key={it._id} className="flex items-center justify-between py-2">
+                      <div className="text-gray-800">{it.fullName}</div>
+                      <div className="text-sm text-gray-500">{it.count}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {insightModal.items.length === 0 ? (
+                    <div className="text-sm text-gray-500">No students found</div>
+                  ) : (
+                    (insightModal.items as any[]).map((s: any) => (
+                      <div key={s._id} className="p-3 border rounded-lg">
+                        <div className="font-medium text-gray-800">{s.fullName || '—'}</div>
+                        <div className="text-xs text-gray-500">GR: {s.grNumber || '—'} • Roll: {s.rollNumber || '—'} • Class: {s.admissionFor || '—'}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast?.show && (

@@ -6,6 +6,7 @@ import { getAllStudentsQuery } from '@/sanity/lib/queries'
 const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
     // Stats
     const [totalStudents, setTotalStudents] = useState<number>(0)
+    const [students, setStudents] = useState<any[]>([])
     const [admissionsLast365, setAdmissionsLast365] = useState<number>(0)
     const [totalQuizzes, setTotalQuizzes] = useState<number>(0)
     const [resultsLast30, setResultsLast30] = useState<number>(0)
@@ -24,6 +25,7 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 // Prefer direct Sanity fetch for accurate Total Students (same as AdminReports)
                 try {
                     const list: any[] = await client.fetch(getAllStudentsQuery)
+                    setStudents(Array.isArray(list) ? list : [])
                     setTotalStudents(Array.isArray(list) ? list.length : 0)
                 } catch {
                     // Fallback to stats API if direct fetch fails
@@ -79,6 +81,27 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
         fetchStats()
     }, [onLoadingChange])
 
+    // Derived insights
+    const insights = React.useMemo(() => {
+        const uniqClasses = new Set<string>()
+        let male = 0, female = 0
+        let medicalYes = 0
+        let withPhoto = 0
+        const classMap = new Map<string, number>()
+        for (const s of students as any[]) {
+            const cls = (s?.admissionFor || '—').toString()
+            uniqClasses.add(cls)
+            classMap.set(cls, (classMap.get(cls) || 0) + 1)
+            const g = (s?.gender || '').toString().toLowerCase()
+            if (g === 'male') male++
+            if (g === 'female') female++
+            if ((s?.medicalCondition || '').toString().toLowerCase() === 'yes') medicalYes++
+            if (s?.photoUrl || s?.imageUrl) withPhoto++
+        }
+        const topClasses = Array.from(classMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5)
+        return { uniqClassCount: uniqClasses.size, male, female, medicalYes, withPhoto, topClasses }
+    }, [students])
+
     // Components
     type Stat = { title: string; value: string; icon: React.ElementType; color: string }
     const StatCard = ({ stat }: { stat: Stat }) => (
@@ -129,7 +152,11 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 ) : (
                     <>
                         <StatCard stat={{ title: 'Total Students', value: totalStudents.toLocaleString(), icon: Users, color: 'from-blue-500 to-purple-600' }} />
-                        <StatCard stat={{ title: 'Admission Range', value: (() => { const pct = totalStudents ? Math.round((totalStudents / 220) * 100) : 0; return `${pct}%`; })(), icon: TrendingUp, color: 'from-pink-500 to-rose-600' }} />
+                        <StatCard stat={{ title: 'Unique Classes', value: (insights.uniqClassCount || 0).toString(), icon: FileBarChart2, color: 'from-sky-500 to-cyan-600' }} />
+                        <StatCard stat={{ title: 'Male', value: (insights.male || 0).toLocaleString(), icon: Activity, color: 'from-green-500 to-emerald-600' }} />
+                        <StatCard stat={{ title: 'Female', value: (insights.female || 0).toLocaleString(), icon: Activity, color: 'from-pink-500 to-rose-600' }} />
+                        <StatCard stat={{ title: 'Medical Cases', value: (insights.medicalYes || 0).toLocaleString(), icon: ShieldCheck, color: 'from-amber-500 to-orange-600' }} />
+                        <StatCard stat={{ title: 'Photos Available', value: (insights.withPhoto || 0).toLocaleString(), icon: TrendingUp, color: 'from-violet-500 to-indigo-600' }} />
                         <StatCard stat={{ title: 'Total Quizzes', value: totalQuizzes.toLocaleString(), icon: Calendar, color: 'from-violet-500 to-indigo-600' }} />
                         <StatCard stat={{ title: 'Announced Results', value: resultsLast30.toLocaleString(), icon: Sparkles, color: 'from-emerald-500 to-teal-600' }} />
                     </>
@@ -162,20 +189,38 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                     </button>
                 </div>
             </div>
-
-            {/* Notices summary */}
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">Notices Overview</h3>
-                    <div className="text-sm text-gray-600">Total: {totalNotices.toLocaleString()}</div>
+            {/* Top Classes & Notices summary */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">Top Classes by Strength</h3>
+                    </div>
+                    {insights.topClasses.length === 0 ? (
+                        <div className="text-sm text-gray-500">No data</div>
+                    ) : (
+                        <div className="divide-y">
+                            {insights.topClasses.map(([cls, cnt]) => (
+                                <div key={String(cls)} className="flex items-center justify-between py-2">
+                                    <span className="text-gray-700">Class {String(cls)}</span>
+                                    <span className="font-semibold">{cnt}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
-                <div className="text-sm text-gray-500">Manage notices in the Notice tab. Events are auto-synced to the homepage.</div>
+                <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">Notices Overview</h3>
+                        <div className="text-sm text-gray-600">Total: {totalNotices.toLocaleString()}</div>
+                    </div>
+                    <div className="text-sm text-gray-500">Manage notices in the Notice tab. Events are auto-synced to the homepage.</div>
+                </div>
             </div>
 
             {/* System Health */}
             <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><ShieldCheck size={18} className="text-emerald-600"/> System Health</h3>
+
                 </div>
                 {health ? (
                     <div className="grid sm:grid-cols-3 gap-3 text-sm">
