@@ -165,7 +165,39 @@ export async function PATCH(req: NextRequest) {
     const existing = await serverClient.fetch(`*[_type=="examResultSet" && _id==$id][0]{ subjects, maxMarksPerSubject, minPassPercentage, students[]{ student->{_id}, _key } }`, { id })
     if (!existing) return NextResponse.json({ ok: false, error: 'Document not found' }, { status: 404 })
     const node = (existing.students || []).find((s: any) => s?.student?._id === studentId)
-    if (!node) return NextResponse.json({ ok: false, error: 'Student not found in this exam' }, { status: 404 })
+    
+    // If student not found, create new entry instead of returning error
+    if (!node) {
+      const subjects = patch.subjects ?? existing.subjects
+      const marks = (patch.marks ?? []).map((m: any) => Number(m))
+      const maxPer = Number(patch.maxMarksPerSubject ?? existing.maxMarksPerSubject)
+      if (!Array.isArray(subjects) || subjects.length === 0 || !Array.isArray(marks) || marks.length !== subjects.length || !maxPer) {
+        return NextResponse.json({ ok: false, error: 'Invalid subjects/marks/maxMarksPerSubject' }, { status: 400 })
+      }
+      for (const v of marks) { if (Number.isNaN(v) || v < 0 || v > maxPer) return NextResponse.json({ ok: false, error: 'Each mark must be between 0 and maxMarksPerSubject' }, { status: 400 }) }
+      const passPct = Number(patch.minPassPercentage ?? existing.minPassPercentage ?? 40)
+      const agg = computeStudentAggregates(marks, subjects.length, maxPer, passPct)
+
+      const newStudent = {
+        _type: 'studentResult',
+        student: { _type: 'reference', _ref: studentId },
+        studentName: patch.studentName || '',
+        fatherName: patch.fatherName || '',
+        rollNumber: patch.rollNumber || '',
+        grNumber: patch.grNumber || '',
+        marks,
+        percentage: agg.percentage,
+        grade: agg.grade,
+        remarks: agg.remarks,
+        createdAt: new Date().toISOString(),
+      }
+      const res = await serverClient
+        .patch(id)
+        .setIfMissing({ students: [] })
+        .append('students', [newStudent as any])
+        .commit()
+      return NextResponse.json({ ok: true, res, created: true })
+    }
 
     const subjects = patch.subjects ?? existing.subjects
     const marks = (patch.marks ?? []).map((m: any) => Number(m))

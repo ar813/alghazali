@@ -27,13 +27,23 @@ const Info = ({ label, value }: { label: string; value?: any }) => {
     return String(v)
   }
 
+  const displayValue = toDisplay(value)
+
   return (
-    <div>
-      <span className="font-medium">{label}:</span>{" "}
-      <span className="text-gray-600">{toDisplay(value)}</span>
+    <div className="flex flex-col bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-3 shadow-sm transition-all duration-200 ease-in-out group">
+      <span className="text-[11px] sm:text-xs uppercase tracking-wide text-gray-500 font-semibold mb-0.5">
+        {label}
+      </span>
+      <span
+        className={`text-sm sm:text-[15px] font-medium ${displayValue === '—' ? 'text-gray-400 italic' : 'text-gray-800'
+          } group-hover:text-orange-700`}
+      >
+        {displayValue}
+      </span>
     </div>
   )
 }
+
 
 const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
   // Search/Filter state (copied pattern from AdminCards)
@@ -434,12 +444,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   }
   const nationalityOptions = useMemo(() => {
     const set = new Set<string>()
-    students.forEach(s=>{ const v=(s.nationality||'').toString().trim(); if(v) set.add(v) })
+    students.forEach(s => { const v = (s.nationality || '').toString().trim(); if (v) set.add(v) })
     return Array.from(set).sort()
   }, [students])
   const FILTERS: FilterDef[] = [
-    { key: 'gender_male', label: 'Gender: Male', predicate: s => (s.gender||'').toLowerCase()==='male' },
-    { key: 'gender_female', label: 'Gender: Female', predicate: s => (s.gender||'').toLowerCase()==='female' },
+    { key: 'gender_male', label: 'Gender: Male', predicate: s => (s.gender || '').toLowerCase() === 'male' },
+    { key: 'gender_female', label: 'Gender: Female', predicate: s => (s.gender || '').toLowerCase() === 'female' },
     { key: 'has_email', label: 'Has Email', predicate: s => !!s.email },
     { key: 'has_whatsapp', label: 'Has WhatsApp', predicate: s => !!s.whatsappNumber },
     { key: 'has_phone', label: 'Has Phone', predicate: s => !!s.phoneNumber },
@@ -448,33 +458,33 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     { key: 'missing_guardian', label: 'Missing Guardian Info', predicate: s => !(s.guardianName && s.guardianContact) },
     { key: 'has_bform', label: 'Has CNIC/B-Form', predicate: s => !!s.cnicOrBform },
     { key: 'missing_bform', label: 'Missing CNIC/B-Form', predicate: s => !s.cnicOrBform },
-    { key: 'medical_yes', label: 'Medical: Yes', predicate: s => (s.medicalCondition||'').toLowerCase()==='yes' },
-    { key: 'medical_no', label: 'Medical: No', predicate: s => (s.medicalCondition||'').toLowerCase()==='no' },
+    { key: 'medical_yes', label: 'Medical: Yes', predicate: s => (s.medicalCondition || '').toLowerCase() === 'yes' },
+    { key: 'medical_no', label: 'Medical: No', predicate: s => (s.medicalCondition || '').toLowerCase() === 'no' },
     { key: 'has_photo', label: 'Has Photo', predicate: s => !!s.photoUrl },
     { key: 'missing_photo', label: 'Missing Photo', predicate: s => !s.photoUrl },
     { key: 'contact_any', label: 'Any Contact (Phone/WhatsApp)', predicate: s => !!s.phoneNumber || !!s.whatsappNumber },
     { key: 'contact_none', label: 'No Contact', predicate: s => !s.phoneNumber && !s.whatsappNumber },
-    { key: 'age_lt5', label: 'Age <5', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a<5 } },
-    { key: 'age_5_7', label: 'Age 5-7', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a>=5 && a<=7 } },
-    { key: 'age_8_10', label: 'Age 8-10', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a>=8 && a<=10 } },
-    { key: 'age_11_13', label: 'Age 11-13', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a>=11 && a<=13 } },
-    { key: 'age_14p', label: 'Age 14+', predicate: s => { const a=ageFromDob(s.dob); return a!=null && a>=14 } },
-    { key: 'age_unknown', label: 'Age Unknown', predicate: s => ageFromDob(s.dob)==null },
+    { key: 'age_lt5', label: 'Age <5', predicate: s => { const a = ageFromDob(s.dob); return a != null && a < 5 } },
+    { key: 'age_5_7', label: 'Age 5-7', predicate: s => { const a = ageFromDob(s.dob); return a != null && a >= 5 && a <= 7 } },
+    { key: 'age_8_10', label: 'Age 8-10', predicate: s => { const a = ageFromDob(s.dob); return a != null && a >= 8 && a <= 10 } },
+    { key: 'age_11_13', label: 'Age 11-13', predicate: s => { const a = ageFromDob(s.dob); return a != null && a >= 11 && a <= 13 } },
+    { key: 'age_14p', label: 'Age 14+', predicate: s => { const a = ageFromDob(s.dob); return a != null && a >= 14 } },
+    { key: 'age_unknown', label: 'Age Unknown', predicate: s => ageFromDob(s.dob) == null },
     { key: 'roll_present', label: 'Has Roll No', predicate: s => !!s.rollNumber },
     { key: 'gr_present', label: 'Has GR Number', predicate: s => !!s.grNumber },
     { key: 'roll_missing', label: 'Missing Roll No', predicate: s => !s.rollNumber },
     { key: 'gr_missing', label: 'Missing GR Number', predicate: s => !s.grNumber },
     { key: 'prev_inst', label: 'Has Previous Institute', predicate: s => !!s.previousInstitute },
     { key: 'former_edu', label: 'Has Former Education', predicate: s => !!s.formerEducation },
-    { key: 'last_pct_ge_60', label: 'Last % ≥ 60', predicate: s => { const n=parseFloat(String(s.lastExamPercentage||'').replace(/[^0-9.]/g,'')); return !isNaN(n) && n>=60 } },
-    { key: 'last_pct_ge_80', label: 'Last % ≥ 80', predicate: s => { const n=parseFloat(String(s.lastExamPercentage||'').replace(/[^0-9.]/g,'')); return !isNaN(n) && n>=80 } },
-    { key: 'address_long', label: 'Address length ≥ 25', predicate: s => (s.address||'').length>=25 },
-    { key: 'name_long', label: 'Long Name (≥ 20)', predicate: s => (s.fullName||'').length>=20 },
+    { key: 'last_pct_ge_60', label: 'Last % ≥ 60', predicate: s => { const n = parseFloat(String(s.lastExamPercentage || '').replace(/[^0-9.]/g, '')); return !isNaN(n) && n >= 60 } },
+    { key: 'last_pct_ge_80', label: 'Last % ≥ 80', predicate: s => { const n = parseFloat(String(s.lastExamPercentage || '').replace(/[^0-9.]/g, '')); return !isNaN(n) && n >= 80 } },
+    { key: 'address_long', label: 'Address length ≥ 25', predicate: s => (s.address || '').length >= 25 },
+    { key: 'name_long', label: 'Long Name (≥ 20)', predicate: s => (s.fullName || '').length >= 20 },
     // Nationality filters dynamically added in UI (handled separately)
   ]
   const [selectedFilterKeys, setSelectedFilterKeys] = useState<Set<string>>(new Set())
   const [selectedNationality, setSelectedNationality] = useState<string>('All')
-  const toggleFilter = (k: string) => setSelectedFilterKeys(prev => { const n=new Set(prev); if(n.has(k)) n.delete(k); else n.add(k); return n })
+  const toggleFilter = (k: string) => setSelectedFilterKeys(prev => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
 
   const handleExportExcel = async () => {
     try {
@@ -679,8 +689,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const matchesTerm = !term
         ? true
         : [s.fullName, s.fatherName, s.grNumber, s.rollNumber]
-            .map((v) => (v || '').toString().toLowerCase())
-            .some((v) => v.includes(term))
+          .map((v) => (v || '').toString().toLowerCase())
+          .some((v) => v.includes(term))
       // Advanced filters
       let matchesAdvanced = true
       // nationality select
@@ -690,7 +700,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       }
       if (matchesAdvanced && selectedFilterKeys.size > 0) {
         for (const k of Array.from(selectedFilterKeys)) {
-          const def = FILTERS.find(f=>f.key===k)
+          const def = FILTERS.find(f => f.key === k)
           if (def && !def.predicate(s)) { matchesAdvanced = false; break }
         }
       }
@@ -699,7 +709,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   }, [students, search, klass, selectedFilterKeys, selectedNationality])
 
   // Sorting: Class order (KG, 1..8, SSCI, SSCII) then numeric Roll No
-  const classOrder = ['KG','1','2','3','4','5','6','7','8','SSCI','SSCII']
+  const classOrder = ['KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII']
   const classIndex = (cls: string) => {
     const c = (cls || '').toString()
     const idx = classOrder.indexOf(c)
@@ -715,7 +725,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     const sign = sortOrder === 'asc' ? 1 : -1
     const opt = SORT_FIELDS.find(o => o.key === sortField) || SORT_FIELDS[0]
     const get = opt.getter
-    const isNumericKey = ['roll','gr','rollNumeric','grNumeric','nameLength','addressLength'].includes(sortField)
+    const isNumericKey = ['roll', 'gr', 'rollNumeric', 'grNumeric', 'nameLength', 'addressLength'].includes(sortField)
     const s = [...filteredStudents].sort((a, b) => {
       if (sortField === 'class') {
         const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
@@ -726,19 +736,19 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const av = get(a)
       const bv = get(b)
       if (isNumericKey) {
-        const an = parseInt(String(av).replace(/\D/g,''), 10)
-        const bn = parseInt(String(bv).replace(/\D/g,''), 10)
+        const an = parseInt(String(av).replace(/\D/g, ''), 10)
+        const bn = parseInt(String(bv).replace(/\D/g, ''), 10)
         const aa = isNaN(an) ? Number.POSITIVE_INFINITY : an
         const bb = isNaN(bn) ? Number.POSITIVE_INFINITY : bn
         if (aa === bb) {
           // tie-breakers
           const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
           if (byClass !== 0) return byClass * sign
-          return String(a.fullName||'').localeCompare(String(b.fullName||'')) * sign
+          return String(a.fullName || '').localeCompare(String(b.fullName || '')) * sign
         }
         return (aa - bb) * sign
       }
-      const res = String(av||'').localeCompare(String(bv||''))
+      const res = String(av || '').localeCompare(String(bv || ''))
       if (res !== 0) return res * sign
       // tie-breakers: class then roll
       const byClass = classIndex(a.admissionFor) - classIndex(b.admissionFor)
@@ -774,17 +784,67 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 <span className="hidden sm:inline">Filter</span>
               </button>
               {showFilter && (
-                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-56 p-2 right-0">
-                  <label className="text-xs text-gray-500 px-1">Class</label>
-                  <select
-                    value={klass}
-                    onChange={(e) => { setKlass(e.target.value); setShowFilter(false) }}
-                    className="mt-1 w-full border rounded-lg px-3 py-2"
-                  >
-                    {["All", ...classOptions].map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg w-[20rem] sm:w-[26rem] p-3 right-0">
+                  {/* Class */}
+                  <div className="mb-2">
+                    <label className="text-xs text-gray-500 px-1">Class</label>
+                    <select
+                      value={klass}
+                      onChange={(e) => setKlass(e.target.value)}
+                      className="mt-1 w-full border rounded-lg px-3 py-2"
+                    >
+                      {["All", ...classOptions].map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Nationality */}
+                  <div className="mb-2">
+                    <label className="text-xs text-gray-500 px-1">Nationality</label>
+                    <select
+                      value={selectedNationality}
+                      onChange={(e) => setSelectedNationality(e.target.value)}
+                      className="mt-1 w-full border rounded-lg px-3 py-2"
+                    >
+                      {['All', ...nationalityOptions].map(n => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Advanced Filters */}
+                  <div className="mt-2">
+                    <div className="text-xs text-gray-500 px-1 mb-1">Advanced Filters</div>
+                    <div className="max-h-56 overflow-auto pr-1 grid grid-cols-1 sm:grid-cols-2 gap-1">
+                      {FILTERS.map(f => (
+                        <label key={f.key} className="flex items-center gap-2 text-sm px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedFilterKeys.has(f.key)}
+                            onChange={() => toggleFilter(f.key)}
+                          />
+                          <span className="truncate" title={f.label}>{f.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-3 flex justify-end gap-2">
+                    <button
+                      onClick={() => { setSelectedFilterKeys(new Set()); setSelectedNationality('All') }}
+                      className="px-3 py-1.5 text-sm border rounded"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setShowFilter(false)}
+                      className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded"
+                    >
+                      Apply
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -792,91 +852,91 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </div>
         {/* Row 2: Actions (sorting + buttons) */}
         <div className="flex flex-wrap items-stretch sm:items-center justify-between gap-2 w-full">
-            {/* Sorting Controls */}
-            <div className="flex gap-2 w-full sm:w-auto">
-              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 h-10 md:h-11">
-                <label className="text-sm text-gray-600">Sort by</label>
-                <select
-                  value={sortField}
-                  onChange={(e)=>setSortField(e.target.value)}
-                  className="border rounded px-2 py-1 text-sm max-w-[220px]"
-                >
-                  {SORT_FIELDS.map(f => (
-                    <option key={f.key} value={f.key}>{f.label}</option>
-                  ))}
-                </select>
-                <select
-                  value={sortOrder}
-                  onChange={(e)=>setSortOrder(e.target.value as any)}
-                  className="border rounded px-2 py-1 text-sm"
-                >
-                  <option value="asc">Asc</option>
-                  <option value="desc">Desc</option>
-                </select>
-              </div>
+          {/* Sorting Controls */}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 h-10 md:h-11">
+              <label className="text-sm text-gray-600">Sort by</label>
+              <select
+                value={sortField}
+                onChange={(e) => setSortField(e.target.value)}
+                className="border rounded px-2 py-1 text-sm max-w-[220px]"
+              >
+                {SORT_FIELDS.map(f => (
+                  <option key={f.key} value={f.key}>{f.label}</option>
+                ))}
+              </select>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as any)}
+                className="border rounded px-2 py-1 text-sm"
+              >
+                <option value="asc">Asc</option>
+                <option value="desc">Desc</option>
+              </select>
             </div>
-            {/* Refresh */}
-            <button
-              onClick={refreshStudents}
-              className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-gray-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
-              title="Refresh table"
-            >
-              <RotateCw size={16} className={loading ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline font-medium">Refresh</span>
-            </button>
-            {/* Export Excel */}
-            <button
-              onClick={handleExportExcel}
-              className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
-              title="Export students to Excel"
-            >
-              <Upload size={16} />
-              <span className="hidden sm:inline font-medium">Export</span>
-            </button>
-            {/* Import Excel */}
-            <button
-              onClick={handleImportExcelClick}
-              className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
-              title="Import students from Excel"
-            >
-              <Download size={16} />
-              <span className="hidden sm:inline font-medium">Import</span>
-            </button>
-            {/* Hidden file input for import */}
-            <input id={fileInputRefId} type="file" accept=".xlsx" className="hidden" onChange={handleImportExcelFile} />
-            {/* Delete by Class */}
-            <button
-              onClick={() => { setDeleteClassSelected('1'); setDeleteClassConfirmText(''); setShowDeleteByClassConfirm(true) }}
-              className="px-4 h-10 md:h-11 border border-amber-300 text-amber-700 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-amber-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
-              title="Delete students by class"
-            >
-              <span className="font-medium">Delete by Class</span>
-            </button>
-            {/* Delete All */}
-            <button
-              onClick={() => {
-                if (students.length === 0) {
-                  setDeleteAllMessage('No students to delete.')
-                  setShowDeleteAllConfirm(true)
-                  return
-                }
-                setDeleteAllMessage('')
+          </div>
+          {/* Refresh */}
+          <button
+            onClick={refreshStudents}
+            className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-gray-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
+            title="Refresh table"
+          >
+            <RotateCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline font-medium">Refresh</span>
+          </button>
+          {/* Export Excel */}
+          <button
+            onClick={handleExportExcel}
+            className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
+            title="Export students to Excel"
+          >
+            <Upload size={16} />
+            <span className="hidden sm:inline font-medium">Export</span>
+          </button>
+          {/* Import Excel */}
+          <button
+            onClick={handleImportExcelClick}
+            className="px-4 h-10 md:h-11 border border-gray-200 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
+            title="Import students from Excel"
+          >
+            <Download size={16} />
+            <span className="hidden sm:inline font-medium">Import</span>
+          </button>
+          {/* Hidden file input for import */}
+          <input id={fileInputRefId} type="file" accept=".xlsx" className="hidden" onChange={handleImportExcelFile} />
+          {/* Delete by Class */}
+          <button
+            onClick={() => { setDeleteClassSelected('1'); setDeleteClassConfirmText(''); setShowDeleteByClassConfirm(true) }}
+            className="px-4 h-10 md:h-11 border border-amber-300 text-amber-700 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-amber-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
+            title="Delete students by class"
+          >
+            <span className="font-medium">Delete by Class</span>
+          </button>
+          {/* Delete All */}
+          <button
+            onClick={() => {
+              if (students.length === 0) {
+                setDeleteAllMessage('No students to delete.')
                 setShowDeleteAllConfirm(true)
-              }}
-              className="px-4 h-10 md:h-11 border border-red-300 text-red-700 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-red-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
-              title="Delete all students"
-            >
-              <span className="font-medium">Delete All</span>
-            </button>
-            {/* Add Student */}
-            <button
-              onClick={() => { console.log('Add button clicked'); setShowAddModal(true) }}
-              className="px-5 h-10 md:h-11 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-sm shadow hover:opacity-95 w-full sm:w-auto font-medium"
-            >
-              Add Student
-            </button>
+                return
+              }
+              setDeleteAllMessage('')
+              setShowDeleteAllConfirm(true)
+            }}
+            className="px-4 h-10 md:h-11 border border-red-300 text-red-700 rounded-lg flex items-center justify-center gap-2 bg-white hover:bg-red-50 hover:shadow-sm transition text-sm w-full sm:w-auto"
+            title="Delete all students"
+          >
+            <span className="font-medium">Delete All</span>
+          </button>
+          {/* Add Student */}
+          <button
+            onClick={() => { console.log('Add button clicked'); setShowAddModal(true) }}
+            className="px-5 h-10 md:h-11 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-sm shadow hover:opacity-95 w-full sm:w-auto font-medium"
+          >
+            Add Student
+          </button>
         </div>
-        </div>
+      </div>
 
       {/* Add Student Modal */}
       {showAddModal && (
@@ -912,7 +972,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <div>
                 <label className="block text-sm font-medium mb-1">Class</label>
                 <select value={newStudent.admissionFor} onChange={(e) => setNewStudent({ ...newStudent, admissionFor: e.target.value })} className="w-full border rounded px-3 py-2">
-                  {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                  {['KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
               </div>
               <div>
@@ -977,7 +1037,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 <label className="block text-sm font-medium mb-1">Former Education</label>
                 <select value={newStudent.formerEducation} onChange={(e) => setNewStudent({ ...newStudent, formerEducation: e.target.value })} className="w-full border rounded px-3 py-2">
                   <option value="">Select</option>
-                  {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                  {['KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
               </div>
               <div>
@@ -1010,8 +1070,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <div>
                 <label className="block text-sm font-medium mb-1">Guardian Relation</label>
                 <div className="flex flex-wrap items-center gap-4">
-                  {['son','daughter','brother','sister','other'].map(rel => (
-                    <label key={rel} className="flex items-center gap-2"><input type="radio" name="guardianRelAdd" checked={newStudent.guardianRelation === rel} onChange={() => setNewStudent({ ...newStudent, guardianRelation: rel })} /> {rel[0].toUpperCase()+rel.slice(1)}</label>
+                  {['son', 'daughter', 'brother', 'sister', 'other'].map(rel => (
+                    <label key={rel} className="flex items-center gap-2"><input type="radio" name="guardianRelAdd" checked={newStudent.guardianRelation === rel} onChange={() => setNewStudent({ ...newStudent, guardianRelation: rel })} /> {rel[0].toUpperCase() + rel.slice(1)}</label>
                   ))}
                 </div>
               </div>
@@ -1023,7 +1083,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                   const f = e.target.files?.[0]
                   if (f) {
                     const reader = new FileReader()
-                    reader.onload = () => { setCropSourceAdd(String(reader.result || '')) ; setShowCropperAdd(true) }
+                    reader.onload = () => { setCropSourceAdd(String(reader.result || '')); setShowCropperAdd(true) }
                     reader.readAsDataURL(f)
                   }
                 }} className="w-full border rounded px-3 py-2" />
@@ -1129,7 +1189,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <div>
                 <label className="block text-sm font-medium mb-1">Class</label>
                 <select value={editingStudent.admissionFor || ''} onChange={(e) => setEditingStudent({ ...editingStudent, admissionFor: e.target.value })} className="w-full border rounded px-3 py-2">
-                  {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                  {['KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
               </div>
               <div>
@@ -1184,7 +1244,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 <label className="block text-sm font-medium mb-1">Former Education</label>
                 <select value={editingStudent.formerEducation || ''} onChange={(e) => setEditingStudent({ ...editingStudent, formerEducation: e.target.value })} className="w-full border rounded px-3 py-2">
                   <option value="">Select</option>
-                  {['KG','1','2','3','4','5','6','7','8','SSCI','SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
+                  {['KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'].map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
               </div>
               <div>
@@ -1212,8 +1272,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <div>
                 <label className="block text-sm font-medium mb-1">Guardian Relation</label>
                 <div className="flex flex-wrap items-center gap-4">
-                  {['son','daughter','brother','sister','other'].map(rel => (
-                    <label key={rel} className="flex items-center gap-2"><input type="radio" name="guardianRelEdit" checked={editingStudent.guardianRelation === rel} onChange={() => setEditingStudent({ ...editingStudent, guardianRelation: rel })} /> {rel[0].toUpperCase()+rel.slice(1)}</label>
+                  {['son', 'daughter', 'brother', 'sister', 'other'].map(rel => (
+                    <label key={rel} className="flex items-center gap-2"><input type="radio" name="guardianRelEdit" checked={editingStudent.guardianRelation === rel} onChange={() => setEditingStudent({ ...editingStudent, guardianRelation: rel })} /> {rel[0].toUpperCase() + rel.slice(1)}</label>
                   ))}
                 </div>
               </div>
@@ -1225,7 +1285,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                   const f = e.target.files?.[0]
                   if (f) {
                     const reader = new FileReader()
-                    reader.onload = () => { setCropSourceEdit(String(reader.result || '')) ; setShowCropperEdit(true) }
+                    reader.onload = () => { setCropSourceEdit(String(reader.result || '')); setShowCropperEdit(true) }
                     reader.readAsDataURL(f)
                   }
                 }} className="w-full border rounded px-3 py-2" />
@@ -1240,38 +1300,77 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       )}
 
       {selectedStudent && (
-        <div className="fixed inset-0 bg-black/40 flex items-start sm:items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Student Details">
-          <div className="bg-white sm:rounded-2xl rounded-none p-4 sm:p-8 w-full sm:w-full sm:max-w-4xl max-w-none h-full sm:h-auto relative shadow-2xl border border-gray-200 overflow-y-auto sm:max-h-[90vh] my-0 sm:my-10">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Student Details"
+        >
+          <div className="bg-white sm:rounded-2xl rounded-none w-full sm:max-w-4xl max-w-none h-full sm:h-auto relative shadow-2xl border border-gray-200 overflow-y-auto sm:max-h-[90vh] my-0 sm:my-10 p-6 sm:p-10 transition-all duration-300 ease-out scale-100">
 
-            {/* Close Button */}
+            {/* ❌ Close Button */}
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-3xl font-bold p-2 rounded-full focus:outline-none focus:ring"
+              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-3xl font-bold p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-red-400"
               onClick={() => setSelectedStudent(null)}
               aria-label="Close"
             >
               &times;
             </button>
 
-            {/* Title */}
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center border-b pb-4">
-              👨‍🎓 Student Details
+            {/* 🧾 Title */}
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-8 text-center border-b pb-4">
+              🎓 Student Details
             </h2>
 
-            {/* Photo */}
-            {selectedStudent.photoUrl && (
-              <div className="flex justify-center mb-6">
-                <img
-                  src={selectedStudent.photoUrl}
-                  alt="Student"
-                  className="w-32 h-32 object-cover rounded-full border shadow-md cursor-zoom-in"
-                  onClick={() => setImgPreviewOpen(true)}
-                  title="Click to enlarge"
-                />
+            {/* 🖼️ Photo */}
+            <div className="flex flex-col items-center mb-10">
+              <div
+                className="relative group w-36 h-36 sm:w-40 sm:h-40 rounded-full overflow-hidden border-[3px] border-orange-300 shadow-lg transition-transform duration-300 hover:scale-105 cursor-pointer bg-gray-100 flex items-center justify-center"
+                onClick={() => selectedStudent.photoUrl && setImgPreviewOpen(true)}
+                title={selectedStudent.photoUrl ? 'Click to enlarge' : 'No photo available'}
+              >
+                {selectedStudent.photoUrl ? (
+                  <>
+                    <img
+                      src={selectedStudent.photoUrl}
+                      alt={selectedStudent.fullName || 'Student Photo'}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs sm:text-sm font-medium">
+                      Click to Enlarge 🔍
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Placeholder avatar when no photo */}
+                    <div className="text-5xl sm:text-6xl text-orange-400 font-bold">
+                      {selectedStudent.fullName
+                        ? selectedStudent.fullName.charAt(0).toUpperCase()
+                        : "?"}
+                    </div>
+                    <div className="absolute bottom-2 text-[10px] text-gray-500">
+                      No Photo
+                    </div>
+                  </>
+                )}
               </div>
-            )}
 
-            {/* SECTION: Personal Information */}
-            <h3 className="text-xl font-semibold text-gray-700 mb-3 mt-6 border-b pb-1">👤 Personal Information</h3>
+              {/* Optional Label */}
+              <div className="mt-3 text-center">
+                <p className="text-sm font-semibold text-gray-700">
+                  {selectedStudent.fullName || "Unnamed Student"}
+                </p>
+                <p className="text-xs text-gray-500">Student Photo</p>
+              </div>
+            </div>
+
+
+
+            {/* 👤 Personal Information */}
+            <h3 className="text-xl font-semibold text-gray-700 mb-3 mt-6 border-b pb-1">
+              👤 Personal Information
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-gray-800 text-sm">
               <Info label="Full Name" value={selectedStudent.fullName} />
               <Info label="Father's Name" value={selectedStudent.fatherName} />
@@ -1286,8 +1385,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <Info label="CNIC/B-Form" value={selectedStudent.cnicOrBform} />
             </div>
 
-            {/* SECTION: Contact Information */}
-            <h3 className="text-xl font-semibold text-gray-700 mb-3 mt-6 border-b pb-1">📞 Contact Information</h3>
+            {/* 📞 Contact Information */}
+            <h3 className="text-xl font-semibold text-gray-700 mb-3 mt-6 border-b pb-1">
+              📞 Contact Information
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-gray-800 text-sm">
               <Info label="Email" value={selectedStudent.email} />
               <Info label="Phone Number" value={selectedStudent.phoneNumber} />
@@ -1297,30 +1398,37 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               </div>
             </div>
 
-            {/* SECTION: Academic Information */}
-            <h3 className="text-xl font-semibold text-gray-700 mb-3 mt-6 border-b pb-1">📚 Academic Information</h3>
+            {/* 📚 Academic Information */}
+            <h3 className="text-xl font-semibold text-gray-700 mb-3 mt-6 border-b pb-1">
+              📚 Academic Information
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-gray-800 text-sm">
               <Info label="Former Education" value={selectedStudent.formerEducation} />
               <Info label="Previous Institute" value={selectedStudent.previousInstitute} />
               <Info label="Last Exam %" value={selectedStudent.lastExamPercentage} />
             </div>
 
-            {/* SECTION: Guardian Details */}
-            <h3 className="text-xl font-semibold text-gray-700 mb-3 mt-6 border-b pb-1">👨‍👩‍👧 Guardian Details</h3>
+            {/* 👨‍👩‍👧 Guardian Details */}
+            <h3 className="text-xl font-semibold text-gray-700 mb-3 mt-6 border-b pb-1">
+              👨‍👩‍👧 Guardian Details
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-gray-800 text-sm">
               <Info label="Guardian Name" value={selectedStudent.guardianName} />
               <Info label="Guardian Contact" value={selectedStudent.guardianContact} />
               <Info label="Guardian CNIC" value={selectedStudent.guardianCnic} />
               <Info label="Guardian Relation" value={selectedStudent.guardianRelation} />
             </div>
-            <ImageModal open={imgPreviewOpen} src={selectedStudent?.photoUrl} alt={selectedStudent?.fullName || 'Student Photo'} onClose={() => setImgPreviewOpen(false)} />
+
+            {/* 📸 Image Modal */}
+            <ImageModal
+              open={imgPreviewOpen}
+              src={selectedStudent?.photoUrl}
+              alt={selectedStudent?.fullName || 'Student Photo'}
+              onClose={() => setImgPreviewOpen(false)}
+            />
           </div>
         </div>
       )}
-
-
-
-
 
 
       {/* 👇 Table (Desktop and Tablets md+) */}
@@ -1433,8 +1541,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             {search.trim() && klass !== 'All'
               ? `No students match "${search}" in Class ${klass}`
               : search.trim()
-              ? `Student not found: "${search}"`
-              : (klass !== 'All' ? `No students found in Class ${klass}` : 'No students found')}
+                ? `Student not found: "${search}"`
+                : (klass !== 'All' ? `No students found in Class ${klass}` : 'No students found')}
           </div>
         ) : (
           sortedStudents.map((student: Student, index: number) => (
@@ -1556,7 +1664,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </div>
       )}
 
-      
+
     </div>
   );
 };

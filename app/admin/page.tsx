@@ -14,7 +14,6 @@ import AdminNotice from '@/components/AdminNotice/AdminNotice';
 import AdminFees from '@/components/AdminFees/AdminFees';
 import AdminQuiz from '@/components/AdminQuiz/AdminQuiz';
 import AdminResults from '@/components/AdminResults/AdminResults';
-import AdminExamResults from '@/components/AdminExamResults/AdminExamResults';
 // import { useRouter } from 'next/router';
 
 const AdminPage = () => {
@@ -209,7 +208,6 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
         { id: 'notice', label: 'Notice', icon: Megaphone },
         { id: 'quiz', label: 'Quiz', icon: GraduationCap },
         { id: 'results', label: 'Quiz Result', icon: BarChart3 },
-        { id: 'examResults', label: 'Exam Result', icon: BarChart3 },
     ];
 
     // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
@@ -330,7 +328,6 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
                         {activeTab === 'notice' && <AdminNotice onLoadingChange={onLoadingChange} />}
                         {activeTab === 'quiz' && <AdminQuiz onLoadingChange={onLoadingChange} />}
                         {activeTab === 'results' && <AdminResults onLoadingChange={onLoadingChange} />}
-                        {activeTab === 'examResults' && <AdminExamResults onLoadingChange={onLoadingChange} />}
                     </div>
                 </main>
             </div>
