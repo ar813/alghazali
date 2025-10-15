@@ -297,7 +297,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
         doc.setFont('helvetica', 'bold');
         // Python coordinates: c.drawCentredString(90.5, 95, "Level" + "-" + roman_class)
         // Convert Y coordinate: cardH - pythonY = 321 - 95 = 226
-        doc.text(`LEVEL-${intToRoman(s.admissionFor)}`, 90.5, cardH - 95, { align: 'center' });
+        doc.text(`LEVEL-${intToRoman(s.admissionFor)}`, 90.5, cardH - 96.2, { align: 'center' });
 
         // Secondary values - matching Python positioning exactly
         doc.setTextColor(35, 31, 85);
@@ -306,11 +306,11 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
         
         // Python coordinates: c.drawString(65, 67, info['roll_no'])
         // Convert Y coordinate: cardH - pythonY = 321 - 67 = 254
-        doc.text(String(s.rollNumber || ''), 65, cardH - 67);
+        doc.text(String(s.rollNumber || ''), 65, cardH - 67.3);
         
         // Python coordinates: c.drawString(65, 52, info['gr_number'])
         // Convert Y coordinate: cardH - pythonY = 321 - 52 = 269
-        doc.text(String(s.grNumber || ''), 65, cardH - 52);
+        doc.text(String(s.grNumber || ''), 65, cardH - 52.4);
         
         // Python coordinates: c.drawString(65, 37, dob_formatted)
         // Convert Y coordinate: cardH - pythonY = 321 - 37 = 284
@@ -319,7 +319,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
           month: 'long', 
           year: 'numeric' 
         }) : '';
-        doc.text(dobFormatted, 65, cardH - 37);
+        doc.text(dobFormatted, 65, cardH - 38);
       };
 
       const drawBack = async () => {

@@ -33,10 +33,10 @@ const ClassSchedule = ({ className, schedule }: { className: string; schedule: D
           key={i}
           className="border border-blue-100/60 rounded-2xl p-5 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 shadow-sm hover:shadow-md transition-all duration-300"
         >
-          <div className="flex items-center gap-2 mb-3">
+          {/* <div className="flex items-center gap-2 mb-3">
             <CalendarDays className="w-5 h-5 text-indigo-600" />
             <h3 className="text-lg font-semibold text-gray-800">{day.day}</h3>
-          </div>
+          </div> */}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {day.periods.map((p, j) => (
