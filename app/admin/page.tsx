@@ -7,7 +7,7 @@ import AdminStudents from '@/components/AdminStudents/AdminStudents';
 import AdminSchedule from '@/components/AdminSchedule/AdminSchedule';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
-import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard, Banknote, Megaphone, Smartphone } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard, Banknote, Megaphone, Smartphone, MessageSquare } from 'lucide-react';
 import TopLoader from '@/components/TopLoader/TopLoader'
 import AdminCards from '@/components/AdminCards/AdminCards';
 import AdminNotice from '@/components/AdminNotice/AdminNotice';
@@ -15,6 +15,7 @@ import AdminFees from '@/components/AdminFees/AdminFees';
 import AdminQuiz from '@/components/AdminQuiz/AdminQuiz';
 import AdminResults from '@/components/AdminResults/AdminResults';
 import AdminMobileAttendance from '@/components/AdminMobileAttendance/AdminMobileAttendance';
+import AdminChatBot from '@/components/AdminChatBot/AdminChatBot';
 // import { useRouter } from 'next/router';
 
 const AdminPage = () => {
@@ -71,29 +72,40 @@ export default AdminPage;
 
 // ✅ Login Popup Component (Enhanced UI)
 const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
   const adminUsers = [
-    { username: 'arsalan', email: 'arsalan@example.com', password: 'admin123' },
-    { username: 'ali', email: 'ali@example.com', password: 'pass456' },
-    { username: 'zain', email: 'zain@example.com', password: 'secure789' },
     {
-      username: process.env.NEXT_PUBLIC_ADMIN_USERNAME || "a",
-      email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || "a@gmail.com",
-      password: process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "a"
+      email: process.env.NEXT_PUBLIC_ADMIN_EMAIL,
+      password: process.env.NEXT_PUBLIC_ADMIN_PASSWORD
     }
   ];
+
+  // Load saved credentials when component mounts
+  useEffect(() => {
+    const savedCredentials = localStorage.getItem('adminCredentials');
+    if (savedCredentials) {
+      try {
+        const { email: savedEmail, password: savedPassword } = JSON.parse(savedCredentials);
+        setEmail(savedEmail || '');
+        setPassword(savedPassword || '');
+        setRememberMe(true);
+      } catch (error) {
+        // If there's an error parsing, just ignore it
+        console.error('Error loading saved credentials:', error);
+      }
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const match = adminUsers.find(
       (admin) =>
-        admin.username === username &&
         admin.email === email &&
         admin.password === password
     );
@@ -102,9 +114,22 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
       // Store session in localStorage with timestamp
       const sessionData = {
         timestamp: new Date().getTime(),
-        user: match.username
+        user: match.email
       };
       localStorage.setItem('adminSession', JSON.stringify(sessionData));
+
+      // Save credentials if "Remember Me" is checked
+      if (rememberMe) {
+        const credentials = {
+          email,
+          password
+        };
+        localStorage.setItem('adminCredentials', JSON.stringify(credentials));
+      } else {
+        // Remove saved credentials if "Remember Me" is unchecked
+        localStorage.removeItem('adminCredentials');
+      }
+
       setError('')
       onLoginSuccess();
     } else {
@@ -139,18 +164,6 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
               {error}
             </div>
           )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter username"
-              required
-            />
-            <p className="mt-1 text-xs text-gray-500">Use the configured admin username.</p>
-          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -181,6 +194,19 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
             <p className="mt-1 text-xs text-gray-500">Your password is case sensitive.</p>
           </div>
 
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="rememberMe"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+            />
+            <label htmlFor="rememberMe" className="text-sm text-gray-700 cursor-pointer select-none">
+              Remember my credentials
+            </label>
+          </div>
+
           <button
             type="submit"
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:opacity-95 transition-all shadow"
@@ -196,10 +222,10 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
 // ✅ Admin Portal (sidebar layout similar to student portal)
 const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance' | 'chatbot'>('dashboard');
   const [collapsed, setCollapsed] = useState(false);
 
-  const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance'; label: string; icon: any }[] = [
+  const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance' | 'chatbot'; label: string; icon: any }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'students', label: 'Students', icon: UsersIcon },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
@@ -210,13 +236,14 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
     { id: 'quiz', label: 'Quiz', icon: GraduationCap },
     { id: 'results', label: 'Quiz Result', icon: BarChart3 },
     { id: 'mobile-attendance', label: 'Mobile Attendance', icon: Smartphone },
+    { id: 'chatbot', label: 'AI Assistant', icon: MessageSquare },
   ];
 
   // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
   useEffect(() => {
     const applyHash = () => {
       const hash = (typeof window !== 'undefined' && window.location.hash.replace('#', '')) as typeof activeTab | ''
-      if (hash && ['dashboard', 'students', 'schedule', 'reports', 'cards', 'fees', 'notice', 'quiz', 'results', 'examResults', 'mobile-attendance'].includes(hash)) {
+      if (hash && ['dashboard', 'students', 'schedule', 'reports', 'cards', 'fees', 'notice', 'quiz', 'results', 'examResults', 'mobile-attendance', 'chatbot'].includes(hash)) {
         setActiveTab(hash as any)
       }
     }
@@ -329,6 +356,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
             {activeTab === 'quiz' && <AdminQuiz onLoadingChange={onLoadingChange} />}
             {activeTab === 'results' && <AdminResults onLoadingChange={onLoadingChange} />}
             {activeTab === 'mobile-attendance' && <AdminMobileAttendance onLoadingChange={onLoadingChange} />}
+            {activeTab === 'chatbot' && <AdminChatBot />}
           </div>
         </main>
       </div>
