@@ -7,7 +7,7 @@ import AdminStudents from '@/components/AdminStudents/AdminStudents';
 import AdminSchedule from '@/components/AdminSchedule/AdminSchedule';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
-import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard, Banknote, Megaphone, Smartphone, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard, Banknote, Megaphone, Smartphone, MessageSquare, Edit2 } from 'lucide-react';
 import TopLoader from '@/components/TopLoader/TopLoader'
 import AdminCards from '@/components/AdminCards/AdminCards';
 import AdminNotice from '@/components/AdminNotice/AdminNotice';
@@ -70,20 +70,15 @@ const AdminPage = () => {
 
 export default AdminPage;
 
-// ✅ Login Popup Component (Enhanced UI)
+// ✅ Login Popup Component (Enhanced UI with Firebase Auth)
 const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState<string>('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
-
-  const adminUsers = [
-    {
-      email: process.env.NEXT_PUBLIC_ADMIN_EMAIL,
-      password: process.env.NEXT_PUBLIC_ADMIN_PASSWORD
-    }
-  ];
+  const [isLoading, setIsLoading] = useState(false)
 
   // Load saved credentials when component mounts
   useEffect(() => {
@@ -101,20 +96,44 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
 
-    const match = adminUsers.find(
-      (admin) =>
-        admin.email === email &&
-        admin.password === password
-    );
+    try {
+      // Import Firebase Auth dynamically to avoid SSR issues
+      const { auth } = await import('@/lib/firebase');
+      const { signInWithEmailAndPassword, updateProfile } = await import('firebase/auth');
 
-    if (match) {
+      // Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Update display name logic moved to AdminPortal post-login check
+
+      // Sync full user data to Firestore
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+
+      const user = userCredential.user;
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        displayName: user.displayName,
+        phoneNumber: user.phoneNumber,
+        photoURL: user.photoURL,
+        metadata: {
+          creationTime: user.metadata.creationTime,
+          lastSignInTime: user.metadata.lastSignInTime,
+        },
+        lastLoginAt: new Date().toISOString()
+      }, { merge: true });
+
       // Store session in localStorage with timestamp
       const sessionData = {
         timestamp: new Date().getTime(),
-        user: match.email
+        user: userCredential.user.email
       };
       localStorage.setItem('adminSession', JSON.stringify(sessionData));
 
@@ -130,11 +149,42 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
         localStorage.removeItem('adminCredentials');
       }
 
-      setError('')
       onLoginSuccess();
-    } else {
-      // Show inline error instead of alert/redirect
-      setError('Invalid credentials. Please check and try again.')
+    } catch (err: any) {
+      // Handle Firebase authentication errors
+      let errorMessage = 'Invalid credentials. Please check and try again.';
+
+      if (err.code) {
+        switch (err.code) {
+          case 'auth/user-not-found':
+            errorMessage = 'No account found with this email.';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = 'Incorrect password. Please try again.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Invalid email format.';
+            break;
+          case 'auth/user-disabled':
+            errorMessage = 'This account has been disabled.';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many failed attempts. Please try again later.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your connection.';
+            break;
+          case 'auth/invalid-credential':
+            errorMessage = 'Invalid credentials. Please check your email and password.';
+            break;
+          default:
+            errorMessage = err.message || 'Login failed. Please try again.';
+        }
+      }
+
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -178,6 +228,8 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
             <p className="mt-1 text-xs text-gray-500">Your admin email address.</p>
           </div>
 
+
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <div className="relative">
@@ -209,9 +261,17 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:opacity-95 transition-all shadow"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:opacity-95 transition-all shadow disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Login
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Logging in...</span>
+              </>
+            ) : (
+              'Login'
+            )}
           </button>
           <div className="text-[11px] text-gray-500 text-center">Tip: You can configure credentials via environment variables.</div>
         </form>
@@ -224,6 +284,99 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance' | 'chatbot'>('dashboard');
   const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState<{ email: string | null; displayName: string | null } | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const [showNamePopup, setShowNamePopup] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+
+  // Get current user from Firebase
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const { auth } = await import('@/lib/firebase');
+        const { onAuthStateChanged } = await import('firebase/auth');
+
+        // Listen for auth state changes
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          if (currentUser) {
+            setUser({
+              email: currentUser.email,
+              displayName: currentUser.displayName
+            });
+
+            // Show popup if display name is missing
+            if (!currentUser.displayName) {
+              setShowNamePopup(true);
+            }
+          } else {
+            setUser(null);
+          }
+        });
+
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error getting user:', error);
+      }
+    };
+
+    const unsubscribePromise = getCurrentUser();
+
+    return () => {
+      unsubscribePromise?.then(unsub => unsub?.());
+    };
+  }, []);
+
+  const handleNameUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+
+    setIsUpdatingName(true);
+    try {
+      const { auth, db } = await import('@/lib/firebase');
+      const { updateProfile } = await import('firebase/auth');
+      const { doc, setDoc } = await import('firebase/firestore');
+
+      if (auth.currentUser) {
+        // Update Auth Profile
+        await updateProfile(auth.currentUser, {
+          displayName: newName.trim()
+        });
+
+        // Sync to Firestore 'users' collection
+        await setDoc(doc(db, 'users', auth.currentUser.uid), {
+          uid: auth.currentUser.uid,
+          email: auth.currentUser.email,
+          displayName: newName.trim(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        // Update local state
+        setUser(prev => prev ? ({ ...prev, displayName: newName.trim() }) : null);
+        setShowNamePopup(false);
+      }
+    } catch (error) {
+      console.error('Error updating name:', error);
+    } finally {
+      setIsUpdatingName(false);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('#user-menu-button') && !target.closest('#user-menu-dropdown')) {
+        setShowUserMenu(false);
+      }
+    };
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showUserMenu]);
+
 
   const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance' | 'chatbot'; label: string; icon: any }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -234,7 +387,8 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
     { id: 'fees', label: 'Fees', icon: Banknote },
     { id: 'notice', label: 'Notice', icon: Megaphone },
     { id: 'quiz', label: 'Quiz', icon: GraduationCap },
-    { id: 'results', label: 'Quiz Result', icon: BarChart3 },
+    { id: 'results', label: 'Results', icon: GraduationCap },
+    { id: 'examResults', label: 'Exam Results', icon: GraduationCap },
     { id: 'mobile-attendance', label: 'Mobile Attendance', icon: Smartphone },
     { id: 'chatbot', label: 'AI Assistant', icon: MessageSquare },
   ];
@@ -260,6 +414,59 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
 
   return (
     <div className={`${isBlurred ? 'pointer-events-none select-none' : ''}`}>
+      {/* Name Update Modal */}
+      {showNamePopup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center px-4 pointer-events-auto select-auto">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md animate-in fade-in zoom-in duration-300 relative">
+            {/* Close button for edit mode (only if user already has a name) */}
+            {user?.displayName && (
+              <button
+                onClick={() => setShowNamePopup(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-all"
+              >
+                <X size={20} />
+              </button>
+            )}
+
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              {user?.displayName ? 'Update Profile' : 'Welcome! 👋'}
+            </h2>
+            <p className="text-gray-500 text-sm mb-6">
+              {user?.displayName ? 'Change your display name below.' : 'Please set your display name to continue.'}
+            </p>
+
+            <form onSubmit={handleNameUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  placeholder="e.g. Arsalan"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isUpdatingName || !newName.trim()}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:opacity-95 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isUpdatingName ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className={`min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 transition-all duration-300 ${isBlurred ? 'blur-sm scale-[.98] brightness-90' : ''}`}>
         {/* Mobile Navigation */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex md:hidden z-30">
@@ -303,14 +510,14 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
           </div>
 
           {/* Navigation */}
-          <nav className="p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-1">
             {sidebarItems.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => { setActiveTab(id); if (typeof window !== 'undefined') window.location.hash = id; }}
-                className={`group flex items-center w-full gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 hover:scale-[1.02] ${activeTab === id
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${activeTab === id
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30'
+                  : 'text-gray-600 hover:bg-white hover:shadow-md'
                   }`}
               >
                 <Icon size={20} className={`transition-transform duration-300 ${activeTab === id ? 'scale-110' : 'group-hover:scale-105'}`} />
@@ -326,20 +533,51 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
         {/* Main Content (separate scroll) */}
         <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto">
           <div className="max-w-7xl mx-auto pb-20 md:pb-8">
-            <div className="mb-6 sm:mb-8 pt-4 sm:pt-8 flex items-center justify-between gap-3">
+            <div className="mb-6 sm:mb-8 pt-4 sm:pt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2 capitalize">
                   {sidebarItems.find(i => i.id === activeTab)?.label}
                 </h2>
                 <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
               </div>
-              {activeTab === 'dashboard' && (
-                <div className="flex items-center gap-2">
+              {activeTab === 'dashboard' && user && (
+                <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-200/50 p-3 w-full sm:w-auto sm:min-w-[220px]">
+                  {/* User Info Section */}
+                  <div className="flex items-center gap-3 mb-3">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center text-white font-bold shadow flex-shrink-0">
+                      {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+                    </div>
+                    {/* Name and Email */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-800 truncate">
+                          {user.displayName || 'Admin'}
+                        </p>
+                        <button
+                          onClick={() => {
+                            setNewName(user.displayName || '');
+                            setShowNamePopup(true);
+                          }}
+                          className="text-gray-400 hover:text-blue-600 transition-colors p-0.5 rounded-full hover:bg-gray-100"
+                          title="Edit Name"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Logout Button */}
                   <button
-                    onClick={() => { try { localStorage.removeItem('adminSession'); } catch { } window.location.href = '/admin'; }}
-                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white hover:opacity-95 text-sm shadow inline-flex items-center gap-2"
+                    onClick={() => {
+                      try { localStorage.removeItem('adminSession'); } catch { }
+                      window.location.href = '/admin';
+                    }}
+                    className="w-full px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors flex items-center justify-center gap-2 border border-red-200/50"
                   >
-                    <LogOut size={16} />
+                    <LogOut size={14} />
                     <span>Logout</span>
                   </button>
                 </div>
