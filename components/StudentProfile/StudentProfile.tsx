@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { User, Mail, Phone, TrendingUp, Calendar, MapPin, Landmark } from 'lucide-react'
+import Image from 'next/image';
+import { User, Phone, Landmark } from 'lucide-react'
 import { Student } from '@/types/student';
 import ImageModal from '@/components/ImageModal/ImageModal'
 
@@ -17,9 +18,11 @@ export default function StudentProfile({ student }: { student: Student }) {
                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 sm:p-6 lg:p-8 text-white">
                     <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-6">
                         {student.photoUrl ? (
-                            <img
+                            <Image
                                 src={student.photoUrl}
                                 alt="Student Avatar"
+                                width={96}
+                                height={96}
                                 className="max-h-24 w-auto sm:max-h-28 rounded-md border-2 sm:border-4 border-white/30 shadow-lg object-contain cursor-zoom-in"
                                 onClick={() => setImgOpen(true)}
                                 title="Click to enlarge"

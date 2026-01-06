@@ -164,7 +164,7 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
         remarks: remarksOf(pct),
       }
     })
-  }, [students, marksMap, subjects.length, maxMarksPerSubject, minPassPercentage])
+  }, [students, marksMap, subjects.length, maxMarksPerSubject, minPassPercentage, gradeOf, remarksOf])
 
   const setMark = (studentKey: string, subjIndex: number, value: string) => {
     const perMax = Math.max(1, Number(maxMarksPerSubject) || 100)

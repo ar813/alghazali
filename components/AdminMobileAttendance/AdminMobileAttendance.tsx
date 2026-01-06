@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Calendar, Search, Smartphone, Clock, User, Hash, AlertCircle, UserCheck, UserX, UserMinus } from 'lucide-react';
 import { client } from '@/sanity/lib/client';
 import { getAllStudentsQuery } from '@/sanity/lib/queries';
@@ -400,9 +401,11 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
                                             <div className="flex items-center gap-4">
                                                 <div className="relative shrink-0">
                                                     {record.photoUrl ? (
-                                                        <img
+                                                        <Image
                                                             src={record.photoUrl}
                                                             alt={record.studentName}
+                                                            width={48}
+                                                            height={48}
                                                             className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 transition-transform"
                                                             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
                                                         />

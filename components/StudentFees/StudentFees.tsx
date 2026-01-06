@@ -30,7 +30,7 @@ const StudentFees = ({ studentId }: { studentId: string }) => {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { if (studentId) load() }, [studentId])
+  useEffect(() => { if (studentId) load() }, [studentId, load])
 
   const monthOrder = ['January','February','March','April','May','June','July','August','September','October','November','December','admission']
   const sortedFees = [...fees].sort((a,b) => {

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react"
 import { client } from "@/sanity/lib/client"
 import { getAllSchedulesQuery } from "@/sanity/lib/queries"
-import { GraduationCap, CalendarDays, Clock } from "lucide-react"
+import { GraduationCap, Clock } from "lucide-react"
 import NavBar from "@/components/NavBar/NavBar"
 import Footer from "@/components/Footer/Footer"
 

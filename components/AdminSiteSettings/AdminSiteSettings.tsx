@@ -35,7 +35,7 @@ export default function AdminSiteSettings({ onLoadingChange }: { onLoadingChange
     } finally { setLoading(false); onLoadingChange?.(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   const save = async () => {
     setSaving(true)

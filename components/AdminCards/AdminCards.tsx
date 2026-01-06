@@ -46,15 +46,15 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
       const storedExpiry = localStorage.getItem('admin_card_expiry') || '';
       if (storedIssue) setIssue(storedIssue);
       if (storedExpiry) setExpiry(storedExpiry);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem('admin_card_issue', issue || ""); } catch {}
+    try { localStorage.setItem('admin_card_issue', issue || ""); } catch { }
   }, [issue]);
 
   useEffect(() => {
-    try { localStorage.setItem('admin_card_expiry', expiry || ""); } catch {}
+    try { localStorage.setItem('admin_card_expiry', expiry || ""); } catch { }
   }, [expiry]);
 
   const classes = useMemo(() => {
@@ -69,8 +69,8 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
       const matchesTerm = !term
         ? true
         : [s.fullName, s.fatherName, s.grNumber, s.rollNumber]
-            .map((v) => (v || "").toString().toLowerCase())
-            .some((v) => v.includes(term));
+          .map((v) => (v || "").toString().toLowerCase())
+          .some((v) => v.includes(term));
       return matchesClass && matchesTerm;
     });
   }, [students, search, klass]);
@@ -112,8 +112,8 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
     if (!value) return "";
     const num = parseInt(String(value), 10);
     if (isNaN(num)) return String(value);
-    const val = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
-    const syms = ["M","CM","D","CD","C","XC","L","XL","X","IX","V","IV","I"];
+    const val = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+    const syms = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
     let i = 0; let roman = ""; let n = num;
     while (n > 0) {
       while (n >= val[i]) { roman += syms[i]; n -= val[i]; }
@@ -189,16 +189,16 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
     const w = img.naturalWidth || img.width; const h = img.naturalHeight || img.height;
     const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d'); if (!ctx) return '';
-    ctx.clearRect(0,0,w,h);
+    ctx.clearRect(0, 0, w, h);
     ctx.drawImage(img, 0, 0, w, h);
     try {
       const imageData = ctx.getImageData(0, 0, w, h);
       const d = imageData.data;
       for (let i = 0; i < d.length; i += 4) {
-        const r = d[i], g = d[i+1], b = d[i+2];
+        const r = d[i], g = d[i + 1], b = d[i + 2];
         // detect near-white boxes and make transparent
         if (r > 240 && g > 240 && b > 240) {
-          d[i+3] = 0; // alpha to 0
+          d[i + 3] = 0; // alpha to 0
         }
       }
       ctx.putImageData(imageData, 0, 0);
@@ -253,7 +253,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
       const drawFront = async () => {
         // Background
         doc.addImage(frontImg, 'JPEG', 0, 0, cardW, cardH);
-        
+
         // Photo positioning - matching Python ReportLab coordinates
         if (s.photoUrl) {
           try {
@@ -272,21 +272,21 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
               // Use no compression to avoid additional blurring
               doc.addImage(photo as any, 'JPEG', img_x, img_y, img_size, img_size, undefined as any, 'NONE');
             }
-          } catch {}
+          } catch { }
         }
-        
+
         // Text positioning - matching Python ReportLab coordinates exactly
         doc.setTextColor(35, 31, 85); // #231f55
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        
+
         const name = String(s.fullName || '').toUpperCase();
         const father = String(s.fatherName || '').toUpperCase();
-        
+
         // Python coordinates: c.drawCentredString(94.5, 140, info['name'].upper())
         // Convert Y coordinate: cardH - pythonY = 321 - 140 = 181
         doc.text(name, 94.5, cardH - 140, { align: 'center' });
-        
+
         // Python coordinates: c.drawCentredString(94.5, 113, info['father_name'].upper())
         // Convert Y coordinate: cardH - pythonY = 321 - 113 = 208
         doc.text(father, 94.5, cardH - 113, { align: 'center' });
@@ -303,28 +303,28 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
         doc.setTextColor(35, 31, 85);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        
+
         // Python coordinates: c.drawString(65, 67, info['roll_no'])
         // Convert Y coordinate: cardH - pythonY = 321 - 67 = 254
         doc.text(String(s.rollNumber || ''), 65, cardH - 67.3);
-        
+
         // Python coordinates: c.drawString(65, 52, info['gr_number'])
         // Convert Y coordinate: cardH - pythonY = 321 - 52 = 269
         doc.text(String(s.grNumber || ''), 65, cardH - 52.4);
-        
+
         // Python coordinates: c.drawString(65, 37, dob_formatted)
         // Convert Y coordinate: cardH - pythonY = 321 - 37 = 284
-        const dobFormatted = s.dob ? new Date(s.dob).toLocaleDateString('en-GB', { 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
+        const dobFormatted = s.dob ? new Date(s.dob).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
         }) : '';
         doc.text(dobFormatted, 65, cardH - 38);
       };
 
       const drawBack = async () => {
         doc.addImage(backImg, 'JPEG', 0, 0, cardW, cardH);
-        
+
         // QR Code positioning - matching Python ReportLab coordinates
         try {
           const qr = await loadImage(getQrSrc(s, 80));
@@ -340,35 +340,35 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
           } else {
             doc.addImage(qr as any, 'PNG', qx, qy, qSize, qSize);
           }
-        } catch {}
-        
+        } catch { }
+
         // Issue/Expiry dates - matching Python positioning exactly
         doc.setTextColor(35, 31, 85);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        
+
         // Format dates to match Python formatting
         const issRaw = (s as any).issueDate || issue || '';
         const expRaw = (s as any).expiryDate || expiry || '';
-        const issueFormatted = issRaw ? new Date(issRaw).toLocaleDateString('en-GB', { 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
+        const issueFormatted = issRaw ? new Date(issRaw).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
         }) : '';
-        const expiryFormatted = expRaw ? new Date(expRaw).toLocaleDateString('en-GB', { 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
+        const expiryFormatted = expRaw ? new Date(expRaw).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
         }) : '';
-        
+
         // Python coordinates: c.drawString(95, 104, issue_formatted)
         // Convert Y coordinate: cardH - pythonY = 321 - 104 = 217
         doc.text(issueFormatted, 95, cardH - 104);
-        
+
         // Python coordinates: c.drawString(95, 93, expiry_formatted)
         // Convert Y coordinate: cardH - pythonY = 321 - 93 = 228
         doc.text(expiryFormatted, 95, cardH - 93);
-        
+
         // Phone number - matching Python positioning exactly
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
@@ -411,7 +411,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, father, GR, Roll..."
-                className="pl-10 pr-4 py-3 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full"
+                className="pl-10 pr-4 py-3 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black w-full transition-all"
               />
             </div>
             <div className="relative w-full sm:w-56">
@@ -446,12 +446,12 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
         <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2">
           {/* Side selector */}
           <div className="flex items-center gap-2 bg-white border rounded-lg px-2 h-10">
-              <label className="text-sm text-gray-600">Side</label>
-              <select value={side} onChange={(e) => setSide(e.target.value as any)} className="text-sm border rounded px-2 py-1">
-                <option value="front">Front</option>
-                <option value="back">Back</option>
-                <option value="both">Both</option>
-              </select>
+            <label className="text-sm text-gray-600">Side</label>
+            <select value={side} onChange={(e) => setSide(e.target.value as any)} className="text-sm border rounded px-2 py-1">
+              <option value="front">Front</option>
+              <option value="back">Back</option>
+              <option value="both">Both</option>
+            </select>
           </div>
           {/* Dates */}
           <input type="date" value={issue} onChange={(e) => setIssue(e.target.value)} className="h-10 border rounded-lg px-3 text-sm bg-white w-[48%] sm:w-auto" placeholder="Issue" />
@@ -462,10 +462,12 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
               try {
                 onLoadingChange?.(true);
                 await Promise.all(toPrint.map(s => fetch('/api/students', {
-                  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s._id, patch: {
-                    ...(issue ? { issueDate: new Date(issue).toISOString().slice(0,10) } : {}),
-                    ...(expiry ? { expiryDate: new Date(expiry).toISOString().slice(0,10) } : {}),
-                  } })
+                  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                    id: s._id, patch: {
+                      ...(issue ? { issueDate: new Date(issue).toISOString().slice(0, 10) } : {}),
+                      ...(expiry ? { expiryDate: new Date(expiry).toISOString().slice(0, 10) } : {}),
+                    }
+                  })
                 })));
                 // refresh students to reflect updated dates
                 const data: Student[] = await client.fetch(getAllStudentsQuery);
@@ -493,7 +495,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
           </button>
           <button
             onClick={handleDownloadZip}
-            className="px-5 h-10 md:h-11 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-sm shadow hover:opacity-95 inline-flex items-center gap-2 w-full sm:w-auto justify-center"
+            className="px-5 h-10 md:h-11 bg-primary text-white rounded-lg text-sm shadow-sm hover:opacity-90 inline-flex items-center gap-2 w-full sm:w-auto justify-center transition-all"
             title="Download ZIP (PDFs)"
           >
             <Archive size={16} />
@@ -607,10 +609,10 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                             <span>{s.grNumber || ""}</span>
                           </div>
                           <div className={`${s.grNumber ? "" : "mt-[15px]"}`}>
-                            <span>{s.dob ? new Date(s.dob).toLocaleDateString('en-GB', { 
-                              day: 'numeric', 
-                              month: 'long', 
-                              year: 'numeric' 
+                            <span>{s.dob ? new Date(s.dob).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
                             }) : ""}</span>
                           </div>
                         </div>
@@ -630,25 +632,25 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                         <div className="absolute left-[50px] top-[116px]">
                           <QRPreview src={getQrSrc(s, 80)} size={80} />
                         </div>
-                        
+
                         {/* Issue and Expiry dates positioned to match PDF exactly */}
                         <div className="absolute left-[95px] top-[207px] text-[8px] font-bold text-[#231f55]">
                           <div className="mb-[0.1px]">
-                            {((s as any).issueDate || issue) ? new Date((s as any).issueDate || issue).toLocaleDateString('en-GB', { 
-                              day: 'numeric', 
-                              month: 'long', 
-                              year: 'numeric' 
+                            {((s as any).issueDate || issue) ? new Date((s as any).issueDate || issue).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
                             }) : ''}
                           </div>
                           <div>
-                            {((s as any).expiryDate || expiry) ? new Date((s as any).expiryDate || expiry).toLocaleDateString('en-GB', { 
-                              day: 'numeric', 
-                              month: 'long', 
-                              year: 'numeric' 
+                            {((s as any).expiryDate || expiry) ? new Date((s as any).expiryDate || expiry).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
                             }) : ''}
                           </div>
                         </div>
-                        
+
                         {/* Phone number positioned to match PDF exactly */}
                         <div className="absolute left-[85px] top-[248px] text-[8px] font-bold text-white">
                           {s.phoneNumber || ''}

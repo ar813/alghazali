@@ -1,7 +1,9 @@
-import { BookOpen, Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react'
+import { BookOpen, Facebook, Instagram, Mail, MapPin, Phone, Twitter, Smartphone, Download, ArrowRight } from 'lucide-react'
 import React from 'react'
 
 const Footer = () => {
+    const appUrl = process.env.NEXT_PUBLIC_MOBILE_APP_URL || '#';
+
     return (
         <footer className="bg-gray-900 text-white py-10 sm:py-12 lg:py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -73,7 +75,37 @@ const Footer = () => {
                     </div>
                 </div>
 
-                <div className="border-t border-gray-800 mt-8 sm:mt-12 pt-6 sm:pt-8 text-center">
+                {/* App Download Banner - Full Width */}
+                <div className="mt-10 sm:mt-12">
+                    <a
+                        href={appUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group block relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-[1px]"
+                    >
+                        <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 bg-gray-900 rounded-2xl px-5 sm:px-8 py-5 sm:py-6">
+                            {/* Left Side */}
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-110 transition-transform">
+                                    <Smartphone size={28} className="text-white" />
+                                </div>
+                                <div className="text-center sm:text-left">
+                                    <h4 className="text-lg sm:text-xl font-bold text-white">Get Our Mobile App</h4>
+                                    <p className="text-sm text-gray-400">Access everything on the go • 100% Free</p>
+                                </div>
+                            </div>
+
+                            {/* Right Side - Button */}
+                            <div className="flex items-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl transition-all group-hover:gap-4">
+                                <Download size={18} className="text-white" />
+                                <span className="text-white font-semibold text-sm sm:text-base">Download Now</span>
+                                <ArrowRight size={18} className="text-white transition-transform group-hover:translate-x-1" />
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div className="border-t border-gray-800 mt-8 sm:mt-10 pt-6 sm:pt-8 text-center">
                     <p className="text-sm sm:text-base text-gray-400">
                         © 2025 Al Ghazali High School. All rights reserved.
                         <span className="hidden sm:inline"> | </span>

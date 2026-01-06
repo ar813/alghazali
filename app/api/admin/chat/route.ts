@@ -2,6 +2,9 @@ import { Agent, run, setDefaultOpenAIClient, setOpenAIAPI, setTracingDisabled } 
 import { OpenAI } from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 
+// This tells Next.js that this route is dynamic and should not be statically generated
+export const dynamic = 'force-dynamic'
+
 // Create OpenAI client configured to use Mistral API
 const mistralClient = new OpenAI({
     apiKey: process.env.MISTRAL_API_KEY || '',
@@ -30,7 +33,7 @@ const adminAgent = new Agent({
 export async function POST(req: NextRequest) {
     try {
         // Parse the request body
-        const { message, conversationHistory = [] } = await req.json();
+        const { message } = await req.json();
 
         if (!message) {
             return NextResponse.json(

@@ -7,7 +7,6 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
     // Stats
     const [totalStudents, setTotalStudents] = useState<number>(0)
     const [students, setStudents] = useState<any[]>([])
-    const [admissionsLast365, setAdmissionsLast365] = useState<number>(0)
     const [totalQuizzes, setTotalQuizzes] = useState<number>(0)
     const [resultsLast30, setResultsLast30] = useState<number>(0)
     const [totalNotices, setTotalNotices] = useState<number>(0)
@@ -43,7 +42,6 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 }
                 const json = await res.json()
                 const data = json?.data || {}
-                setAdmissionsLast365(data.admissionsLast365 || 0)
                 setTotalQuizzes(data.totalQuizzes || 0)
                 setTotalNotices(data.totalNotices || 0)
 
@@ -98,21 +96,21 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
             if ((s?.medicalCondition || '').toString().toLowerCase() === 'yes') medicalYes++
             if (s?.photoUrl || s?.imageUrl) withPhoto++
         }
-        const topClasses = Array.from(classMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5)
+        const topClasses = Array.from(classMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
         return { uniqClassCount: uniqClasses.size, male, female, medicalYes, withPhoto, topClasses }
     }, [students])
 
     // Components
     type Stat = { title: string; value: string; icon: React.ElementType; color: string }
     const StatCard = ({ stat }: { stat: Stat }) => (
-        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md hover:border-gray-300 transition-all duration-300">
             <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-gray-600 text-xs sm:text-sm font-medium truncate">{stat.title}</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-800 mt-1 truncate">{stat.value}</p>
+                    <p className="text-gray-500 text-xs sm:text-sm font-medium truncate">{stat.title}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 truncate">{stat.value}</p>
                 </div>
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center flex-shrink-0`}>
-                    <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
+                    <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-900" />
                 </div>
             </div>
         </div>
@@ -151,47 +149,47 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                     </>
                 ) : (
                     <>
-                        <StatCard stat={{ title: 'Total Students', value: totalStudents.toLocaleString(), icon: Users, color: 'from-blue-500 to-purple-600' }} />
-                        <StatCard stat={{ title: 'Unique Classes', value: (insights.uniqClassCount || 0).toString(), icon: FileBarChart2, color: 'from-sky-500 to-cyan-600' }} />
-                        <StatCard stat={{ title: 'Male', value: (insights.male || 0).toLocaleString(), icon: Activity, color: 'from-green-500 to-emerald-600' }} />
-                        <StatCard stat={{ title: 'Female', value: (insights.female || 0).toLocaleString(), icon: Activity, color: 'from-pink-500 to-rose-600' }} />
-                        <StatCard stat={{ title: 'Medical Cases', value: (insights.medicalYes || 0).toLocaleString(), icon: ShieldCheck, color: 'from-amber-500 to-orange-600' }} />
-                        <StatCard stat={{ title: 'Photos Available', value: (insights.withPhoto || 0).toLocaleString(), icon: TrendingUp, color: 'from-violet-500 to-indigo-600' }} />
-                        <StatCard stat={{ title: 'Total Quizzes', value: totalQuizzes.toLocaleString(), icon: Calendar, color: 'from-violet-500 to-indigo-600' }} />
-                        <StatCard stat={{ title: 'Announced Results', value: resultsLast30.toLocaleString(), icon: Sparkles, color: 'from-emerald-500 to-teal-600' }} />
+                        <StatCard stat={{ title: 'Total Students', value: totalStudents.toLocaleString(), icon: Users, color: '' }} />
+                        <StatCard stat={{ title: 'Unique Classes', value: (insights.uniqClassCount || 0).toString(), icon: FileBarChart2, color: '' }} />
+                        <StatCard stat={{ title: 'Male', value: (insights.male || 0).toLocaleString(), icon: Activity, color: '' }} />
+                        <StatCard stat={{ title: 'Female', value: (insights.female || 0).toLocaleString(), icon: Activity, color: '' }} />
+                        <StatCard stat={{ title: 'Medical Cases', value: (insights.medicalYes || 0).toLocaleString(), icon: ShieldCheck, color: '' }} />
+                        <StatCard stat={{ title: 'Photos Available', value: (insights.withPhoto || 0).toLocaleString(), icon: TrendingUp, color: '' }} />
+                        <StatCard stat={{ title: 'Total Quizzes', value: totalQuizzes.toLocaleString(), icon: Calendar, color: '' }} />
+                        <StatCard stat={{ title: 'Announced Results', value: resultsLast30.toLocaleString(), icon: Sparkles, color: '' }} />
                     </>
                 )}
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Wrench className="text-blue-600" size={18}/> Quick Actions</h3>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2"><Wrench className="text-gray-900" size={18} /> Quick Actions</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'students' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100">
-                        <UserCog size={16}/> Manage Students
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'students' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
+                        <UserCog size={16} /> Students
                     </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'schedule' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
-                        <Calendar size={16}/> Schedule
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'schedule' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
+                        <Calendar size={16} /> Schedule
                     </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'reports' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
-                        <FileBarChart2 size={16}/> Reports
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'reports' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
+                        <FileBarChart2 size={16} /> Reports
                     </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'notice' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100">
-                        <Megaphone size={16}/> Notices
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'notice' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
+                        <Megaphone size={16} /> Notices
                     </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'fees' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100">
-                        <Sparkles size={16}/> Fees
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'fees' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
+                        <Sparkles size={16} /> Fees
                     </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'quiz' }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100">
-                        <Calendar size={16}/> Quiz
+                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'quiz' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
+                        <Calendar size={16} /> Quiz
                     </button>
                 </div>
             </div>
             {/* Top Classes & Notices summary */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">Top Classes by Strength</h3>
                     </div>
@@ -208,7 +206,7 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                         </div>
                     )}
                 </div>
-                <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">Notices Overview</h3>
                         <div className="text-sm text-gray-600">Total: {totalNotices.toLocaleString()}</div>
@@ -218,24 +216,24 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
             </div>
 
             {/* System Health */}
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
-
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900">System Health</h3>
                 </div>
                 {health ? (
                     <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 text-emerald-700">
-                            <Activity size={16}/> Status: {health.ok ? 'OK' : 'Issues found'}
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-white border border-gray-200 text-gray-700">
+                            <Activity size={16} className={health.ok ? "text-green-600" : "text-red-600"} /> Status: {health.ok ? 'Operational' : 'Issues found'}
                         </div>
-                        <div className="p-3 rounded-lg bg-blue-50 text-blue-700">
+                        <div className="p-3 rounded-lg bg-white border border-gray-200 text-gray-700">
                             Missing ENV: {(health.missingEnv || []).length}
                         </div>
-                        <div className="p-3 rounded-lg bg-amber-50 text-amber-700">
+                        <div className="p-3 rounded-lg bg-white border border-gray-200 text-gray-700">
                             Warnings: {(health.issues || []).length}
                         </div>
                     </div>
                 ) : (
-                    <div className="text-sm text-gray-500 flex items-center gap-2"><Bell size={16} className="text-gray-400"/> Health endpoint unavailable or disabled.</div>
+                    <div className="text-sm text-gray-500 flex items-center gap-2"><Bell size={16} className="text-gray-400" /> Health endpoint unavailable or disabled.</div>
                 )}
             </div>
 

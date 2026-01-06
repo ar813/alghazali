@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
 
+// This tells Next.js that this route is dynamic and should not be statically generated
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)

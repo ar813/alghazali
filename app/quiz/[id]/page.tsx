@@ -145,7 +145,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const submit = async () => {
+  const submit = React.useCallback(async () => {
     const studentSession = typeof window !== 'undefined' ? localStorage.getItem('studentSession') : null
     if (!studentSession) { alert('Please login from Student Portal to take the quiz.'); router.push('/student-portal'); return }
     const { bFormOrCnic: _bFormOrCnic, grNumber: _grNumber } = JSON.parse(studentSession)
@@ -169,7 +169,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     } catch (e: any) {
       setError(e?.message || 'Failed to submit results')
     } finally { setSubmitting(false) }
-  }
+  }, [studentId, id, answers, questionOrder, router])
 
   // Countdown tick and auto-submit
   useEffect(() => {

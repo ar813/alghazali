@@ -55,7 +55,7 @@ const Contact = () => {
             } else {
                 throw new Error(data.error || 'Failed to send message');
             }
-        } catch (_error) {
+        } catch {
             setStatus({
                 type: 'error',
                 message: 'Sorry, there was an error sending your message. Please try again.'

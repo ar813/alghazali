@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
 
+// This tells Next.js that this route is dynamic and should not be statically generated
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: Request) {
   if (!process.env.SANITY_API_WRITE_TOKEN) {
     return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
@@ -30,8 +33,8 @@ export async function PATCH(request: Request) {
     if (!id || !patch || typeof patch !== 'object') {
       return NextResponse.json({ ok: false, error: 'id and patch are required' }, { status: 400 })
     }
-    const res = await serverClient.patch(id).set(patch).commit()
-    return NextResponse.json({ ok: true, res })
+    const result = await serverClient.patch(id).set(patch).commit()
+    return NextResponse.json({ ok: true, res: result })
   } catch (err) {
     console.error('API PATCH error', err)
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
@@ -147,7 +150,7 @@ export async function DELETE(request: Request) {
         try {
           await serverClient.delete(rid)
           deletedRefs.push(rid)
-        } catch (e) {
+        } catch {
           // if any fails, continue and let final delete potentially fail with remaining refs
         }
       }

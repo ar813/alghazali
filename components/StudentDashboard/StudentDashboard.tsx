@@ -1,6 +1,7 @@
 import { Student } from '@/types/student';
 import { Megaphone, ListChecks, CheckCircle2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
+import Image from 'next/image';
 import ImageModal from '@/components/ImageModal/ImageModal'
 
 type QuizSummary = { _id: string; title: string; subject: string; createdAt?: string; _createdAt?: string }
@@ -77,9 +78,11 @@ const StudentDashboard = ({data}:{data: Student}) => {
         </div>
                     <div className="block">
                         {data.photoUrl ? (
-                            <img
+                            <Image
                                 src={data.photoUrl}
                                 alt="Student Avatar"
+                                width={96}
+                                height={96}
                                 className="max-h-16 w-auto sm:max-h-20 md:max-h-24 object-contain rounded-md border-2 sm:border-4 border-white/30 shadow-lg cursor-zoom-in"
                                 onClick={() => setImgOpen(true)}
                                 title="Click to enlarge"

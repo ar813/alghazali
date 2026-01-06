@@ -1,13 +1,15 @@
+
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import AdminDashboard from '@/components/AdminDashboard/AdminDashboard';
 import AdminReports from '@/components/AdminReports/AdminReports';
 import AdminStudents from '@/components/AdminStudents/AdminStudents';
 import AdminSchedule from '@/components/AdminSchedule/AdminSchedule';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
-import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, ChevronLeft, ChevronRight, Calendar, LogOut, IdCard, Banknote, Megaphone, Smartphone, MessageSquare, Edit2 } from 'lucide-react';
+import Sidebar from '@/components/Sidebar/Sidebar';
+import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, Calendar, LogOut, IdCard, Banknote, Megaphone, Smartphone, MessageSquare, Edit2 } from 'lucide-react';
 import TopLoader from '@/components/TopLoader/TopLoader'
 import AdminCards from '@/components/AdminCards/AdminCards';
 import AdminNotice from '@/components/AdminNotice/AdminNotice';
@@ -74,7 +76,6 @@ export default AdminPage;
 const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState<string>('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
@@ -104,7 +105,7 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
     try {
       // Import Firebase Auth dynamically to avoid SSR issues
       const { auth } = await import('@/lib/firebase');
-      const { signInWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+      const { signInWithEmailAndPassword } = await import('firebase/auth');
 
       // Authenticate with Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -283,10 +284,7 @@ const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 // ✅ Admin Portal (sidebar layout similar to student portal)
 const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance' | 'chatbot'>('dashboard');
-  const [collapsed, setCollapsed] = useState(false);
   const [user, setUser] = useState<{ email: string | null; displayName: string | null } | null>(null);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-
   const [showNamePopup, setShowNamePopup] = useState(false);
   const [newName, setNewName] = useState('');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
@@ -363,22 +361,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
     }
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('#user-menu-button') && !target.closest('#user-menu-dropdown')) {
-        setShowUserMenu(false);
-      }
-    };
-    if (showUserMenu) {
-      document.addEventListener('click', handleClickOutside);
-    }
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showUserMenu]);
-
-
-  const sidebarItems: { id: 'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance' | 'chatbot'; label: string; icon: any }[] = [
+  const sidebarItems = useMemo(() => [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'students', label: 'Students', icon: UsersIcon },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
@@ -391,13 +374,13 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
     { id: 'examResults', label: 'Exam Results', icon: GraduationCap },
     { id: 'mobile-attendance', label: 'Mobile Attendance', icon: Smartphone },
     { id: 'chatbot', label: 'AI Assistant', icon: MessageSquare },
-  ];
+  ], []);
 
   // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
   useEffect(() => {
     const applyHash = () => {
       const hash = (typeof window !== 'undefined' && window.location.hash.replace('#', '')) as typeof activeTab | ''
-      if (hash && ['dashboard', 'students', 'schedule', 'reports', 'cards', 'fees', 'notice', 'quiz', 'results', 'examResults', 'mobile-attendance', 'chatbot'].includes(hash)) {
+      if (hash && sidebarItems.some(item => item.id === hash)) {
         setActiveTab(hash as any)
       }
     }
@@ -405,7 +388,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
     const onHash = () => applyHash()
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
-  }, [])
+  }, [sidebarItems])
 
   // Notify parent to show loader whenever tab changes (until child reports done)
   useEffect(() => {
@@ -413,7 +396,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
   }, [activeTab, onLoadingChange])
 
   return (
-    <div className={`${isBlurred ? 'pointer-events-none select-none' : ''}`}>
+    <div className={`${isBlurred ? 'pointer-events-none select-none' : ''} `}>
       {/* Name Update Modal */}
       {showNamePopup && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center px-4 pointer-events-auto select-auto">
@@ -468,105 +451,59 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
       )}
 
       <div className={`min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 transition-all duration-300 ${isBlurred ? 'blur-sm scale-[.98] brightness-90' : ''}`}>
-        {/* Mobile Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex md:hidden z-30">
-          <nav className="flex w-full px-2 py-2 items-center overflow-x-auto gap-1">
-            {sidebarItems.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => { setActiveTab(id); if (typeof window !== 'undefined') window.location.hash = id; }}
-                className={`flex-[0_0_20%] shrink-0 flex flex-col items-center justify-center gap-1 p-2 rounded-lg ${activeTab === id ? 'text-blue-600' : 'text-gray-600'
-                  }`}
-              >
-                <Icon size={20} className={activeTab === id ? 'scale-110' : ''} />
-                <span className="text-xs font-medium">{label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
 
-        {/* Sidebar - Desktop (sticky + independent scroll) */}
-        <aside className={`transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} bg-white/80 backdrop-blur-xl shadow-2xl hidden md:flex flex-col border-r border-white/20 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto`}>
-          {/* Toggle Button */}
-          <div className="flex justify-end p-2">
-            <button onClick={() => setCollapsed(!collapsed)} className="text-gray-600 hover:text-gray-800 transition-all">
-              {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-            </button>
-          </div>
-
-          {/* Logo / Branding */}
-          <div className={`p-6 text-center border-b border-gray-200/50 pt-6 transition-all duration-300 ${collapsed ? 'pt-0' : 'pt-6'}`}>
-            {!collapsed && (
-              <>
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg">
-                  <GraduationCap size={28} className="text-white" />
-                </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Admin Portal
-                </h1>
-                <p className="text-sm text-gray-500 mt-1">Management Dashboard</p>
-              </>
-            )}
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1">
-            {sidebarItems.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => { setActiveTab(id); if (typeof window !== 'undefined') window.location.hash = id; }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${activeTab === id
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30'
-                  : 'text-gray-600 hover:bg-white hover:shadow-md'
-                  }`}
-              >
-                <Icon size={20} className={`transition-transform duration-300 ${activeTab === id ? 'scale-110' : 'group-hover:scale-105'}`} />
-                {!collapsed && <span className="font-medium">{label}</span>}
-                {activeTab === id && !collapsed && (
-                  <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                )}
-              </button>
-            ))}
-          </nav>
-        </aside>
+        {/* NEW Sidebar */}
+        <Sidebar
+          items={sidebarItems}
+          activeTab={activeTab}
+          onTabChange={(id) => {
+            setActiveTab(id as any);
+            if (typeof window !== 'undefined') window.location.hash = id;
+          }}
+          title="Admin Portal"
+          subtitle="Management Dashboard"
+          logo={
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <GraduationCap size={20} className="text-white" />
+            </div>
+          }
+        />
 
         {/* Main Content (separate scroll) */}
-        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto">
+        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto h-screen">
           <div className="max-w-7xl mx-auto pb-20 md:pb-8">
-            <div className="mb-6 sm:mb-8 pt-4 sm:pt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2 capitalize">
+                <h2 className="text-2xl sm:text-3xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-1 capitalize">
                   {sidebarItems.find(i => i.id === activeTab)?.label}
                 </h2>
-                <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                <div className="h-1 w-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
               </div>
               {activeTab === 'dashboard' && user && (
-                <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-200/50 p-3 w-full sm:w-auto sm:min-w-[220px]">
+                <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 p-2 pl-3 pr-2 w-full sm:w-auto flex items-center gap-3">
                   {/* User Info Section */}
-                  <div className="flex items-center gap-3 mb-3">
-                    {/* Avatar */}
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center text-white font-bold shadow flex-shrink-0">
-                      {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+                  {/* Avatar */}
+                  <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm flex-shrink-0 text-sm">
+                    {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+                  </div>
+                  {/* Name and Email */}
+                  <div className="min-w-0 mr-2">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-gray-800 truncate">
+                        {user.displayName || 'Admin'}
+                      </p>
+                      <button
+                        onClick={() => {
+                          setNewName(user.displayName || '');
+                          setShowNamePopup(true);
+                        }}
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Edit Name"
+                      >
+                        <Edit2 size={12} />
+                      </button>
                     </div>
-                    {/* Name and Email */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-gray-800 truncate">
-                          {user.displayName || 'Admin'}
-                        </p>
-                        <button
-                          onClick={() => {
-                            setNewName(user.displayName || '');
-                            setShowNamePopup(true);
-                          }}
-                          className="text-gray-400 hover:text-blue-600 transition-colors p-0.5 rounded-full hover:bg-gray-100"
-                          title="Edit Name"
-                        >
-                          <Edit2 size={12} />
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                    </div>
+                    <p className="text-[10px] text-gray-500 truncate leading-none">{user.email}</p>
                   </div>
 
                   {/* Logout Button */}
@@ -575,10 +512,10 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
                       try { localStorage.removeItem('adminSession'); } catch { }
                       window.location.href = '/admin';
                     }}
-                    className="w-full px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors flex items-center justify-center gap-2 border border-red-200/50"
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Logout"
                   >
-                    <LogOut size={14} />
-                    <span>Logout</span>
+                    <LogOut size={18} />
                   </button>
                 </div>
               )}

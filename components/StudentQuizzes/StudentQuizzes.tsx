@@ -49,7 +49,7 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [studentId, className])
+  useEffect(() => { load() }, [studentId, className, load])
 
   // Seeded RNG for per-student variance and fairness
   const seededShuffle = (arr: Quiz[], seedStr: string) => {

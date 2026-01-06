@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
 
+// This tells Next.js that this route is dynamic and should not be statically generated
+export const dynamic = 'force-dynamic'
+
 // Helpers
 const gradeFromPercent = (pct: number) => pct >= 85 ? 'A+' : pct >= 75 ? 'A' : pct >= 65 ? 'B' : pct >= 50 ? 'C' : pct >= 40 ? 'D' : 'F'
 

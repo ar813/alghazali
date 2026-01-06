@@ -29,7 +29,7 @@ const StudentNotices = ({ studentId, className }: { studentId?: string; classNam
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [studentId, className])
+  useEffect(() => { load() }, [studentId, className, load])
 
   return (
     <div className="max-w-4xl mx-auto">

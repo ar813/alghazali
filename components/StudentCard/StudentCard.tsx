@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import NextImage from 'next/image';
 import type { Student } from "@/types/student";
 
 const frontBg = "/1.jpeg";
@@ -52,7 +53,11 @@ export default function StudentCard({ student }: { student: Student }) {
 
   // Helpers for transparent QR
   const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
+    const img = typeof window !== 'undefined' ? new window.Image() : null;
+    if (!img) {
+      reject(new Error('Window is not available'));
+      return;
+    }
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = reject;
@@ -91,8 +96,15 @@ export default function StudentCard({ student }: { student: Student }) {
       return () => { mounted = false };
     }, [src]);
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={out || src} alt="QR" className="w-20 h-20 rounded border pointer-events-none select-none" style={{ width: size, height: size }} draggable={false} />
+      <NextImage
+        src={out || src}
+        alt="QR"
+        width={size}
+        height={size}
+        className="w-20 h-20 rounded border pointer-events-none select-none"
+        style={{ width: size, height: size }}
+        draggable={false}
+      />
     );
   };
 
@@ -125,14 +137,27 @@ export default function StudentCard({ student }: { student: Student }) {
         {(side === 'front' || side === 'both') && (
           <div className="w-[189px] h-[321px] bg-white rounded-xl shadow relative overflow-hidden border mx-auto">
             <div className="absolute inset-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={frontBg} alt="front" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" draggable={false} />
+              <NextImage
+                src={frontBg}
+                alt="front"
+                fill
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                draggable={false}
+                sizes="100vw"
+              />
             </div>
             <div className="relative z-10 p-3 h-full flex flex-col">
               <div className="mt-[46px] mr-2 flex-1 flex flex-col items-center justify-start">
                 <div className="w-[103px] h-[103px] rounded-full overflow-hidden">
                   {student.photoUrl ? (
-                    <img src={student.photoUrl} alt={student.fullName} className="w-full h-full object-cover pointer-events-none select-none" draggable={false} />
+                    <NextImage
+                      src={student.photoUrl}
+                      alt={student.fullName}
+                      width={103}
+                      height={103}
+                      className="w-full h-full object-cover pointer-events-none select-none"
+                      draggable={false}
+                    />
                   ) : null}
                 </div>
                 {/* Match AdminCards preview typography and spacing */}
@@ -161,8 +186,14 @@ export default function StudentCard({ student }: { student: Student }) {
         {(side === 'back' || side === 'both') && (
           <div className="w-[189px] h-[321px] bg-white rounded-xl shadow relative overflow-hidden border mx-auto">
             <div className="absolute inset-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={backBg} alt="back" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" draggable={false} />
+              <NextImage
+                src={backBg}
+                alt="back"
+                fill
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                draggable={false}
+                sizes="100vw"
+              />
             </div>
             <div className="relative z-10 p-3 h-full flex flex-col">
               <div className="mt-[116px] w-full text-[8px] text-[#231f55]">

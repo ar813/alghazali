@@ -48,7 +48,7 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [studentId])
+  useEffect(() => { load() }, [studentId, load])
 
   // Fetch quiz details when a result is selected
   useEffect(() => {

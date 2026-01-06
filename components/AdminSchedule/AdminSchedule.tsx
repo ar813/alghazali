@@ -136,10 +136,6 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     }
   }
 
-  useEffect(() => {
-    loadSchedules()
-  }, [])
-
   const loadSchedules = async () => {
     try {
       setLoadingSchedules(true)
@@ -152,6 +148,10 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     }
     finally { setLoadingSchedules(false); onLoadingChange?.(false) }
   }
+
+  useEffect(() => {
+    loadSchedules()
+  }, [loadSchedules])
 
   // Helpers for Edit modal
   const openEditModalForClass = (className: string) => {

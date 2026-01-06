@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react'
-import { BookOpen, CalendarCheck, GraduationCap, LayoutDashboard, Megaphone, User, ChevronLeft, ChevronRight, LogOut, QrCode } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react'
+import { CalendarCheck, GraduationCap, LayoutDashboard, Megaphone, User, LogOut, QrCode } from 'lucide-react';
 import { client } from "@/sanity/lib/client";
 import { getAllStudentsQuery, getScheduleByClassQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
 import { X } from 'lucide-react';
+import Sidebar from '@/components/Sidebar/Sidebar';
 import { useRouter } from 'next/navigation';
 
 import NavBar from '@/components/NavBar/NavBar';
@@ -32,7 +33,6 @@ const formatCnic = (s: string) => {
 
 export default function StylishStudentPortal() {
   const [activeTab, setActiveTab] = useState('Dashboard');
-  const [collapsed, setCollapsed] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const router = useRouter();
 
@@ -102,10 +102,10 @@ export default function StylishStudentPortal() {
       setShowModal(false)
       setIsLoading(false)
       // persist studentId for quiz submission page
-      try { localStorage.setItem('studentId', String(result[0]!._id)) } catch {}
+      try { localStorage.setItem('studentId', String(result[0]!._id)) } catch { }
     } else {
       // Session didn't match any student (data changed). Clear and show modal
-      try { localStorage.removeItem('studentSession') } catch {}
+      try { localStorage.removeItem('studentSession') } catch { }
       setSessionData(null)
       setFiltered([])
       setShowModal(true)
@@ -141,7 +141,7 @@ export default function StylishStudentPortal() {
       localStorage.setItem('studentSession', JSON.stringify(payload))
       setSessionData({ bFormOrCnic: bForm, grNumber: grNo })
       // also persist studentId for quiz submission
-      try { localStorage.setItem('studentId', String(result[0]!._id)) } catch {}
+      try { localStorage.setItem('studentId', String(result[0]!._id)) } catch { }
     }
   };
 
@@ -164,16 +164,16 @@ export default function StylishStudentPortal() {
 
 
 
-  const sidebarItems = [
-    { name: 'Dashboard', icon: LayoutDashboard },
-    { name: 'Profile', icon: User },
-    { name: 'Schedule', icon: CalendarCheck },
-    { name: 'Fees', icon: GraduationCap },
-    { name: 'ID Card', icon: QrCode },
-    { name: 'Notices', icon: Megaphone },
-    { name: 'Quiz', icon: GraduationCap },
-    { name: 'Quiz Result', icon: GraduationCap },
-  ] as const
+  const sidebarItems = useMemo(() => [
+    { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'Profile', label: 'Profile', icon: User },
+    { id: 'Schedule', label: 'Schedule', icon: CalendarCheck },
+    { id: 'Fees', label: 'Fees', icon: GraduationCap },
+    { id: 'ID Card', label: 'ID Card', icon: QrCode },
+    { id: 'Notices', label: 'Notices', icon: Megaphone },
+    { id: 'Quiz', label: 'Quiz', icon: GraduationCap },
+    { id: 'Quiz Result', label: 'Quiz Result', icon: GraduationCap },
+  ], []);
 
   const shouldShowLoader = isLoading || !studentsLoaded || (activeTab === 'Schedule' && scheduleLoading)
   if (shouldShowLoader) {
@@ -252,91 +252,36 @@ export default function StylishStudentPortal() {
       <NavBar />
 
       <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-        {/* Mobile Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex md:hidden z-10">
-          <nav className="flex w-full px-2 py-2 items-center overflow-x-auto gap-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            {sidebarItems.map(({ name, icon: Icon }) => (
-              <button
-                key={name}
-                onClick={() => setActiveTab(name)}
-                className={`flex-[0_0_20%] shrink-0 flex flex-col items-center justify-center gap-1 p-2 rounded-lg ${
-                  activeTab === name
-                    ? `text-blue-600`
-                    : 'text-gray-600'
-                }`}
-              >
-                <Icon size={20} className={activeTab === name ? 'scale-110' : ''} />
-                <span className="text-xs font-medium">{name}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
 
-        {/* Sidebar - Desktop */}
-        <aside className={`transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} bg-white/80 backdrop-blur-xl shadow-2xl hidden md:flex flex-col border-r border-white/20`}>
-          {/* Toggle Button */}
-          <div className="flex justify-end p-2">
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="text-gray-600 hover:text-gray-800 transition-all"
-            >
-              {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-            </button>
-          </div>
-
-          {/* Logo */}
-          <div className={`p-6 text-center border-b border-gray-200/50 pt-6 transition-all duration-300 ${collapsed ? 'pt-0' : 'pt-6'}`}>
-            {!collapsed && (
-              <>
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg">
-                  <GraduationCap size={28} className="text-white" />
-                </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Student Portal
-                </h1>
-                <p className="text-sm text-gray-500 mt-1">Academic Excellence Hub</p>
-              </>
-            )}
-          </div>
-
-          {/* Navigation */}
-          <nav className="p-4 space-y-2">
-            {sidebarItems.map(({ name, icon: Icon }) => (
-              <button
-                key={name}
-                onClick={() => setActiveTab(name)}
-                className={`group flex items-center w-full gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 hover:scale-[1.02] ${activeTab === name
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
-                  }`}
-              >
-                <Icon size={20} className={`transition-transform duration-300 ${activeTab === name ? 'scale-110' : 'group-hover:scale-105'}`} />
-                {!collapsed && <span className="font-medium">{name}</span>}
-                {activeTab === name && !collapsed && (
-                  <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          {/* removed logout from sidebar; moved to header */}
-        </aside>
+        {/* NEW Sidebar */}
+        <Sidebar
+          items={sidebarItems}
+          activeTab={activeTab}
+          onTabChange={(id) => setActiveTab(id)}
+          title="Student Portal"
+          subtitle="Academic Excellence Hub"
+          logo={
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <GraduationCap size={20} className="text-white" />
+            </div>
+          }
+        />
 
         {/* Main Content */}
-        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto">
+        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto h-screen">
           <div className="max-w-7xl mx-auto pb-20 md:pb-8">
-            <div className="mb-6 sm:mb-8 pt-4 sm:pt-8 flex items-center justify-between gap-3">
+            <div className="mb-6 sm:mb-8 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2">
+                <h2 className="text-2xl sm:text-3xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-1">
                   {activeTab}
                 </h2>
-                <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                <div className="h-1 w-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
               </div>
               {activeTab === 'Dashboard' && (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => { try { localStorage.removeItem('studentSession'); } catch {} window.location.href = '/student-portal'; }}
-                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white hover:opacity-95 text-sm shadow inline-flex items-center gap-2"
+                    onClick={() => { try { localStorage.removeItem('studentSession'); } catch { } window.location.href = '/student-portal'; }}
+                    className="px-4 py-2 rounded-lg bg-white text-red-600 hover:bg-red-50 border border-red-100 transition-colors shadow-sm text-sm font-medium inline-flex items-center gap-2"
                   >
                     <LogOut size={16} />
                     <span>Logout</span>

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { client } from '@/sanity/lib/client'
 
+// This tells Next.js that this route is dynamic and should not be statically generated
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -59,9 +62,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, results })
   } catch (error: any) {
     console.error('Error fetching student exam results:', error)
-    return NextResponse.json({ 
-      ok: false, 
-      error: error?.message || 'Failed to fetch exam results' 
+    return NextResponse.json({
+      ok: false,
+      error: error?.message || 'Failed to fetch exam results'
     }, { status: 500 })
   }
 }

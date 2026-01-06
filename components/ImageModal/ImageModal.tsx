@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react'
+import Image from 'next/image'
 import { X } from 'lucide-react'
 
 type ImageModalProps = {
@@ -30,9 +31,11 @@ const ImageModal: React.FC<ImageModalProps> = ({ src, alt = 'Image preview', ope
         </button>
 
         {/* Image */}
-        <img
+        <Image
           src={src}
           alt={alt}
+          width={1200}
+          height={800}
           className="max-w-[95vw] max-h-[85vh] object-contain shadow-2xl rounded-lg"
         />
       </div>

@@ -19,7 +19,7 @@ const SchoolEvents = () => {
       const res = await fetch('/api/notices?events=1&limit=8', { cache: 'no-store' })
       const json = await res.json()
       if (json?.ok) setEvents(json.data as EventItem[])
-    } catch (e) {
+    } catch {
       // swallow
     } finally {
       setLoading(false)

@@ -160,7 +160,6 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
 
 const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingChange?: (loading: boolean) => void; students: Student[]; classOptions: string[] }) => {
   const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<any | null>(null)
   const [workingId, setWorkingId] = useState<string | null>(null)
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
@@ -169,12 +168,12 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
   const [deleteAllInput, setDeleteAllInput] = useState('')
 
   const load = useCallback(async () => {
-    setLoading(true); onLoadingChange?.(true)
+    onLoadingChange?.(true)
     try {
       const res = await fetch('/api/notices?limit=500', { cache: 'no-store' })
       const json = await res.json()
       if (json?.ok) setItems(json.data)
-    } finally { setLoading(false); onLoadingChange?.(false) }
+    } finally { onLoadingChange?.(false) }
   }, [onLoadingChange])
 
   useEffect(() => { load() }, [load])
@@ -188,16 +187,7 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
           <button onClick={load} className="px-3 py-1.5 border rounded text-sm inline-flex items-center gap-2"><RefreshCw size={14}/> Refresh</button>
         </div>
       </div>
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="p-3 rounded border bg-gray-50 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-              <div className="h-3 bg-gray-200 rounded w-2/3 mt-2"></div>
-            </div>
-          ))}
-        </div>
-      ) : items.length === 0 ? (
+      {items.length === 0 ? (
         <div className="text-sm text-gray-500">No notices yet.</div>
       ) : (
         <div className="space-y-3">
