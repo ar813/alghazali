@@ -5,8 +5,9 @@ import type { ChangeEvent } from 'react'
 import { RotateCw, Upload, Download, Search, Plus } from 'lucide-react'
 
 import { client } from "@/sanity/lib/client";
-import { getAllStudentsQuery } from "@/sanity/lib/queries";
+import { getPaginatedStudentsQuery, getStudentsCountQuery, getAllClassesQuery, getStudentStatsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
+import { auth } from '@/lib/firebase';
 
 // New Components
 import HeaderStats from './HeaderStats';
@@ -47,18 +48,30 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
 
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [stats, setStats] = useState({ total: 0, boys: 0, girls: 0, kg: 0 });
+  const [fetchedClasses, setFetchedClasses] = useState<string[]>([]);
+
   // Toast
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
 
-  // Dynamic class options
-  const classOptions = useMemo(() => {
-    const set = new Set<string>()
-    for (const s of students) {
-      const c = (s.admissionFor || '').toString().trim()
-      if (c) set.add(c)
-    }
-    return Array.from(set).sort()
-  }, [students])
+  // Load class options
+  useEffect(() => {
+    client.fetch(getAllClassesQuery).then((data: any[]) => {
+      const set = new Set<string>()
+      for (const s of data) {
+        if (s.admissionFor) set.add(s.admissionFor)
+      }
+      setFetchedClasses(Array.from(set).sort())
+    })
+  }, [])
+
+  // Reset page on filter change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, klass])
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ show: true, message, type })
@@ -107,21 +120,54 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     const fetchStudents = async () => {
       setLoading(true);
       onLoadingChange?.(true)
-      const data: Student[] = await client.fetch(getAllStudentsQuery);
-      setStudents(data.map(normalizeStudent));
-      setLoading(false);
-      onLoadingChange?.(false)
+      try {
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const params = { classFilter: klass, search: search, start, end };
+
+        const [data, count, statsData] = await Promise.all([
+          client.fetch(getPaginatedStudentsQuery, params),
+          client.fetch(getStudentsCountQuery, params),
+          client.fetch(getStudentStatsQuery, params)
+        ]);
+
+        setStudents(data.map(normalizeStudent));
+        setTotalCount(count);
+        setStats(statsData);
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false);
+        onLoadingChange?.(false)
+      }
     };
 
-    fetchStudents();
+    // Debounce search slightly to avoid spamming API
+    const timer = setTimeout(() => {
+      fetchStudents();
+    }, 300);
+
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onLoadingChange]);
+  }, [onLoadingChange, currentPage, pageSize, klass, search]); // Added deps
 
   const refreshStudents = async () => {
+    // Trigger re-fetch by toggling a dummy state or just calling fetch (but effect handles it)
+    // We can force re-run by setting loading to true, but effects depend on state.
+    // Simplest: just reload window or use a toggle. 
+    // Actually, let's just re-run the fetch logic directly here for manual refresh.
     setLoading(true)
     onLoadingChange?.(true)
-    const data: Student[] = await client.fetch(getAllStudentsQuery);
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    const params = { classFilter: klass, search: search, start, end };
+
+    const [data, count] = await Promise.all([
+      client.fetch(getPaginatedStudentsQuery, params),
+      client.fetch(getStudentsCountQuery, params)
+    ]);
     setStudents(data.map(normalizeStudent))
+    setTotalCount(count)
     setLoading(false)
     onLoadingChange?.(false)
   }
@@ -131,7 +177,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const uploadPhotoAndGetRef = async (file: File) => {
     const form = new FormData()
     form.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: form })
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch('/api/upload', { method: 'POST', body: form, headers: { 'Authorization': `Bearer ${token}` } })
     const json = await res.json()
     if (!json.ok) throw new Error(json.error || 'Upload failed')
     return { _type: 'image', asset: { _type: 'reference', _ref: json.assetId } }
@@ -146,7 +193,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         const imageRef = await uploadPhotoAndGetRef(photoFile)
         body.photo = imageRef
       }
-      const res = await fetch('/api/students', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } })
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/students', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } })
       const json = await res.json()
       if (!json.ok) throw new Error(json.error || 'Create failed')
 
@@ -180,10 +228,14 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       if ('_type' in body) delete body._type
       if ('_rev' in body) delete body._rev
 
+      const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/students', {
         method: 'PATCH',
         body: JSON.stringify({ id: editingStudent._id, patch: body }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       })
       const json = await res.json()
       if (!json.ok) throw new Error(json.error || 'Update failed')
@@ -203,7 +255,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const handleDeleteStudent = async (id: string) => {
     setDeleteLoadingId(id)
     try {
-      const res = await fetch('/api/students', { method: 'DELETE', body: JSON.stringify({ id }), headers: { 'Content-Type': 'application/json' } })
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/students', { method: 'DELETE', body: JSON.stringify({ id }), headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } })
       const json = await res.json()
       if (!res.ok || !json.ok) {
         if (res.status === 409 && (json?.referencing || json?.blocked)) {
@@ -232,7 +285,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       // If no specific "Delete All" endpoint, we might need to iterate or add a query param
       // For now, let's assume we send a special DELETE request or multiple
       // Ideally: DELETE /api/students?action=deleteAll
-      const res = await fetch('/api/students?action=deleteAll', { method: 'DELETE' })
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/students?action=deleteAll', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
       const json = await res.json()
 
       if (!res.ok || !json.ok) throw new Error(json.error || 'Delete all failed')
@@ -252,7 +306,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const handleDeleteClass = async () => {
     setBulkActionLoading(true)
     try {
-      const res = await fetch(`/api/students?class=${deleteClassSelected}`, { method: 'DELETE' })
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`/api/students?class=${deleteClassSelected}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
       const json = await res.json()
 
       if (!res.ok || !json.ok) throw new Error(json.error || 'Delete class failed')
@@ -416,12 +471,13 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       }
 
       let successCount = 0
+      const token = await auth.currentUser?.getIdToken();
       for (const doc of toCreate) {
         try {
           const res = await fetch('/api/students', {
             method: 'POST',
             body: JSON.stringify(doc),
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
           })
           if ((await res.json()).ok) successCount++
         } catch {
@@ -440,26 +496,15 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   }
 
 
-  // Filter Logic
-  const filteredStudents = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    return students.filter((s) => {
-      const matchesClass = klass === 'All' || (s.admissionFor || '').toString() === klass
-      const matchesTerm = !term
-        ? true
-        : [s.fullName, s.fatherName, s.grNumber, s.rollNumber]
-          .map((v) => (v || '').toString().toLowerCase())
-          .some((v) => v.includes(term))
-      return matchesClass && matchesTerm
-    })
-  }, [students, search, klass])
+  // No client-side filtering needed anymore, 'students' contains the page
+  const filteredStudents = students;
 
 
   return (
     <div className="pb-20">
 
       {/* 1. Header & Stats */}
-      <HeaderStats students={students} />
+      <HeaderStats stats={stats} />
 
       {/* 2. Control Bar (Search, Filters, Actions) */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col xl:flex-row gap-4 justify-between items-center mb-6">
@@ -481,7 +526,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/10 outline-none transition-all min-w-[140px] bg-white cursor-pointer hover:border-gray-400"
           >
             <option value="All">All Classes</option>
-            {classOptions.map(c => <option key={c} value={c}>Class {c}</option>)}
+            {fetchedClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
           </select>
         </div>
 
@@ -559,6 +604,30 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         deleteLoadingId={deleteLoadingId}
       />
 
+      {/* Pagination Controls */}
+      <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-4">
+        <div className="text-sm text-gray-500">
+          Showing <span className="font-medium">{Math.min(students.length, pageSize)}</span> of <span className="font-medium">{totalCount}</span> results
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1 || loading}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <span className="text-sm font-medium text-gray-700">Page {currentPage}</span>
+          <button
+            onClick={() => setCurrentPage(p => p + 1)}
+            disabled={students.length < pageSize || loading}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
 
       {/* --- MODALS --- */}
 
@@ -628,7 +697,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 onChange={e => setDeleteClassSelected(e.target.value)}
                 className="w-full border-amber-200 focus:ring-amber-500/20 focus:border-amber-500 rounded-lg py-2.5"
               >
-                {classOptions.map(c => <option key={c} value={c}>Class {c}</option>)}
+                {fetchedClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
               </select>
             </div>
             <p>This will delete all students currently assigned to <strong>Class {deleteClassSelected}</strong>.</p>

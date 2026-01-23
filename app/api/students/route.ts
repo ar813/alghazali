@@ -4,7 +4,12 @@ import serverClient from '@/sanity/lib/serverClient'
 // This tells Next.js that this route is dynamic and should not be statically generated
 export const dynamic = 'force-dynamic'
 
+import { verifyAuth, unauthorizedResponse } from '@/lib/api-auth'
+
 export async function POST(request: Request) {
+  const user = await verifyAuth(request);
+  if (!user) return unauthorizedResponse();
+
   if (!process.env.SANITY_API_WRITE_TOKEN) {
     return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
   }
@@ -24,6 +29,9 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const user = await verifyAuth(request);
+  if (!user) return unauthorizedResponse();
+
   if (!process.env.SANITY_API_WRITE_TOKEN) {
     return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
   }
@@ -42,6 +50,9 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const user = await verifyAuth(request);
+  if (!user) return unauthorizedResponse();
+
   if (!process.env.SANITY_API_WRITE_TOKEN) {
     return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
   }
@@ -97,7 +108,7 @@ export async function DELETE(request: Request) {
         if (Array.isArray(refs) && refs.length > 0) {
           // Always force: delete all referencing docs first
           for (const r of refs) {
-            try { await serverClient.delete(r._id) } catch {}
+            try { await serverClient.delete(r._id) } catch { }
           }
           const remaining = await serverClient.fetch('*[references($id)]{_id,_type}', { id })
           if (remaining.length === 0) {

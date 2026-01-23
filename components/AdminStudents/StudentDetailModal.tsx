@@ -9,16 +9,45 @@ interface StudentDetailModalProps {
     onClose: () => void;
 }
 
-const Info = ({ label, value }: { label: string; value?: any }) => {
+const Info = ({ label, value, copyable }: { label: string; value?: any; copyable?: boolean }) => {
     const displayValue = value === undefined || value === null || value === '' ? '—' : String(value);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (displayValue === '—') return;
+        navigator.clipboard.writeText(displayValue);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     return (
-        <div className="flex flex-col bg-gray-50/50 border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+        <div className="flex flex-col bg-gray-50/50 border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors relative group">
             <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-1">
                 {label}
             </span>
-            <span className={`text-sm font-medium ${displayValue === '—' ? 'text-gray-400 italic' : 'text-gray-800'}`}>
-                {displayValue}
-            </span>
+            <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${displayValue === '—' ? 'text-gray-400 italic' : 'text-gray-800'}`}>
+                    {displayValue}
+                </span>
+                {copyable && displayValue !== '—' && (
+                    <button
+                        onClick={handleCopy}
+                        className="p-1 hover:bg-gray-200 rounded text-gray-500 transition-colors"
+                        title="Copy to clipboard"
+                    >
+                        {copied ? (
+                            <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                        )}
+                    </button>
+                )}
+            </div>
         </div>
     );
 };
@@ -40,7 +69,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
                     <button
                         onClick={onClose}
 
-                        className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all"
+                        className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all z-50"
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
@@ -87,8 +116,8 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
                                 <Info label="Father Name" value={student.fatherName} />
                                 <Info label="Gender" value={student.gender} />
                                 <Info label="Date of Birth" value={student.dob} />
-                                <Info label="CNIC / B-Form" value={student.cnicOrBform} />
-                                <Info label="Father CNIC" value={(student as any).fatherCnic} />
+                                <Info label="CNIC / B-Form" value={student.cnicOrBform} copyable />
+                                <Info label="Father CNIC" value={(student as any).fatherCnic} copyable />
                                 <Info label="Nationality" value={student.nationality} />
                                 <Info label="Medical" value={student.medicalCondition} />
                             </div>
@@ -103,7 +132,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
                                     Academic & Contact
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <Info label="GR Number" value={student.grNumber} />
+                                    <Info label="GR Number" value={student.grNumber} copyable />
                                     <Info label="Former Edu" value={student.formerEducation} />
                                     <Info label="Prev Institute" value={student.previousInstitute} />
                                     <Info label="Last Exam %" value={student.lastExamPercentage} />
@@ -111,8 +140,8 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
                                         <Info label="Address" value={student.address} />
                                     </div>
                                     <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <Info label="Phone" value={student.phoneNumber} />
-                                        <Info label="WhatsApp" value={student.whatsappNumber} />
+                                        <Info label="Phone" value={student.phoneNumber} copyable />
+                                        <Info label="WhatsApp" value={student.whatsappNumber} copyable />
                                     </div>
                                 </div>
 
@@ -126,8 +155,8 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <Info label="Guardian Name" value={student.guardianName} />
                                     <Info label="Relation" value={student.guardianRelation} />
-                                    <Info label="Guardian Contact" value={student.guardianContact} />
-                                    <Info label="Guardian CNIC" value={student.guardianCnic} />
+                                    <Info label="Guardian Contact" value={student.guardianContact} copyable />
+                                    <Info label="Guardian CNIC" value={student.guardianCnic} copyable />
                                 </div>
 
                             </section>

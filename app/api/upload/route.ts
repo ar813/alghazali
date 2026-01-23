@@ -2,7 +2,12 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
 
+import { verifyAuth, unauthorizedResponse } from '@/lib/api-auth'
+
 export async function POST(request: Request) {
+  const user = await verifyAuth(request);
+  if (!user) return unauthorizedResponse();
+
   try {
     const form = await request.formData()
     const file = form.get('file') as File | null

@@ -6,6 +6,7 @@ import { getAllStudentsQuery } from "@/sanity/lib/queries";
 import type { Student } from "@/types/student";
 import { Search, Filter, Archive } from "lucide-react";
 import { saveAs } from "file-saver";
+import { auth } from '@/lib/firebase';
 
 // Lightweight Next.js implementation inspired by main.py (Streamlit + ReportLab)
 // - Preview student ID cards (front only, for now) with school styling
@@ -461,8 +462,9 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
               if (!issue && !expiry) return;
               try {
                 onLoadingChange?.(true);
+                const token = await auth.currentUser?.getIdToken();
                 await Promise.all(toPrint.map(s => fetch('/api/students', {
-                  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                  method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({
                     id: s._id, patch: {
                       ...(issue ? { issueDate: new Date(issue).toISOString().slice(0, 10) } : {}),
                       ...(expiry ? { expiryDate: new Date(expiry).toISOString().slice(0, 10) } : {}),
