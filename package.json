@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.31.0",
+    "@emotion/react": "^11.14.0",
     "@openai/agents": "^0.3.4",
     "@sanity/client": "^7.6.0",
     "@sanity/image-url": "^1.1.0",
@@ -23,9 +25,10 @@
     "jspdf": "^2.5.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.525.0",
-    "motion": "^12.28.2",
+    "motion": "^12.29.0",
     "next": "14.2.16",
     "next-sanity": "^9.12.2",
+    "next-themes": "^0.4.6",
     "nodemailer": "^7.0.6",
     "react": "^18",
     "react-dom": "^18",

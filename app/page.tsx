@@ -10,6 +10,7 @@ import SchoolEvents from '@/components/SchoolEvents/SchoolEvents';
 import AdmissionDetail from '@/components/AdmissionDetail/AdmissionDetail';
 import Footer from '@/components/Footer/Footer';
 import Contact from '@/components/Contact/Contact';
+import { SectionReveal, ScrollProgress } from '@/components/ScrollEffects/SectionReveal';
 
 export default function HomePage() {
 
@@ -23,15 +24,39 @@ export default function HomePage() {
         <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-primary/20 opacity-20 blur-[100px]"></div>
       </div>
 
+      <ScrollProgress />
       <NavBar />
+
       <HeroSection />
-      <SchoolEvents />
-      <About />
-      <AcademicPrograms />
-      <Faculty />
-      <StatsSection />
-      <AdmissionDetail />
-      <Contact />
+
+      <SectionReveal>
+        <SchoolEvents />
+      </SectionReveal>
+
+      <SectionReveal>
+        <About />
+      </SectionReveal>
+
+      <SectionReveal>
+        <AcademicPrograms />
+      </SectionReveal>
+
+      <SectionReveal>
+        <Faculty />
+      </SectionReveal>
+
+      <SectionReveal>
+        <StatsSection />
+      </SectionReveal>
+
+      <SectionReveal>
+        <AdmissionDetail />
+      </SectionReveal>
+
+      <SectionReveal>
+        <Contact />
+      </SectionReveal>
+
       <Footer />
 
     </main>

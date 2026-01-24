@@ -3,6 +3,15 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::selection {
+    background-color: #000;
+    color: #fff;
+  }
+
   :root {
     /* Vercel Light Theme */
     --background: 0 0% 100%;
@@ -110,5 +119,84 @@
   /* Mask gradient for smooth fade */
   .mask-gradient-b {
     mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  }
+
+  /* Enterprise Refinement Utility */
+  .bg-grid-vercel {
+    background-image:
+      linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .bg-grid-enterprise {
+    background-image:
+      linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .shadow-enterprise {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.02), 0 12px 24px rgba(0, 0, 0, 0.03);
+  }
+
+  /* Animated Beams */
+  @keyframes beam-x {
+    0% {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    10% {
+      opacity: 0.4;
+    }
+
+    90% {
+      opacity: 0.4;
+    }
+
+    100% {
+      transform: translateX(100vw);
+      opacity: 0;
+    }
+  }
+
+  @keyframes beam-y {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    10% {
+      opacity: 0.4;
+    }
+
+    90% {
+      opacity: 0.4;
+    }
+
+    100% {
+      transform: translateY(100vh);
+      opacity: 0;
+    }
+  }
+
+  .animate-beam-x {
+    animation: beam-x 3s linear infinite;
+    filter: drop-shadow(0 0 1px currentColor) brightness(1.2);
+    mix-blend-mode: screen;
+    height: 1px;
+  }
+
+  .animate-beam-y {
+    animation: beam-y 4s linear infinite;
+    filter: drop-shadow(0 0 1px currentColor) brightness(1.2);
+    mix-blend-mode: screen;
+    width: 1px;
+  }
+
+  /* Refined Mask for Hero Content - Stronger center fade */
+  .hero-mask {
+    mask-image: radial-gradient(ellipse at 50% 40%, transparent 10%, black 80%);
   }
 }

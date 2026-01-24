@@ -4,24 +4,24 @@ const Faculty = () => {
 
     const faculty = [
         {
-            name: "Dr. Amna Siddiqui",
-            role: "Principal",
-            qualification: "PhD in Education",
-            experience: "15+ years",
+            name: "Molana Noor ul Bashar",
+            // role: "Administration Head",
+            qualification: "Shaik ul Hadees",
+            // experience: "15+ years",
             image: "https://images.unsplash.com/photo-1494790108755-2616c64c6f4e?w=150&h=150&fit=crop&crop=face"
         },
         {
-            name: "Prof. Ahmed Ali",
-            role: "Mathematics Department Head",
-            qualification: "MSc Mathematics",
-            experience: "12+ years",
+            name: "Dr. Zakariya Rasheed",
+            // role: "Principal of the school",
+            qualification: "Principal of the school",
+            // experience: "12+ years",
             image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
         },
         {
-            name: "Ms. Zara Sheikh",
-            role: "Science Department Head",
-            qualification: "MSc Physics",
-            experience: "10+ years",
+            name: "Molana Shabbir Sahab",
+            // role: "Science Department Head",
+            qualification: "Director of Administration",
+            // experience: "10+ years",
             image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face"
         }
     ];
@@ -49,9 +49,9 @@ const Faculty = () => {
                                 <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                             <h3 className="text-xl font-bold mb-1 text-foreground tracking-tight">{member.name}</h3>
-                            <p className="text-primary font-medium mb-3 text-sm sm:text-base uppercase tracking-wider">{member.role}</p>
+                            {/* <p className="text-primary font-medium mb-3 text-sm sm:text-base uppercase tracking-wider">{member.role}</p> */}
                             <p className="text-muted-foreground mb-1 text-sm sm:text-base">{member.qualification}</p>
-                            <p className="text-muted-foreground/60 text-xs sm:text-sm">{member.experience}</p>
+                            {/* <p className="text-muted-foreground/60 text-xs sm:text-sm">{member.experience}</p> */}
                         </div>
                     ))}
                 </div>

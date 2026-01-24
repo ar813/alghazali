@@ -50,10 +50,10 @@ interface MobileNavMenuProps {
 export const Navbar = ({ children, className }: NavbarProps) => {
     const [visible, setVisible] = useState<boolean>(false);
 
-    // Use window scroll instead of ref-based scroll for all pages
     React.useEffect(() => {
         const handleScroll = () => {
-            if (window.scrollY > 100) {
+            // Lower threshold for quicker response
+            if (window.scrollY > 50) {
                 setVisible(true);
             } else {
                 setVisible(false);
@@ -65,18 +65,20 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     }, []);
 
     return (
-        <motion.div
-            className={cn("fixed inset-x-0 top-0 z-50 w-full", className)}
+        <motion.header
+            className={cn("fixed inset-x-0 top-0 z-[100] w-full pointer-events-none", className)}
         >
-            {React.Children.map(children, (child) =>
-                React.isValidElement(child)
-                    ? React.cloneElement(
-                        child as React.ReactElement<{ visible?: boolean }>,
-                        { visible },
-                    )
-                    : child,
-            )}
-        </motion.div>
+            <div className="pointer-events-auto w-full">
+                {React.Children.map(children, (child) =>
+                    React.isValidElement(child)
+                        ? React.cloneElement(
+                            child as React.ReactElement<{ visible?: boolean }>,
+                            { visible },
+                        )
+                        : child,
+                )}
+            </div>
+        </motion.header>
     );
 };
 
@@ -88,20 +90,17 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
                 boxShadow: visible
                     ? "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
                     : "none",
-                width: visible ? "50%" : "100%",
-                y: visible ? 25 : 0,
+                width: visible ? "70%" : "100%",
+                y: visible ? 20 : 0,
             }}
             transition={{
                 type: "spring",
                 stiffness: 200,
                 damping: 50,
             }}
-            style={{
-                minWidth: "800px",
-            }}
             className={cn(
-                "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-transparent px-4 py-2 lg:flex border border-transparent transition-all duration-200",
-                visible && "bg-background/80 backdrop-blur-md border-border shadow-sm",
+                "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-transparent px-4 py-2 lg:flex border border-transparent transition-colors duration-200",
+                visible && "bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-neutral-200/50 dark:border-neutral-700/50",
                 className,
             )}
         >
@@ -132,10 +131,12 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
                     {hovered === idx && (
                         <motion.div
                             layoutId="hovered"
-                            className="absolute inset-0 h-full w-full rounded-full bg-accent"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+                            className="absolute inset-0 h-full w-full rounded-full bg-neutral-100 dark:bg-neutral-800"
+                            style={{ zIndex: -1 }}
                         />
                     )}
-                    <span className="relative z-20">{item.name}</span>
+                    <span className="relative z-10">{item.name}</span>
                 </a>
             ))}
         </motion.div>
