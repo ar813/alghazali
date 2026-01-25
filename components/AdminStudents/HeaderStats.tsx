@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Users, UserCheck, GraduationCap } from 'lucide-react';
 
 interface HeaderStatsProps {

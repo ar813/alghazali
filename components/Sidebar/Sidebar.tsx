@@ -6,6 +6,7 @@ import { IconLogout } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { LucideIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import Image from 'next/image';
 
 interface SidebarItem {
   id: string;
@@ -164,8 +165,10 @@ const Sidebar = ({ items, activeTab, onTabChange }: SidebarProps) => {
             <div className="flex items-center gap-3 mb-2 group/user cursor-pointer p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">
               <div className="relative">
                 {user.photoURL ? (
-                  <img
+                  <Image
                     src={user.photoURL}
+                    width={32}
+                    height={32}
                     className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm border border-neutral-200 dark:border-neutral-700"
                     alt="Avatar"
                   />

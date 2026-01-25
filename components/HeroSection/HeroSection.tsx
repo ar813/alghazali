@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { TypewriterLoop } from '@/components/ui/typewriter-loop'
 import { BackgroundBeamsWithCollision } from '@/components/ui/background-beams-with-collision'
 import { Button } from "@chakra-ui/react"
+import Image from 'next/image'
 
 const HeroSection = () => {
     const [mounted, setMounted] = useState(false)
@@ -58,9 +59,11 @@ const HeroSection = () => {
                         <div className="flex flex-col items-center gap-2">
                             {/* Logo - Simple Round & Clean */}
                             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white dark:bg-black rounded-full flex items-center justify-center shadow-sm border border-neutral-200 dark:border-neutral-800">
-                                <img
+                                <Image
                                     src="/logo.png"
                                     alt="Al Ghazali High School Logo"
+                                    width={48}
+                                    height={48}
                                     className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
                                 />
                             </div>
@@ -90,12 +93,13 @@ const HeroSection = () => {
                         {/* CTA Buttons - Compact Row */}
                         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center items-center pt-1">
                             <Button
-                                asChild
+                                as="a"
+                                href="/student-portal"
                                 size="lg"
                                 rounded="full"
                                 className="group relative px-8 bg-black dark:bg-white text-white dark:text-black font-bold text-sm sm:text-base shadow-lg shadow-blue-500/20 hover:bg-black/90 dark:hover:bg-white/90 transition-all hover:scale-100"
                             >
-                                <a href="/student-portal" className="flex items-center gap-2">
+                                <span className="flex items-center gap-2">
                                     Student Portal
                                     <svg
                                         width="15"
@@ -106,17 +110,18 @@ const HeroSection = () => {
                                     >
                                         <path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
                                     </svg>
-                                </a>
+                                </span>
                             </Button>
 
                             <Button
-                                asChild
+                                as="a"
+                                href="/schedule"
                                 variant="outline"
                                 size="lg"
                                 rounded="full"
                                 className="px-6 font-bold text-sm sm:text-base border-neutral-200 dark:border-white/10 backdrop-blur-md hover:bg-white/80 dark:hover:bg-white/10"
                             >
-                                <a href="/schedule">View Schedule</a>
+                                View Schedule
                             </Button>
                         </div>
 

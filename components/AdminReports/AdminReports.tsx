@@ -620,6 +620,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       const ExcelJS = await import('exceljs')
       return (ExcelJS as any).default || ExcelJS
     } catch (e) {
+      console.error('ExcelJS library could not be loaded:', e);
       throw new Error('ExcelJS library could not be loaded. Please make sure it is installed.')
     }
   }

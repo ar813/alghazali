@@ -19,7 +19,7 @@ const StudentFees = ({ studentId }: { studentId: string }) => {
   const [fees, setFees] = useState<FeeRow[]>([])
   const [loading, setLoading] = useState<boolean>(false)
 
-  const load = async () => {
+  const load = React.useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/fees?studentId=${encodeURIComponent(studentId)}`, { cache: 'no-store' })
@@ -27,8 +27,9 @@ const StudentFees = ({ studentId }: { studentId: string }) => {
       if (json?.ok) setFees(json.data as FeeRow[])
     } catch (e) {
       // Silently fail for student view
+      console.error('Error loading fees:', e);
     } finally { setLoading(false) }
-  }
+  }, [studentId])
 
   useEffect(() => { if (studentId) load() }, [studentId, load])
 

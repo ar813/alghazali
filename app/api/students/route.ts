@@ -79,10 +79,9 @@ export async function DELETE(request: Request) {
         }
       }
 
-      let res: any = null
       if (deletable.length > 0) {
         // Safe bulk delete only those without references
-        res = await serverClient.delete({ query: '*[_type == "student" && _id in $ids]', params: { ids: deletable } })
+        await serverClient.delete({ query: '*[_type == "student" && _id in $ids]', params: { ids: deletable } })
       }
       return NextResponse.json({ ok: true, deletedCount: deletable.length, blocked }, { status: 200 })
     } catch (err) {

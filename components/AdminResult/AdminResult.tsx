@@ -140,10 +140,10 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
     setSubjects(prev => prev.map((s,i)=> i===idx ? value : s))
   }
 
-  const gradeOf = (pct: number) => pct >= 85 ? 'A+' : pct >= 75 ? 'A' : pct >= 65 ? 'B' : pct >= 50 ? 'C' : pct >= minPassPercentage ? 'D' : 'F'
-  const remarksOf = (pct: number) => pct >= minPassPercentage ? 'Pass' : 'Fail'
-
   const entries: Entry[] = useMemo(() => {
+    const gradeOf = (pct: number) => pct >= 85 ? 'A+' : pct >= 75 ? 'A' : pct >= 65 ? 'B' : pct >= 50 ? 'C' : pct >= minPassPercentage ? 'D' : 'F'
+    const remarksOf = (pct: number) => pct >= minPassPercentage ? 'Pass' : 'Fail'
+
     const perMax = Math.max(1, Number(maxMarksPerSubject) || 100)
     const totalMax = subjects.length * perMax
     return students.map(s => {
@@ -164,7 +164,7 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
         remarks: remarksOf(pct),
       }
     })
-  }, [students, marksMap, subjects.length, maxMarksPerSubject, minPassPercentage, gradeOf, remarksOf])
+  }, [students, marksMap, subjects.length, maxMarksPerSubject, minPassPercentage])
 
   const setMark = (studentKey: string, subjIndex: number, value: string) => {
     const perMax = Math.max(1, Number(maxMarksPerSubject) || 100)

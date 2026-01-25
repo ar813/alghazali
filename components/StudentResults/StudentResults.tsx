@@ -36,7 +36,7 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
     return `${date} ${time}`
   }
 
-  const load = async () => {
+  const load = React.useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/quiz-results?studentId=${encodeURIComponent(studentId)}&limit=200`, { cache: 'no-store' })
@@ -46,9 +46,9 @@ const StudentResults = ({ studentId }: { studentId: string }) => {
         setResults(list)
       }
     } finally { setLoading(false) }
-  }
+  }, [studentId])
 
-  useEffect(() => { load() }, [studentId, load])
+  useEffect(() => { load() }, [load])
 
   // Fetch quiz details when a result is selected
   useEffect(() => {

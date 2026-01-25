@@ -44,6 +44,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const ExcelJS = await import('exceljs')
       return (ExcelJS as any).default || (ExcelJS as any)
     } catch (e) {
+      console.error('ExcelJS could not be loaded:', e);
       throw new Error('ExcelJS could not be loaded. Please ensure it is installed.')
     }
   }

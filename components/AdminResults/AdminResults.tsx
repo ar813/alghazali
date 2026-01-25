@@ -265,7 +265,8 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       const buffer = await wb.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       ;(fileSaver as any).saveAs(blob, `quiz_results_${quiz.title.replace(/\s+/g,'_')}.xlsx`)
-    } catch (_e) {
+    } catch (e) {
+      console.error('Error exporting as Excel, falling back to CSV:', e);
       // Fallback: CSV export to ensure the user still gets a file if ExcelJS is unavailable in runtime
       try {
         // Pre-compute positions for CSV as well

@@ -1,8 +1,8 @@
 "use client";
 import { cn } from "@/lib/utils";
-import React, { useState, createContext, useContext, useRef, useEffect } from "react";
+import React, { useState, createContext, useContext, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { IconMenu2, IconX } from "@tabler/icons-react";
+import { IconMenu2 } from "@tabler/icons-react";
 
 interface Links {
   label: string;
@@ -83,7 +83,7 @@ export const DesktopSidebar = ({
   children,
   ...props
 }: React.ComponentProps<typeof motion.div>) => {
-  const { open, setOpen, animate } = useSidebar();
+  const { open, animate } = useSidebar();
   return (
     <>
       <motion.div
@@ -109,7 +109,7 @@ export const DesktopSidebar = ({
 export const MobileSidebar = ({
   className,
   children,
-  ...props
+  ..._props
 }: React.ComponentProps<"div">) => {
   const { open, setOpen } = useSidebar();
   return (
