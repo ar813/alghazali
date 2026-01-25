@@ -59,7 +59,7 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="relative">
+    <div className="relative pt-20">
       <NavBar />
       {/* Top non-blocking progress bar for child loading */}
       <TopLoader loading={childLoading} />
@@ -450,7 +450,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
         </div>
       )}
 
-      <div className={`min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 transition-all duration-300 ${isBlurred ? 'blur-sm scale-[.98] brightness-90' : ''}`}>
+      <div className={`min-h-screen flex bg-white transition-all duration-300 ${isBlurred ? 'blur-sm scale-[.98] brightness-90' : ''}`}>
 
         {/* NEW Sidebar */}
         <Sidebar
@@ -460,17 +460,10 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
             setActiveTab(id as any);
             if (typeof window !== 'undefined') window.location.hash = id;
           }}
-          title="Admin Portal"
-          subtitle="Management Dashboard"
-          logo={
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <GraduationCap size={20} className="text-white" />
-            </div>
-          }
         />
 
         {/* Main Content (separate scroll) */}
-        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto h-screen">
+        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8">
           <div className="max-w-7xl mx-auto pb-20 md:pb-8">
             <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>

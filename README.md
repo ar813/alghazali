@@ -1,6 +1,6 @@
 ## Al Ghazali School Management System
 
-Next.js + TypeScript based school management system integrated with Sanity CMS and Tailwind CSS. It includes Admin Panel, Student Portal, dynamic Notices/Events, Quizzes and Results, ID Card generation, and Reports.
+Next.js + TypeScript based school management system integrated with Sanity CMS and Tailwind CSS. It includes Admin Panel, Student Portal, dynamic Notices/Events, Quizzes and Results, ID Card generation, Reports, and Parent/Guardian Search functionality.
 
 ## Tech Stack
 - Next.js (App Router) with TypeScript
@@ -35,6 +35,7 @@ App runs at http://localhost:3000
 - `components/StudentDashboard/StudentDashboard.tsx`: Student overview: quizzes, announced results, recent notice
 - `components/StudentResults/StudentResults.tsx`: Student side results with detailed popup
 - `components/HeroSection/HeroSection.tsx`: Homepage hero with headline ticker and full-screen popup
+- `app/search/page.tsx`: Parent/guardian search functionality for student information
 - `app/api/*`: Backend routes (quizzes, quiz-results, notices, schedule, etc.)
 - `sanity/schemaTypes/*`: Sanity datasets and schema (e.g., quizResult)
 
@@ -53,6 +54,7 @@ App runs at http://localhost:3000
 - Attempted Students lists: class-wise position computed and shown (Admin Results as a separate right section; Student Results alongside when a result is selected)
 - Hero Headline: notice title + animated content fetched from `/api/notices`; click to open a full-screen modal showing that content
 - Exports: Excel/CSV for results; jsPDF for reports/cards
+- Parent/Guardian Search: Secure search functionality allowing parents to find their children's information using CNIC/B-Form and GR number
 
 ## Admin → Student Mapping
 - Admin Results → Student Results

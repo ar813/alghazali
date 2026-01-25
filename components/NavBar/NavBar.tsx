@@ -1,96 +1,94 @@
 "use client";
+import {
+  Navbar,
+  NavBody,
+  NavItems,
+  MobileNav,
+  NavbarLogo,
+  NavbarButton,
+  MobileNavHeader,
+  MobileNavToggle,
+  MobileNavMenu,
+} from "@/components/ui/resizable-navbar";
+import { useState } from "react";
 
-import { Menu, X } from 'lucide-react';
-import { useState } from 'react'
+export default function NavBar() {
+  const navItems = [
+    {
+      name: "Home",
+      link: "/",
+    },
+    {
+      name: "Fees",
+      link: "/#admissions",
+    },
+    {
+      name: "Student Portal",
+      link: "/student-portal",
+    },
+    {
+      name: "Admin",
+      link: "/admin",
+    },
+  ];
 
-const NavBar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 text-white shadow-2xl sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="School Logo" className="w-9 h-9 object-contain" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Al Ghazali High School</h1>
-              <p className="text-xs text-blue-200">Excellence in Education Since 1993</p>
-            </div>
+    <div className="relative w-full">
+      <Navbar>
+        {/* Desktop Navigation */}
+        <NavBody>
+          <NavbarLogo />
+          <NavItems items={navItems} />
+          <div className="flex items-center gap-4">
+            <NavbarButton
+              variant="primary"
+              href="/assets/Student_Information_Form.pdf"
+              target="_blank"
+            >
+              Admission Form
+            </NavbarButton>
           </div>
+        </NavBody>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-3">
-            <a href="/" className="px-2 hover:text-amber-300 transition-colors font-medium">Home</a>
-            <a href="/#admissions" className="px-2 hover:text-amber-300 transition-colors font-medium">Fees</a>
-            <a href="/student-portal" className="px-2 hover:text-amber-300 transition-colors font-medium">Student</a>
-            <a href="/admin" target='_blank' className="px-2 hover:text-amber-300 transition-colors font-medium">Admin</a>
-            <a href="/assets/Student_Information_Form.pdf" target="_blank" className="ml-2">
-              <button className="px-4 py-2 bg-white text-indigo-700 rounded-lg font-semibold text-sm hover:bg-gray-100 shadow-sm transition-colors">
-                Admission Form
-              </button>
-            </a>
-          </nav>
+        {/* Mobile Navigation */}
+        <MobileNav>
+          <MobileNavHeader>
+            <NavbarLogo />
+            <MobileNavToggle
+              isOpen={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            />
+          </MobileNavHeader>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-controls="mobile-drawer"
-            aria-expanded={isMenuOpen ? 'true' : 'false'}
+          <MobileNavMenu
+            isOpen={isMobileMenuOpen}
           >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-
-        {/* Mobile Slide-over Drawer (right side) */}
-        {/* Backdrop */}
-        <div
-          className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ease-in-out md:hidden ${isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-          onClick={() => setIsMenuOpen(false)}
-          aria-hidden={!isMenuOpen}
-        />
-
-        {/* Drawer */}
-        <aside
-          id="mobile-drawer"
-          className={`fixed top-0 right-0 h-full w-72 bg-white text-slate-900 z-50 transform transition-transform duration-300 ease-in-out md:hidden ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
-          aria-hidden={!isMenuOpen}
-        >
-          <div className="p-6 flex flex-col h-full">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo.png" alt="School Logo" className="w-7 h-7 object-contain" />
-                </div>
-                <h2 className="font-semibold">Menu</h2>
-              </div>
-              <button onClick={() => setIsMenuOpen(false)} aria-label="Close menu">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <nav className="mt-8 flex flex-col gap-4">
-              <a href="/" className="hover:text-amber-300 transition-colors font-medium">Home</a>
-              <a href="/#admissions" className="hover:text-amber-300 transition-colors font-medium">Fees</a>
-              <a href="/student-portal" className="hover:text-amber-300 transition-colors font-medium">Student</a>
-              <a href="/admin" target='_blank' className="hover:text-amber-300 transition-colors font-medium">Admin</a>
-              <a href="/assets/Student_Information_Form.pdf" target="_blank">
-                <button className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-indigo-700 transition-colors">
-                  Admission Form
-                </button>
+            {navItems.map((item, idx) => (
+              <a
+                key={`mobile-link-${idx}`}
+                href={item.link}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="relative text-neutral-600 dark:text-neutral-300"
+              >
+                <span className="block">{item.name}</span>
               </a>
-            </nav>
-
-            <div className="mt-auto text-sm text-gray-500">Al Ghazali High School</div>
-          </div>
-        </aside>
-      </div>
-    </header>
-  )
+            ))}
+            <div className="flex w-full flex-col gap-4">
+              <NavbarButton
+                onClick={() => setIsMobileMenuOpen(false)}
+                variant="primary"
+                className="w-full"
+                href="/assets/Student_Information_Form.pdf"
+                target="_blank"
+              >
+                Admission Form
+              </NavbarButton>
+            </div>
+          </MobileNavMenu>
+        </MobileNav>
+      </Navbar>
+    </div>
+  );
 }
-
-export default NavBar

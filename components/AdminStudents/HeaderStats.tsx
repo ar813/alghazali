@@ -1,28 +1,21 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Users, UserCheck, GraduationCap } from 'lucide-react';
 
 interface HeaderStatsProps {
-    students: any[];
+    stats: {
+        total: number;
+        boys: number;
+        girls: number;
+        kg: number;
+    }
 }
 
-const HeaderStats = ({ students }: HeaderStatsProps) => {
-    const stats = useMemo(() => {
-        const total = students.length;
-        const boys = students.filter(s => (s.gender || '').toLowerCase() === 'male').length;
-        const girls = students.filter(s => (s.gender || '').toLowerCase() === 'female').length;
-
-        // Example logic for "New Admissions" (e.g., added recently if we had a date field, here just dummy or admissionFor logic)
-        // Let's count students in KG to make it dynamic
-        const kgStudents = students.filter(s => s.admissionFor === 'KG').length;
-
-        return { total, boys, girls, kgStudents };
-    }, [students]);
-
+const HeaderStats = ({ stats }: HeaderStatsProps) => {
     const cards = [
-        { label: 'Total Students', value: stats.total, icon: Users },
-        { label: 'Boys', value: stats.boys, icon: UserCheck },
-        { label: 'Girls', value: stats.girls, icon: UserCheck },
-        { label: 'KG Class', value: stats.kgStudents, icon: GraduationCap },
+        { label: 'Total Students', value: stats.total || 0, icon: Users },
+        { label: 'Boys', value: stats.boys || 0, icon: UserCheck },
+        { label: 'Girls', value: stats.girls || 0, icon: UserCheck },
+        { label: 'KG Class', value: stats.kg || 0, icon: GraduationCap },
     ];
 
     return (

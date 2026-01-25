@@ -16,7 +16,7 @@ const StudentNotices = ({ studentId, className }: { studentId?: string; classNam
   const [items, setItems] = useState<Notice[]>([])
   const [loading, setLoading] = useState(false)
 
-  const load = async () => {
+  const load = React.useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -27,9 +27,9 @@ const StudentNotices = ({ studentId, className }: { studentId?: string; classNam
       const json = await res.json()
       if (json?.ok) setItems(json.data as Notice[])
     } finally { setLoading(false) }
-  }
+  }, [studentId, className])
 
-  useEffect(() => { load() }, [studentId, className, load])
+  useEffect(() => { load() }, [load])
 
   return (
     <div className="max-w-4xl mx-auto">

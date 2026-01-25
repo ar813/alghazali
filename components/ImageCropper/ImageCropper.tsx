@@ -17,27 +17,28 @@ export default function ImageCropper({ src, aspect: _aspect = 0, onCancel, onCro
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [imgLoaded, setImgLoaded] = useState(false)
   const [imgError, setImgError] = useState<string | null>(null)
-  const [start, setStart] = useState<{x:number,y:number}|null>(null)
-  const [end, setEnd] = useState<{x:number,y:number}|null>(null)
-  const [dragMode, setDragMode] = useState<'none'|'creating'|'moving'|'resizing'>('none')
-  const [moveOffset, setMoveOffset] = useState<{dx:number, dy:number}>({dx:0, dy:0})
-  const [activeHandle, setActiveHandle] = useState<'nw'|'ne'|'sw'|'se'|null>(null)
+  const [start, setStart] = useState<{ x: number, y: number } | null>(null)
+  const [end, setEnd] = useState<{ x: number, y: number } | null>(null)
+  const [dragMode, setDragMode] = useState<'none' | 'creating' | 'moving' | 'resizing'>('none')
+  const [moveOffset, setMoveOffset] = useState<{ dx: number, dy: number }>({ dx: 0, dy: 0 })
+  const [activeHandle, setActiveHandle] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null)
   // aspect lock mode: 0 = free, >0 = fixed ratio (w/h)
-  const [aspectMode, setAspectMode] = useState<'free'|'square'|'portrait'|'landscape'>(_aspect === 0 ? 'free' : (_aspect === 1 ? 'square' : (_aspect >= 1 ? 'landscape' : 'portrait')))
+  const [aspectMode, setAspectMode] = useState<'free' | 'square' | 'portrait' | 'landscape'>(_aspect === 0 ? 'free' : (_aspect === 1 ? 'square' : (_aspect >= 1 ? 'landscape' : 'portrait')))
   const aspectValue = useMemo(() => {
     if (aspectMode === 'free') return 0
     if (aspectMode === 'square') return 1
-    if (aspectMode === 'portrait') return 3/4
-    if (aspectMode === 'landscape') return 4/3
+    if (aspectMode === 'portrait') return 3 / 4
+    if (aspectMode === 'landscape') return 4 / 3
     return 0
   }, [aspectMode])
 
   useEffect(() => {
-    return () => { try { URL.revokeObjectURL(src) } catch {}
-  }
+    return () => {
+      try { URL.revokeObjectURL(src) } catch { }
+    }
   }, [src])
 
-  const clamp = (x:number, y:number) => {
+  const clamp = (x: number, y: number) => {
     const rect = containerRef.current?.getBoundingClientRect()
     if (!rect) return { x, y }
     return { x: Math.max(0, Math.min(rect.width, x)), y: Math.max(0, Math.min(rect.height, y)) }
@@ -52,18 +53,18 @@ export default function ImageCropper({ src, aspect: _aspect = 0, onCancel, onCro
     return { x, y, w, h }
   }
 
-  const hitTest = (px:number, py:number) => {
+  const hitTest = (px: number, py: number) => {
     const sel = getSelection()
     if (!sel) return { inBox: false, handle: null as any }
     const { x, y, w, h } = sel
     const pad = 8
-    const inBox = px >= x && px <= x+w && py >= y && py <= y+h
-    const near = (ax:number, bx:number) => Math.abs(ax-bx) <= pad
-    let handle: 'nw'|'ne'|'sw'|'se'|null = null
-    if (near(px,x) && near(py,y)) handle = 'nw'
-    else if (near(px,x+w) && near(py,y)) handle = 'ne'
-    else if (near(px,x) && near(py,y+h)) handle = 'sw'
-    else if (near(px,x+w) && near(py,y+h)) handle = 'se'
+    const inBox = px >= x && px <= x + w && py >= y && py <= y + h
+    const near = (ax: number, bx: number) => Math.abs(ax - bx) <= pad
+    let handle: 'nw' | 'ne' | 'sw' | 'se' | null = null
+    if (near(px, x) && near(py, y)) handle = 'nw'
+    else if (near(px, x + w) && near(py, y)) handle = 'ne'
+    else if (near(px, x) && near(py, y + h)) handle = 'sw'
+    else if (near(px, x + w) && near(py, y + h)) handle = 'se'
     return { inBox, handle }
   }
 
@@ -226,7 +227,7 @@ export default function ImageCropper({ src, aspect: _aspect = 0, onCancel, onCro
     const ctx = canvas.getContext('2d')!
     try {
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
-    } catch (_e) {
+    } catch {
       setImgError('Failed to draw image. Please try selecting the image again.')
       return
     }
@@ -243,10 +244,10 @@ export default function ImageCropper({ src, aspect: _aspect = 0, onCancel, onCro
           <div className="text-lg font-semibold">Crop Image</div>
           <div className="flex items-center gap-2 text-xs">
             <span className="text-gray-500">Aspect:</span>
-            <button onClick={()=>setAspectMode('free')} className={`px-2 py-1 border rounded ${aspectMode==='free'?'bg-blue-600 text-white':'bg-white'}`}>Free</button>
-            <button onClick={()=>setAspectMode('square')} className={`px-2 py-1 border rounded ${aspectMode==='square'?'bg-blue-600 text-white':'bg-white'}`}>Square</button>
-            <button onClick={()=>setAspectMode('portrait')} className={`px-2 py-1 border rounded ${aspectMode==='portrait'?'bg-blue-600 text-white':'bg-white'}`}>3:4</button>
-            <button onClick={()=>setAspectMode('landscape')} className={`px-2 py-1 border rounded ${aspectMode==='landscape'?'bg-blue-600 text-white':'bg-white'}`}>4:3</button>
+            <button onClick={() => setAspectMode('free')} className={`px-2 py-1 border rounded ${aspectMode === 'free' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Free</button>
+            <button onClick={() => setAspectMode('square')} className={`px-2 py-1 border rounded ${aspectMode === 'square' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Square</button>
+            <button onClick={() => setAspectMode('portrait')} className={`px-2 py-1 border rounded ${aspectMode === 'portrait' ? 'bg-blue-600 text-white' : 'bg-white'}`}>3:4</button>
+            <button onClick={() => setAspectMode('landscape')} className={`px-2 py-1 border rounded ${aspectMode === 'landscape' ? 'bg-blue-600 text-white' : 'bg-white'}`}>4:3</button>
           </div>
         </div>
         <div
@@ -273,13 +274,13 @@ export default function ImageCropper({ src, aspect: _aspect = 0, onCancel, onCro
           {/* Overlay shading */}
           {sel && (
             <>
-              <div className="absolute inset-0 bg-black/40 pointer-events-none" style={{ clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, ${sel.x}px ${sel.y}px, ${sel.x+sel.w}px ${sel.y}px, ${sel.x+sel.w}px ${sel.y+sel.h}px, ${sel.x}px ${sel.y+sel.h}px, ${sel.x}px ${sel.y}px)` }} />
+              <div className="absolute inset-0 bg-black/40 pointer-events-none" style={{ clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, ${sel.x}px ${sel.y}px, ${sel.x + sel.w}px ${sel.y}px, ${sel.x + sel.w}px ${sel.y + sel.h}px, ${sel.x}px ${sel.y + sel.h}px, ${sel.x}px ${sel.y}px)` }} />
               <div className="absolute border-2 border-blue-500/80 bg-blue-500/10" style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }} />
               {/* Corner handles */}
-              {['nw','ne','sw','se'].map(h => {
-                const cx = h==='nw' ? sel.x : h==='ne' ? sel.x+sel.w : h==='sw' ? sel.x : sel.x+sel.w
-                const cy = h==='nw' ? sel.y : h==='ne' ? sel.y : h==='sw' ? sel.y+sel.h : sel.y+sel.h
-                return <div key={h} className="absolute w-3 h-3 bg-white border border-blue-500 rounded-sm" style={{ left: cx-6/2, top: cy-6/2 }} />
+              {['nw', 'ne', 'sw', 'se'].map(h => {
+                const cx = h === 'nw' ? sel.x : h === 'ne' ? sel.x + sel.w : h === 'sw' ? sel.x : sel.x + sel.w
+                const cy = h === 'nw' ? sel.y : h === 'ne' ? sel.y : h === 'sw' ? sel.y + sel.h : sel.y + sel.h
+                return <div key={h} className="absolute w-3 h-3 bg-white border border-blue-500 rounded-sm" style={{ left: cx - 6 / 2, top: cy - 6 / 2 }} />
               })}
             </>
           )}

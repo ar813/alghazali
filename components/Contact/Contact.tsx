@@ -1,4 +1,4 @@
-import { Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react'
+import { ArrowRight, Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
@@ -8,7 +8,7 @@ const Contact = () => {
         fetch('/api/important', { cache: 'no-store' })
             .then(r => r.json())
             .then(j => { if (j?.ok) setSettings(j.data || null) })
-            .catch(()=>{})
+            .catch(() => { })
     }, [])
     const [formData, setFormData] = useState({
         fullName: '',
@@ -65,51 +65,51 @@ const Contact = () => {
         }
     };
     return (
-        <div>
-            <section id="contact" className="py-12 sm:py-16 lg:py-20 bg-white">
+        <div className="bg-background">
+            <section id="contact" className="py-24 border-t border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-10 sm:mb-16">
-                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">Contact Us</h2>
-                        <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto px-4 sm:px-0">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">Contact Us</h2>
+                        <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto px-4 sm:px-0">
                             Get in touch with us for any inquiries about admissions, programs, or general information.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
                         <div className="lg:col-span-2">
-                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-6 sm:p-8">
-                                <h3 className="text-2xl font-bold mb-6">Send Us a Message</h3>
+                            <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
+                                <h3 className="text-2xl font-bold mb-8 text-foreground tracking-tight">Send Us a Message</h3>
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Full Name</label>
+                                            <label className="block text-sm font-medium text-foreground mb-2">Full Name</label>
                                             <input
                                                 type="text"
                                                 required
                                                 value={formData.fullName}
-                                                onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                                                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
+                                                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                                className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base outline-none transition-all"
                                                 placeholder="Enter your full name"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Email Address</label>
+                                            <label className="block text-sm font-medium text-foreground mb-2">Email Address</label>
                                             <input
                                                 type="email"
                                                 required
                                                 value={formData.email}
-                                                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base outline-none transition-all"
                                                 placeholder="Enter your email"
                                             />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Subject</label>
-                                        <select 
+                                        <label className="block text-sm font-medium text-foreground mb-2">Subject</label>
+                                        <select
                                             value={formData.subject}
-                                            onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                                            className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
+                                            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                            className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base outline-none transition-all"
                                         >
                                             <option>General Inquiry</option>
                                             <option>Admission Information</option>
@@ -119,29 +119,28 @@ const Contact = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Message</label>
+                                        <label className="block text-sm font-medium text-foreground mb-2">Message</label>
                                         <textarea
                                             rows={4}
                                             required
                                             value={formData.message}
-                                            onChange={(e) => setFormData({...formData, message: e.target.value})}
-                                            className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
+                                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                                            className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base outline-none transition-all"
                                             placeholder="Write your message here..."
                                         />
                                     </div>
                                     {status.message && (
-                                        <div className={`p-3 rounded-lg text-sm ${
-                                            status.type === 'success' 
-                                                ? 'bg-green-50 text-green-800 border border-green-200' 
-                                                : 'bg-red-50 text-red-800 border border-red-200'
-                                        }`}>
+                                        <div className={`p-3 rounded-lg text-sm ${status.type === 'success'
+                                            ? 'bg-green-50 text-green-800 border border-green-200'
+                                            : 'bg-red-50 text-red-800 border border-red-200'
+                                            }`}>
                                             {status.message}
                                         </div>
                                     )}
-                                    <button 
+                                    <button
                                         type="submit"
                                         disabled={isLoading}
-                                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-70 flex items-center justify-center"
+                                        className="w-full bg-primary text-primary-foreground py-3 rounded-lg text-sm sm:text-base font-bold hover:bg-primary/90 transition-all duration-300 disabled:opacity-70 flex items-center justify-center shadow-lg"
                                     >
                                         {isLoading ? (
                                             <>
@@ -156,61 +155,75 @@ const Contact = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-5 sm:space-y-6">
-                            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-6 sm:p-8 text-white">
-                                <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">Contact Information</h3>
-                                <div className="space-y-4">
-                                    <div className="flex items-start space-x-3">
-                                        <MapPin className="w-5 h-5 text-blue-200 mt-1" />
+                        <div className="space-y-6">
+                            <div className="bg-background border border-border rounded-xl p-8 sm:p-10 relative overflow-hidden shadow-enterprise group">
+                                <div className="absolute inset-0 bg-grid-enterprise opacity-20" />
+                                <h3 className="text-lg sm:text-xl font-bold mb-10 relative z-10 text-foreground tracking-tight flex items-center gap-3">
+                                    <span className="p-2 bg-primary/5 rounded-lg border border-primary/20">
+                                        <Mail className="w-5 h-5 text-primary" />
+                                    </span>
+                                    Contact Information
+                                </h3>
+                                <div className="space-y-8 relative z-10">
+                                    <div className="flex items-start space-x-5 group/item">
+                                        <div className="p-3 bg-secondary rounded-xl border border-border group-hover/item:border-primary/50 transition-colors">
+                                            <MapPin className="w-5 h-5 text-muted-foreground group-hover/item:text-primary transition-colors" />
+                                        </div>
                                         <div>
-                                            <h4 className="font-semibold text-sm sm:text-base">Address</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.schoolAddress || 'Area 36-B, Double Road, Landhi Town, Korangi, Karachi, Pakistan'}</p>
+                                            <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground/60 mb-1">Our Location</h4>
+                                            <p className="text-foreground text-sm leading-relaxed max-w-[200px]">{settings?.schoolAddress || 'Area 36-B, Double Road, Landhi Town, Korangi, Karachi, Pakistan'}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-start space-x-3">
-                                        <Phone className="w-5 h-5 text-blue-200 mt-1" />
+                                    <div className="flex items-start space-x-5 group/item">
+                                        <div className="p-3 bg-secondary rounded-xl border border-border group-hover/item:border-primary/50 transition-colors">
+                                            <Phone className="w-5 h-5 text-muted-foreground group-hover/item:text-primary transition-colors" />
+                                        </div>
                                         <div>
-                                            <h4 className="font-semibold text-sm sm:text-base">Phone</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.phoneNumber || '+92 321 9230035'}</p>
+                                            <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground/60 mb-1">Call Us</h4>
+                                            <p className="text-foreground text-base font-semibold">{settings?.phoneNumber || '+92 321 9230035'}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-start space-x-3">
-                                        <Mail className="w-5 h-5 text-blue-200 mt-1" />
+                                    <div className="flex items-start space-x-5 group/item">
+                                        <div className="p-3 bg-secondary rounded-xl border border-border group-hover/item:border-primary/50 transition-colors">
+                                            <Mail className="w-5 h-5 text-muted-foreground group-hover/item:text-primary transition-colors" />
+                                        </div>
                                         <div>
-                                            <h4 className="font-semibold text-sm sm:text-base">Email</h4>
-                                            <p className="text-blue-100 text-sm sm:text-base">{settings?.email || 'ar3584158@gmail.com'}</p>
+                                            <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground/60 mb-1">Email Support</h4>
+                                            <p className="text-foreground text-base font-semibold">{settings?.email || 'ar3584158@gmail.com'}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
-                                <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">Office Hours</h3>
+                            <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
+                                <h3 className="text-lg sm:text-xl font-bold mb-6 text-foreground tracking-tight">Office Hours</h3>
                                 <div className="space-y-3">
                                     {(settings?.officeHours || [
                                         { day: 'Saturday - Thursday', open: '8:00 AM', close: '2:10 PM' },
                                         { day: 'Friday', open: 'Closed', close: '' }
                                     ]).map((row: any, idx: number) => (
-                                        <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                                            <span className="text-gray-600 text-sm sm:text-base">{row.day}</span>
-                                            <span className="font-semibold text-sm sm:text-base">{row.close ? `${row.open} - ${row.close}` : row.open}</span>
+                                        <div key={idx} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
+                                            <span className="text-muted-foreground text-sm">{row.day}</span>
+                                            <span className="font-semibold text-sm text-foreground">{row.close ? `${row.open} - ${row.close}` : row.open}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-6 sm:p-8">
-                                <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">Follow Us</h3>
+                            <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
+                                <h3 className="text-lg sm:text-xl font-bold mb-6 text-foreground tracking-tight">Follow Us</h3>
                                 <div className="flex space-x-4">
-                                    <a href="https://www.facebook.com/p/Al-Ghazali-High-School-36B-Landhi-Karachi-100071529611065/" target='_blank' className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors">
-                                        <Facebook className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    </a>
-                                    <a href="#" className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-400 rounded-full flex items-center justify-center text-white hover:bg-blue-500 transition-colors">
-                                        <Twitter className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    </a>
-                                    <a href="#" className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-600 rounded-full flex items-center justify-center text-white hover:bg-pink-700 transition-colors">
-                                        <Instagram className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    </a>
+                                    <div className="flex space-x-3">
+                                        <a href="https://www.facebook.com/p/Al-Ghazali-High-School-36B-Landhi-Karachi-100071529611065/" target='_blank' className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
+                                            <Facebook className="w-5 h-5" />
+                                        </a>
+                                        <a href="#" className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
+                                            <Twitter className="w-5 h-5" />
+                                        </a>
+                                        <a href="#" className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
+                                            <Instagram className="w-5 h-5" />
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -219,9 +232,9 @@ const Contact = () => {
             </section>
 
             {/* Map Section */}
-            <section className="py-12 sm:py-16 bg-gradient-to-b from-slate-50 to-white">
+            <section className="py-24 border-t border-border bg-background">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                         {/* Embedded Google Map */}
                         <div className="h-[300px] sm:h-[400px] lg:h-[450px] w-full">
                             <iframe
@@ -237,20 +250,21 @@ const Contact = () => {
                         </div>
 
                         {/* Info Footer (Optional) */}
-                        <div className="p-4 sm:p-6 text-center">
-                            <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-1">
+                        <div className="p-8 text-center bg-card">
+                            <h3 className="text-xl font-bold text-foreground mb-2 tracking-tight">
                                 School Location
                             </h3>
-                            <p className="text-sm sm:text-base text-gray-500 mb-3 sm:mb-4">
+                            <p className="text-sm text-muted-foreground mb-6">
                                 Area 36-B, Double Road, Landhi Town, Korangi, Karachi, Pakistan
                             </p>
                             <a
                                 href="https://www.google.com/maps/dir//Al+ghazali+high+school"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-block bg-indigo-600 text-white px-4 sm:px-6 py-2 text-sm sm:text-base rounded-lg hover:bg-indigo-700 transition-colors"
+                                className="inline-block bg-primary text-primary-foreground px-8 py-3 rounded-lg font-bold hover:bg-primary/90 transition-all shadow-md group"
                             >
                                 Get Directions
+                                <ArrowRight className="inline-block ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </a>
                         </div>
                     </div>

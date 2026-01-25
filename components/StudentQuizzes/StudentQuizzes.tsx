@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, PlayCircle, CheckCircle2 } from 'lucide-react'
+import { PlayCircle, CheckCircle2 } from 'lucide-react'
 
 type Quiz = {
   _id: string
@@ -13,7 +13,7 @@ type Quiz = {
   resultsAnnounced?: boolean
   createdAt?: string
   _createdAt?: string
-  questions?: { difficulty?: 'easy'|'medium'|'hard' }[]
+  questions?: { difficulty?: 'easy' | 'medium' | 'hard' }[]
 }
 
 type Result = { _id: string; score: number; quiz?: { _id: string }; student?: { _id: string } }
@@ -23,7 +23,7 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<Record<string, Result | null>>({})
 
-  const load = async () => {
+  const load = React.useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -47,9 +47,9 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
         }
       }
     } finally { setLoading(false) }
-  }
+  }, [studentId, className])
 
-  useEffect(() => { load() }, [studentId, className, load])
+  useEffect(() => { load() }, [load])
 
   // Seeded RNG for per-student variance and fairness
   const seededShuffle = (arr: Quiz[], seedStr: string) => {
@@ -68,7 +68,7 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
     const copy = [...arr]
     for (let i = copy.length - 1; i > 0; i--) {
       const j = Math.floor(rand() * (i + 1))
-      ;[copy[i], copy[j]] = [copy[j], copy[i]]
+        ;[copy[i], copy[j]] = [copy[j], copy[i]]
     }
     return copy
   }
@@ -76,17 +76,17 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
   const randomized = useMemo(() => {
     if (!quizzes || quizzes.length === 0) return [] as Quiz[]
     // derive predominant difficulty for each quiz
-    const bucket: Record<'easy'|'medium'|'hard', Quiz[]> = { easy: [], medium: [], hard: [] }
+    const bucket: Record<'easy' | 'medium' | 'hard', Quiz[]> = { easy: [], medium: [], hard: [] }
     const seed = `${studentId}|${new Date().toDateString()}`
     const withLevels = quizzes.map(q => {
       const qs = q.questions || []
-      const counts: Record<'easy'|'medium'|'hard', number> = { easy: 0, medium: 0, hard: 0 }
+      const counts: Record<'easy' | 'medium' | 'hard', number> = { easy: 0, medium: 0, hard: 0 }
       for (const qq of qs) {
-        const key: 'easy'|'medium'|'hard' = (qq?.difficulty === 'medium' ? 'medium' : qq?.difficulty === 'hard' ? 'hard' : 'easy')
+        const key: 'easy' | 'medium' | 'hard' = (qq?.difficulty === 'medium' ? 'medium' : qq?.difficulty === 'hard' ? 'hard' : 'easy')
         counts[key]++
       }
       const level = counts.hard > counts.medium && counts.hard > counts.easy ? 'hard' : counts.medium > counts.easy ? 'medium' : 'easy'
-      return { q, level: level as 'easy'|'medium'|'hard' }
+      return { q, level: level as 'easy' | 'medium' | 'hard' }
     })
     for (const item of withLevels) bucket[item.level].push(item.q)
     // seeded shuffle within buckets
@@ -140,7 +140,7 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
                       <div className="font-semibold text-gray-800 truncate max-w-[16rem]">{q.title}</div>
                       <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">{q.subject}</span>
                       {results[q._id] && (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 text-xs"><CheckCircle2 size={14}/> Submitted</span>
+                        <span className="inline-flex items-center gap-1 text-emerald-700 text-xs"><CheckCircle2 size={14} /> Submitted</span>
                       )}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">{new Date((q as any).createdAt || (q as any)._createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: true })}</div>
@@ -149,7 +149,7 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
                     {results[q._id] ? (
                       <span className="text-xs text-emerald-700">Completed</span>
                     ) : (
-                      <Link href={`/quiz/${q._id}`} className="px-3 py-1.5 bg-blue-600 text-white rounded inline-flex items-center gap-2 text-sm"><PlayCircle size={16}/> Start</Link>
+                      <Link href={`/quiz/${q._id}`} className="px-3 py-1.5 bg-blue-600 text-white rounded inline-flex items-center gap-2 text-sm"><PlayCircle size={16} /> Start</Link>
                     )}
                   </div>
                 </div>

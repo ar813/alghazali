@@ -1,236 +1,220 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Sidebar as AceternitySidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
+import { IconLogout } from "@tabler/icons-react";
+import { motion } from "motion/react";
+import { cn } from "@/lib/utils";
+import { LucideIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import Image from 'next/image';
 
 interface SidebarItem {
-    id: string;
-    label: string;
-    icon: any;
+  id: string;
+  label: string;
+  icon: LucideIcon;
 }
 
 interface SidebarProps {
-    items: SidebarItem[];
-    activeTab: string;
-    onTabChange: (id: string) => void;
-    logo?: React.ReactNode;
-    title?: string;
-    subtitle?: string;
-    // Optional: Allow parent to control collapse for layout adjustments
-    onCollapseChange?: (collapsed: boolean) => void;
+  items: SidebarItem[];
+  activeTab: string;
+  onTabChange: (id: string) => void;
 }
 
-const Sidebar = ({
-    items,
-    activeTab,
-    onTabChange,
-    logo,
-    title,
-    subtitle,
-    onCollapseChange,
-}: SidebarProps) => {
-    const [collapsed, setCollapsed] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+const Sidebar = ({ items, activeTab, onTabChange }: SidebarProps) => {
+  const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<{ email: string | null; displayName: string | null; photoURL: string | null } | null>(null);
 
-    // Handle responsiveness
-    useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 768);
-        checkMobile();
-        window.addEventListener("resize", checkMobile);
-        return () => window.removeEventListener("resize", checkMobile);
-    }, []);
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const { auth } = await import('@/lib/firebase');
+        const { onAuthStateChanged } = await import('firebase/auth');
 
-    // Update parent when collapse state changes
-    useEffect(() => {
-        onCollapseChange?.(collapsed);
-    }, [collapsed, onCollapseChange]);
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          if (currentUser) {
+            setUser({
+              email: currentUser.email,
+              displayName: currentUser.displayName,
+              photoURL: currentUser.photoURL
+            });
+          } else {
+            setUser(null);
+          }
+        });
 
-    const toggleCollapse = () => {
-        setCollapsed((prev) => !prev);
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error getting user:', error);
+      }
     };
 
-    const sidebarVariants = {
-        expanded: { width: "280px", transition: { type: "spring" as const, stiffness: 300, damping: 30 } },
-        collapsed: { width: "80px", transition: { type: "spring" as const, stiffness: 300, damping: 30 } },
+    const unsubscribePromise = getCurrentUser();
+
+    return () => {
+      unsubscribePromise?.then(unsub => unsub?.());
     };
+  }, []);
 
-    // Mobile Bottom Nav for quick access (optional hybrid approach)
-    // For this "Ultra Professional" request, we'll implement a proper responsive Sidebar 
-    // that behaves like a Drawer on mobile and a Sidebar on desktop.
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('adminSession');
+    } catch { }
+    window.location.href = '/admin';
+  };
 
-    // Mobile Scroll Logic (Always callable)
-    const navRef = useRef<HTMLDivElement>(null);
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(true);
+  const links = items.map((item) => ({
+    label: item.label,
+    href: `#${item.id}`,
+    icon: (
+      <item.icon
+        className={cn(
+          "h-4 w-4 shrink-0 transition-colors duration-200",
+          activeTab === item.id
+            ? "text-neutral-900 dark:text-white"
+            : "text-neutral-500 dark:text-neutral-400 group-hover/item:text-neutral-700 dark:group-hover/item:text-neutral-200"
+        )}
+      />
+    ),
+  }));
 
-    const checkScroll = useCallback(() => {
-        if (navRef.current) {
-            const { scrollLeft, scrollWidth, clientWidth } = navRef.current;
-            setCanScrollLeft(scrollLeft > 0);
-            setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
-        }
-    }, []);
+  return (
 
-    useEffect(() => {
-        if (isMobile) {
-            checkScroll();
-            window.addEventListener('resize', checkScroll);
-            return () => window.removeEventListener('resize', checkScroll);
-        }
-    }, [isMobile, checkScroll]);
-
-    const scrollNav = (direction: 'left' | 'right') => {
-        if (navRef.current) {
-            const scrollAmount = 150;
-            navRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
-        }
-    };
-
-
-    if (isMobile) {
-        return (
-            <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-2 pt-2 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none">
-                <div className="relative mx-auto max-w-lg pointer-events-auto">
-
-                    {/* Scroll Indicators */}
-                    <AnimatePresence>
-                        {canScrollLeft && (
-                            <motion.button
-                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                onClick={() => scrollNav('left')}
-                                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center bg-white/80 backdrop-blur-md rounded-full shadow-lg border border-gray-100 text-blue-600 ml-[-10px]"
-                            >
-                                <ChevronLeft size={16} />
-                            </motion.button>
-                        )}
-                        {canScrollRight && (
-                            <motion.button
-                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                onClick={() => scrollNav('right')}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center bg-white/80 backdrop-blur-md rounded-full shadow-lg border border-gray-100 text-blue-600 mr-[-10px] animate-pulse"
-                            >
-                                <ChevronRight size={16} />
-                            </motion.button>
-                        )}
-                    </AnimatePresence>
-
-                    <nav
-                        ref={navRef}
-                        onScroll={checkScroll}
-                        className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-between px-2 py-1.5 overflow-x-auto scrollbar-hide snap-x"
-                    >
-                        {items.map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => {
-                                    onTabChange(item.id);
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                }}
-                                className={`relative flex flex-col items-center justify-center min-w-[64px] h-[54px] rounded-xl transition-all duration-300 snap-start mx-0.5 ${activeTab === item.id
-                                    ? "text-blue-600"
-                                    : "text-gray-400 hover:text-gray-600"
-                                    }`}
-                            >
-                                {activeTab === item.id && (
-                                    <motion.div
-                                        layoutId="mobile-nav-active"
-                                        className="absolute inset-0 bg-blue-50 rounded-xl -z-10"
-                                        initial={false}
-                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                    />
-                                )}
-                                <div className={`relative p-1.5 rounded-lg transition-transform duration-300 ${activeTab === item.id ? "-translate-y-1" : ""}`}>
-                                    <item.icon
-                                        size={activeTab === item.id ? 20 : 18}
-                                        strokeWidth={activeTab === item.id ? 2.5 : 2}
-                                        className="transition-all"
-                                    />
-                                </div>
-                                <span className={`text-[10px] font-semibold transition-all duration-300 ${activeTab === item.id ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 absolute bottom-2"}`}>
-                                    {item.label}
-                                </span>
-                            </button>
-                        ))}
-                    </nav>
+    <AceternitySidebar open={open} setOpen={setOpen} animate={true}>
+      <SidebarBody className="justify-between gap-0 bg-white dark:bg-neutral-950 border-r border-neutral-200 dark:border-neutral-800">
+        <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto pt-1 pb-2 no-scrollbar">
+          {/* Header Section - Minimal */}
+          <div className={cn("flex items-center justify-between h-10 transition-all duration-300", open ? "px-5 mb-8" : "px-0 mb-4")}>
+            {open ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-3"
+              >
+                <div className="w-8 h-8 bg-neutral-900 dark:bg-white rounded-lg flex items-center justify-center shadow-sm">
+                  <span className="text-white dark:text-neutral-900 font-bold text-sm">AG</span>
                 </div>
-            </div>
-        );
-    }
+                <div className="flex flex-col">
+                  <span className="font-semibold text-neutral-900 dark:text-white text-sm leading-tight">Al Ghazali</span>
+                  <span className="text-[10px] text-neutral-500 font-medium uppercase tracking-wider">Admin</span>
+                </div>
+              </motion.div>
+            ) : null}
 
-    // Desktop Sidebar
-    return (
-        <motion.aside
-            initial="expanded"
-            animate={collapsed ? "collapsed" : "expanded"}
-            variants={sidebarVariants}
-            className="sticky top-0 h-screen bg-white border-r border-gray-200 z-30 hidden md:flex flex-col shadow-sm"
-        >
-            {/* Header */}
-            <div className={`p-6 flex items-center ${collapsed ? "justify-center" : "justify-between gap-4"} border-b border-gray-100 h-20`}>
-                {!collapsed && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="flex items-center gap-3 overflow-hidden whitespace-nowrap"
-                    >
-                        {logo}
-                        <div>
-                            {title && <h2 className="font-bold text-gray-900 leading-none text-base">{title}</h2>}
-                            {subtitle && <p className="text-[11px] text-gray-500 mt-1 font-medium">{subtitle}</p>}
-                        </div>
-                    </motion.div>
-                )}
-                {collapsed && logo}
-            </div>
+            <button
+              onClick={() => setOpen(!open)}
+              className={cn(
+                "rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center",
+                open ? "p-1.5" : "w-full h-10"
+              )}
+            >
+              {open ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+            </button>
+          </div>
 
-            {/* Nav Items */}
-            <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 scrollbar-hide">
-                {items.map((item) => (
-                    <button
-                        key={item.id}
-                        onClick={() => onTabChange(item.id)}
-                        className={`group relative flex items-center w-full p-3 rounded-xl transition-all duration-200 ${activeTab === item.id
-                            ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                            } ${collapsed ? "justify-center" : "gap-3"}`}
-                        title={collapsed ? item.label : undefined}
-                    >
-                        <item.icon
-                            size={20}
-                            className={`shrink-0 transition-transform ${activeTab === item.id ? "scale-105" : "group-hover:scale-105"} `}
-                        />
-
-                        {!collapsed && (
-                            <motion.span
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="font-medium text-sm whitespace-nowrap"
-                            >
-                                {item.label}
-                            </motion.span>
-                        )}
-
-                        {/* Active Indicator Dot for Collapsed State */}
-                        {collapsed && activeTab === item.id && (
-                            <div className="absolute right-2 top-2 w-1.5 h-1.5 bg-white rounded-full"></div>
-                        )}
-                    </button>
-                ))}
-            </nav>
-
-            {/* Toggle Button (Vercel Style) */}
-            <div className="p-4 border-t border-gray-100">
-                <button
-                    onClick={toggleCollapse}
-                    className={`w-full flex items-center p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all ${collapsed ? "justify-center" : "gap-3"}`}
+          {/* Navigation Links - Clean List */}
+          <div className={cn("flex flex-col gap-0.5 transition-all duration-300", open ? "px-3" : "px-0")}>
+            {links.map((link, idx) => {
+              const isActive = activeTab === link.href.replace('#', '');
+              return (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    const id = link.href.replace('#', '');
+                    onTabChange(id);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "cursor-pointer rounded-lg transition-all duration-200 group/item relative flex items-center",
+                    open ? "mx-0" : "mx-auto w-10",
+                    isActive
+                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-medium"
+                      : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:text-neutral-900 dark:hover:text-neutral-200"
+                  )}
                 >
-                    {collapsed ? <ChevronRight size={18} /> : <div className="border rounded px-1.5 py-0.5"><ChevronLeft size={14} /></div>}
-                    {!collapsed && <span className="text-sm font-medium">Collapse Sidebar</span>}
-                </button>
+                  {/* Subtle Active Indicator Line */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="active-line"
+                      className={cn(
+                        "absolute w-1 bg-neutral-900 dark:bg-white rounded-r-full",
+                        open ? "left-0 top-1.5 bottom-1.5" : "left-0 top-2 bottom-2"
+                      )}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  )}
+
+                  <div className="relative z-10 w-full">
+                    <SidebarLink
+                      link={link}
+                      className={cn(
+                        "h-auto",
+                        open ? "py-2 px-3.5" : "py-2 px-0",
+                        isActive ? "text-neutral-900 dark:text-white" : "text-neutral-600 dark:text-neutral-400"
+                      )}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* User Section at Bottom - Minimal */}
+        <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 pb-4 px-3 bg-white dark:bg-neutral-950">
+          {user && (
+            <div className="flex items-center gap-3 mb-2 group/user cursor-pointer p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">
+              <div className="relative">
+                {user.photoURL ? (
+                  <Image
+                    src={user.photoURL}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm border border-neutral-200 dark:border-neutral-700"
+                    alt="Avatar"
+                  />
+                ) : (
+                  <div className="h-8 w-8 shrink-0 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 font-bold text-xs border border-neutral-200 dark:border-neutral-700">
+                    {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+
+              <div className={cn(
+                "flex flex-col min-w-0 transition-all duration-300",
+                open ? "opacity-100" : "opacity-0 w-0 hidden"
+              )}>
+                <span className="text-xs font-medium text-neutral-900 dark:text-white truncate">
+                  {user.displayName || 'Admin'}
+                </span>
+                <span className="text-[10px] text-neutral-500 truncate">
+                  {user.email}
+                </span>
+              </div>
             </div>
-        </motion.aside>
-    );
+          )}
+
+          {/* Logout Button */}
+          <div
+            onClick={handleLogout}
+            className="cursor-pointer rounded-lg group/logout hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
+          >
+            <SidebarLink
+              link={{
+                label: "Log out",
+                href: "#logout",
+                icon: (
+                  <IconLogout
+                    className="h-4 w-4 shrink-0 text-neutral-500 group-hover/logout:text-neutral-900 dark:group-hover/logout:text-neutral-200 transition-colors"
+                  />
+                ),
+              }}
+              className="group-hover/logout:text-neutral-900 dark:group-hover/logout:text-neutral-200 py-2 px-3 text-sm text-neutral-500"
+            />
+          </div>
+        </div>
+      </SidebarBody>
+    </AceternitySidebar>
+  );
 };
 
 export default Sidebar;

@@ -2,18 +2,18 @@ import React, { useEffect, useState } from 'react'
 import { Calendar, Plus, Save, Sparkles, Trash2, Upload, Download, X } from 'lucide-react'
 
 // Types
- type ScheduleDay = { day: string; periods: { subject: string; time: string }[] }
- type ScheduleDoc = { _id: string; className: string; days: ScheduleDay[] }
+type ScheduleDay = { day: string; periods: { subject: string; time: string }[] }
+type ScheduleDoc = { _id: string; className: string; days: ScheduleDay[] }
 
 const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
   const [schedules, setSchedules] = useState<ScheduleDoc[]>([])
   const [loadingSchedules, setLoadingSchedules] = useState<boolean>(false)
 
   // Form state
-  const classOptions = ['1','2','3','4','5','6','SSCI','SSCII']
-  const dayOptions = ['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday']
-  const subjectOptions = ['English','Urdu','Math','Science','Islamiat','Computer', 'Nardban', 'Nazra', 'Islamiat', 'Social Studies', 'Talim-ul-Islam', 'General Knowledge', 'Islami Adaab', 'Rasool Arabi', 'English Grammar', 'Chemistry', 'Biology', "Physics", "Pak Studies", "Break Time"]
-  const timeOptions = ['08:00 - 08:35','08:35 - 09:10','09:10 - 09:45','09:45 - 10:20','10:20 - 10:55','10:55 - 11:30','11:30 - 12:00','12:00 - 12:35','12:45 - 01:20','01:35 - 02:10']
+  const classOptions = ['1', '2', '3', '4', '5', '6', 'SSCI', 'SSCII']
+  const dayOptions = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday']
+  const subjectOptions = ['English', 'Urdu', 'Math', 'Science', 'Islamiat', 'Computer', 'Nardban', 'Nazra', 'Islamiat', 'Social Studies', 'Talim-ul-Islam', 'General Knowledge', 'Islami Adaab', 'Rasool Arabi', 'English Grammar', 'Chemistry', 'Biology', "Physics", "Pak Studies", "Break Time"]
+  const timeOptions = ['08:00 - 08:35', '08:35 - 09:10', '09:10 - 09:45', '09:45 - 10:20', '10:20 - 10:55', '10:55 - 11:30', '11:30 - 12:00', '12:00 - 12:35', '12:45 - 01:20', '01:35 - 02:10']
 
   const [formClass, setFormClass] = useState<string>('')
   const [formDay, setFormDay] = useState<string>('')
@@ -44,6 +44,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const ExcelJS = await import('exceljs')
       return (ExcelJS as any).default || (ExcelJS as any)
     } catch (e) {
+      console.error('ExcelJS could not be loaded:', e);
       throw new Error('ExcelJS could not be loaded. Please ensure it is installed.')
     }
   }
@@ -71,7 +72,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       }
       const buffer = await wb.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-      saveAs(blob, `schedules_${new Date().toISOString().slice(0,10)}.xlsx`)
+      saveAs(blob, `schedules_${new Date().toISOString().slice(0, 10)}.xlsx`)
       showToast('Schedules exported', 'success')
     } catch (e: any) {
       showToast(`Export failed: ${e?.message || 'Unknown error'}`, 'error')
@@ -136,7 +137,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     }
   }
 
-  const loadSchedules = async () => {
+  const loadSchedules = React.useCallback(async () => {
     try {
       setLoadingSchedules(true)
       onLoadingChange?.(true)
@@ -147,7 +148,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       showToast('Failed to load schedules', 'error')
     }
     finally { setLoadingSchedules(false); onLoadingChange?.(false) }
-  }
+  }, [onLoadingChange])
 
   useEffect(() => {
     loadSchedules()
@@ -196,7 +197,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   const addPeriodRow = () => setFormPeriods(prev => [...prev, { subject: '', time: '' }])
   const removePeriodRow = (idx: number) => setFormPeriods(prev => prev.filter((_, i) => i !== idx))
-  const updatePeriod = (idx: number, key: 'subject'|'time', value: string) =>
+  const updatePeriod = (idx: number, key: 'subject' | 'time', value: string) =>
     setFormPeriods(prev => prev.map((p, i) => i === idx ? { ...p, [key]: value } : p))
 
   const submitSchedule = async () => {
@@ -254,9 +255,9 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       {/* Manage Schedule (first) */}
       <div id="manage-schedule" className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Calendar size={18}/> Manage Schedule</h3>
+          <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Calendar size={18} /> Manage Schedule</h3>
           <div className="flex items-center gap-2">
-            <button onClick={submitSchedule} disabled={formSubmitting} className="text-sm inline-flex items-center gap-1 px-3 py-1 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-60"><Save size={14}/> {formSubmitting ? 'Saving...' : 'Save Schedule'}</button>
+            <button onClick={submitSchedule} disabled={formSubmitting} className="text-sm inline-flex items-center gap-1 px-3 py-1 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-60"><Save size={14} /> {formSubmitting ? 'Saving...' : 'Save Schedule'}</button>
           </div>
         </div>
 
@@ -276,29 +277,29 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             </select>
           </div>
           <div className="flex items-end">
-            <button onClick={addPeriodRow} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"><Plus size={16}/> Add Period</button>
+            <button onClick={addPeriodRow} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"><Plus size={16} /> Add Period</button>
           </div>
         </div>
 
         <div className="mt-4 space-y-3">
           {formPeriods.map((p, idx) => (
-            <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 items-end">
-              <div>
+            <div key={idx} className="flex flex-col sm:flex-row gap-3 items-end border-b pb-4 mb-4 sm:border-none sm:pb-0 sm:mb-0">
+              <div className="w-full sm:flex-1">
                 <label className="text-sm text-gray-600">Subject</label>
                 <select value={p.subject} onChange={e => updatePeriod(idx, 'subject', e.target.value)} className="w-full border rounded-lg p-2 text-sm">
                   <option value="">Select Subject</option>
                   {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div>
+              <div className="w-full sm:flex-1">
                 <label className="text-sm text-gray-600">Time</label>
                 <select value={p.time} onChange={e => updatePeriod(idx, 'time', e.target.value)} className="w-full border rounded-lg p-2 text-sm">
                   <option value="">Select Time</option>
                   {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => removePeriodRow(idx)} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm text-red-600 border-red-200"><Trash2 size={16}/> Remove</button>
+              <div className="w-full sm:w-auto">
+                <button onClick={() => removePeriodRow(idx)} className="w-full sm:w-auto inline-flex justify-center items-center gap-1 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm text-red-600 border-red-200"><Trash2 size={16} /> Remove</button>
               </div>
             </div>
           ))}
@@ -310,19 +311,19 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-            <Calendar size={20} className="text-blue-600"/> 
+            <Calendar size={20} className="text-blue-600" />
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">This Week Schedule</span>
           </h3>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-            <button onClick={handleExport} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Upload size={16}/> Export</button>
-            <button onClick={onClickImport} disabled={importLoading} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Download size={16}/> {importLoading ? 'Importing...' : 'Import'}</button>
+            <button onClick={handleExport} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Upload size={16} /> Export</button>
+            <button onClick={onClickImport} disabled={importLoading} className="text-sm inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 w-full sm:w-auto"><Download size={16} /> {importLoading ? 'Importing...' : 'Import'}</button>
             <button onClick={loadSchedules} className="text-sm inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 w-full sm:w-auto">
-              <Sparkles size={16} className="text-blue-600"/> 
+              <Sparkles size={16} className="text-blue-600" />
               <span className="text-blue-700 font-medium">Refresh</span>
             </button>
           </div>
         </div>
-        
+
         {loadingSchedules ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
@@ -349,7 +350,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             </div>
             <h4 className="text-lg font-semibold text-gray-700 mb-2">No Schedules Found</h4>
             <p className="text-gray-500 mb-6">Create your first class schedule using the form above.</p>
-            <button 
+            <button
               onClick={() => document.getElementById('manage-schedule')?.scrollIntoView({ behavior: 'smooth' })}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
@@ -379,7 +380,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                     <Plus size={16} />
                   </button>
                 </div>
-                
+
                 <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar">
                   {sc.days?.slice(0, 7).map(day => (
                     <div key={day.day} className="bg-white rounded-xl p-4 border border-gray-100 hover:border-blue-200 transition-all duration-200">
@@ -412,7 +413,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                           </button>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         {day.periods?.slice(0, 6).map((p, idx) => (
                           <div key={idx} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
@@ -433,7 +434,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                       </div>
                     </div>
                   ))}
-                  
+
                   {(sc.days?.length || 0) === 0 && (
                     <div className="text-center py-8">
                       <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
@@ -482,29 +483,29 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
                 </select>
               </div>
               <div className="flex items-end">
-                <button onClick={addEditPeriodRow} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"><Plus size={16}/> Add Period</button>
+                <button onClick={addEditPeriodRow} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"><Plus size={16} /> Add Period</button>
               </div>
             </div>
 
             <div className="mt-4 space-y-3">
               {editPeriods.map((p, idx) => (
-                <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 items-end">
-                  <div>
+                <div key={idx} className="flex flex-col sm:flex-row gap-3 items-end border-b pb-4 mb-4 sm:border-none sm:pb-0 sm:mb-0">
+                  <div className="w-full sm:flex-1">
                     <label className="text-sm text-gray-600">Subject</label>
                     <select value={p.subject} onChange={e => updateEditPeriod(idx, 'subject', e.target.value)} className="w-full border rounded-lg p-2 text-sm">
                       <option value="">Select Subject</option>
                       {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
-                  <div>
+                  <div className="w-full sm:flex-1">
                     <label className="text-sm text-gray-600">Time</label>
                     <select value={p.time} onChange={e => updateEditPeriod(idx, 'time', e.target.value)} className="w-full border rounded-lg p-2 text-sm">
                       <option value="">Select Time</option>
                       {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => removeEditPeriodRow(idx)} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm text-red-600 border-red-200"><Trash2 size={16}/> Remove</button>
+                  <div className="w-full sm:w-auto">
+                    <button onClick={() => removeEditPeriodRow(idx)} className="w-full sm:w-auto inline-flex justify-center items-center gap-1 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm text-red-600 border-red-200"><Trash2 size={16} /> Remove</button>
                   </div>
                 </div>
               ))}

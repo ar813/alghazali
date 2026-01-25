@@ -251,28 +251,24 @@ export default function StylishStudentPortal() {
 
       <NavBar />
 
-      <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen flex bg-white transition-all duration-300">
 
         {/* NEW Sidebar */}
         <Sidebar
           items={sidebarItems}
           activeTab={activeTab}
-          onTabChange={(id) => setActiveTab(id)}
-          title="Student Portal"
-          subtitle="Academic Excellence Hub"
-          logo={
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <GraduationCap size={20} className="text-white" />
-            </div>
-          }
+          onTabChange={(id) => {
+            setActiveTab(id);
+            if (typeof window !== 'undefined') window.location.hash = id;
+          }}
         />
 
         {/* Main Content */}
-        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 overflow-auto h-screen">
+        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 mt-20 md:mt-0">
           <div className="max-w-7xl mx-auto pb-20 md:pb-8">
-            <div className="mb-6 sm:mb-8 flex items-center justify-between gap-3">
+            <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-2xl sm:text-3xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-1">
+                <h2 className="text-2xl sm:text-3xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-1 capitalize">
                   {activeTab}
                 </h2>
                 <div className="h-1 w-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
