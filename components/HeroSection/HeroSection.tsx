@@ -1,8 +1,8 @@
-import { Megaphone } from 'lucide-react'
+import { Megaphone, ChevronRight } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { TypewriterLoop } from '@/components/ui/typewriter-loop'
 import { BackgroundBeamsWithCollision } from '@/components/ui/background-beams-with-collision'
-import { Button } from "@chakra-ui/react"
+import { Button as MovingBorderButton, MovingBorder } from "@/components/ui/moving-border"
 import Image from 'next/image'
 
 const HeroSection = () => {
@@ -40,9 +40,9 @@ const HeroSection = () => {
 
     return (
         <>
-            <section id="home" className="relative w-full overflow-hidden pt-16 sm:pt-20 pb-8">
-                <BackgroundBeamsWithCollision className="h-[auto] min-h-[450px] flex flex-col justify-start items-center">
-                    <div className="relative z-20 w-full max-w-4xl mx-auto px-4 text-center flex flex-col items-center justify-center space-y-3 sm:space-y-4">
+            <section id="home" className="relative w-full overflow-hidden">
+                <BackgroundBeamsWithCollision className="min-h-screen sm:min-h-[90vh] flex flex-col justify-start sm:justify-center items-center pt-40 sm:pt-28 pb-16 px-4">
+                    <div className="relative z-20 w-full max-w-5xl mx-auto text-center flex flex-col items-center justify-start sm:justify-center space-y-7 sm:space-y-10">
 
                         {/* Est. Badge - Compact */}
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 dark:bg-black/20 border border-white/20 dark:border-white/10 shadow-[0_0_10px_rgba(0,0,0,0.05)] backdrop-blur-md animate-fade-in-up">
@@ -57,28 +57,33 @@ const HeroSection = () => {
 
                         {/* Logo & Welcome Group - Tighter */}
                         <div className="flex flex-col items-center gap-2">
-                            {/* Logo - Simple Round & Clean */}
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white dark:bg-black rounded-full flex items-center justify-center shadow-sm border border-neutral-200 dark:border-neutral-800">
-                                <Image
-                                    src="/logo.png"
-                                    alt="Al Ghazali High School Logo"
-                                    width={48}
-                                    height={48}
-                                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
-                                />
+                            {/* Logo - Premium Moving Border */}
+                            <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-white dark:bg-black rounded-full flex items-center justify-center p-[2px] overflow-hidden select-none">
+                                <MovingBorder duration={3500} rx="50%" ry="50%">
+                                    <div className="h-20 w-20 bg-[radial-gradient(#3b82f6_40%,transparent_60%)] opacity-[0.8]" />
+                                </MovingBorder>
+                                <div className="relative z-10 w-full h-full bg-white dark:bg-black rounded-full flex items-center justify-center border border-neutral-100 dark:border-neutral-900">
+                                    <Image
+                                        src="/logo.png"
+                                        alt="Al Ghazali High School Logo"
+                                        width={48}
+                                        height={48}
+                                        className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+                                    />
+                                </div>
                             </div>
 
-                            <h2 className="text-lg sm:text-xl font-semibold text-neutral-500 dark:text-neutral-400 tracking-tight">
+                            <h2 className="text-lg sm:text-xl font-semibold text-neutral-500 dark:text-neutral-400 tracking-tight select-none">
                                 Welcome to
                             </h2>
                         </div>
 
                         {/* Typewriter with Backspace Animation */}
-                        <div className="min-h-[50px] flex items-center justify-center w-full px-2 -mt-1">
+                        <div className="min-h-[50px] flex items-center justify-center w-full px-2 -mt-2">
                             <TypewriterLoop
                                 texts={names}
-                                className="text-xl sm:text-2xl md:text-4xl"
-                                cursorClassName="h-5 sm:h-7 md:h-10"
+                                className="text-xl sm:text-2xl md:text-4xl text-blue-600 dark:text-blue-400"
+                                cursorClassName="h-5 sm:h-7 md:h-10 bg-black dark:bg-white"
                                 typingSpeed={2}
                                 deletingSpeed={1.5}
                                 pauseDuration={2000}
@@ -86,20 +91,20 @@ const HeroSection = () => {
                         </div>
 
                         {/* Description - Compact */}
-                        <p className="text-sm sm:text-base md:text-lg text-neutral-600 dark:text-neutral-300 max-w-xl mx-auto leading-relaxed font-medium">
-                            Nurturing young minds with <span className="text-blue-600 dark:text-blue-400 font-semibold">academic excellence</span>, Islamic values, and modern education.
+                        <p className="text-sm sm:text-base md:text-lg text-neutral-600 dark:text-neutral-300 max-w-xl mx-auto leading-relaxed font-medium -mt-2">
+                            Nurturing young minds with <span className="text-neutral-900 dark:text-white font-semibold">academic excellence</span>, Islamic values, and modern education.
                         </p>
 
-                        {/* CTA Buttons - Compact Row */}
-                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center items-center pt-1">
-                            <Button
+                        <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto justify-center items-center pt-0">
+                            <MovingBorderButton
                                 as="a"
                                 href="/student-portal"
-                                size="lg"
-                                rounded="full"
-                                className="group relative px-8 bg-black dark:bg-white text-white dark:text-black font-bold text-sm sm:text-base shadow-lg shadow-blue-500/20 hover:bg-black/90 dark:hover:bg-white/90 transition-all hover:scale-100"
+                                borderRadius="1.75rem"
+                                containerClassName="w-[280px] sm:w-48 h-12 sm:h-14"
+                                className="bg-black dark:bg-white text-white dark:text-black border-neutral-800 dark:border-neutral-200 font-bold text-base sm:text-lg"
+                                borderClassName="bg-[radial-gradient(#4299e1_40%,transparent_70%)] opacity-[1.0] scale-[2.0]" // Slightly larger and brighter glow for more visibility
                             >
-                                <span className="flex items-center gap-2">
+                                <span className="flex items-center gap-2 group">
                                     Student Portal
                                     <svg
                                         width="15"
@@ -111,23 +116,23 @@ const HeroSection = () => {
                                         <path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
                                     </svg>
                                 </span>
-                            </Button>
+                            </MovingBorderButton>
 
-                            <Button
+                            <MovingBorderButton
                                 as="a"
                                 href="/schedule"
-                                variant="outline"
-                                size="lg"
-                                rounded="full"
-                                className="px-6 font-bold text-sm sm:text-base border-neutral-200 dark:border-white/10 backdrop-blur-md hover:bg-white/80 dark:hover:bg-white/10"
+                                borderRadius="1.75rem"
+                                containerClassName="w-[280px] sm:w-48 h-12 sm:h-14"
+                                className="bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 font-bold text-base sm:text-lg"
+                                borderClassName="bg-[radial-gradient(#808080_40%,transparent_60%)] opacity-[0.2] scale-75" // Sharper, smaller glow to prevent bleed
                             >
                                 View Schedule
-                            </Button>
+                            </MovingBorderButton>
                         </div>
 
                         {/* Notice Pill - Glassmorphic & Clean */}
                         {(headlineTitle || headlineContent) && (
-                            <div className="animate-fade-in w-full max-w-sm mx-auto pt-2 sm:pt-4">
+                            <div className="animate-fade-in w-full max-w-sm mx-auto pt-4 sm:pt-6">
                                 <div
                                     onClick={() => setOpenHeadline(true)}
                                     className="cursor-pointer group relative overflow-hidden rounded-full border border-neutral-200/50 dark:border-white/10 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-md p-1 pr-3 transition-all hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] active:scale-95"
@@ -140,11 +145,15 @@ const HeroSection = () => {
                                             <div className="relative h-4 w-full">
                                                 <div className="marquee-track absolute flex items-center whitespace-nowrap text-[10px] sm:text-xs font-medium text-neutral-600 dark:text-neutral-300">
                                                     <span className="font-bold text-neutral-900 dark:text-white mr-2">{headlineTitle}:</span>
-                                                    <span className="mr-6">{headlineContent}</span>
+                                                    <span className="mr-8">{headlineContent}</span>
+
                                                     <span className="font-bold text-neutral-900 dark:text-white mr-2">{headlineTitle}:</span>
-                                                    <span className="mr-6">{headlineContent}</span>
+                                                    <span className="mr-8">{headlineContent}</span>
                                                 </div>
                                             </div>
+                                        </div>
+                                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                            <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                                         </div>
                                     </div>
                                 </div>
@@ -154,13 +163,14 @@ const HeroSection = () => {
                 </BackgroundBeamsWithCollision>
             </section >
 
+
             <style jsx>{`
                 @keyframes marquee {
                     0% { transform: translateX(0) translateZ(0); }
                     100% { transform: translateX(-50%) translateZ(0); }
                 }
                 .marquee-track {
-                    animation: marquee 20s linear infinite;
+                    animation: marquee 30s linear infinite;
                     will-change: transform;
                     backface-visibility: hidden;
                     perspective: 1000;

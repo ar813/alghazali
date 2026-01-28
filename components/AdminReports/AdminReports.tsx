@@ -1,5 +1,6 @@
 import { Upload, Users, PieChart, BarChart2, Loader2, X } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
+import { toast } from "sonner";
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
 
@@ -16,13 +17,6 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const [students, setStudents] = useState<StudentType[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
-  // Toasts (similar style as AdminSchedule/AdminStudents)
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ show: true, message, type })
-    window.setTimeout(() => setToast(null), 2200)
-  }
-
   // Modal to show lists for insights
   const [insightModal, setInsightModal] = useState<{ open: boolean; title: string; items: any[] }>({ open: false, title: '', items: [] })
 
@@ -64,10 +58,10 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       // Build API query based on target
       const params = new URLSearchParams()
       if (feeTargetType === 'class') {
-        if (!feeClassName) { alert('Please select a class'); return }
+        if (!feeClassName) { toast.error('Please select a class'); return }
         params.set('className', feeClassName)
       } else if (feeTargetType === 'student') {
-        if (!feeStudentId) { alert('Please select a student'); return }
+        if (!feeStudentId) { toast.error('Please select a student'); return }
         const st = (students as any[]).find(s => s._id === feeStudentId)
         const q = (st?.grNumber || st?.rollNumber || '').toString()
         if (q) params.set('q', q)
@@ -77,7 +71,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to load fees')
       const fees: any[] = json.data || []
-      if (fees.length === 0) { showToast('Koi fee records nahi mile export ke liye.', 'error'); return }
+      if (fees.length === 0) { toast.error('Koi fee records nahi mile export ke liye.'); return }
 
       const ExcelJS: any = await loadExcel()
       const fileSaver = await import('file-saver')
@@ -127,7 +121,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         window.URL.revokeObjectURL(url)
       }
     } catch (e: any) {
-      showToast(e?.message || 'Fee export mein error aaya', 'error')
+      toast.error(e?.message || 'Fee export mein error aaya')
     } finally {
       setFeeExporting(false)
     }
@@ -141,7 +135,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       if (formTargetType === 'all') list = students as any[]
       else if (formTargetType === 'class') list = (students as any[]).filter(s => (s.admissionFor || '') === formClassName)
       else if (formTargetType === 'student') list = (students as any[]).filter(s => s._id === formStudentId)
-      if (list.length === 0) { alert('Koi student nahi mila.'); return }
+      if (list.length === 0) { toast.error('Koi student nahi mila.'); return }
 
       const jsPDFMod: any = await import('jspdf')
       const { default: JSZip } = await import('jszip') as any
@@ -255,9 +249,9 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
             const tint = await tintImageAlpha(logoDataUrl, 0.12, wmW, wmH)
             const wmX = margin + (contentWidth - wmW) / 2
             const wmY = margin + ((pageHeight - margin * 2) - wmH) / 2
-            ;(doc as any).addImage(tint, 'PNG', wmX, wmY, wmW, wmH)
+              ; (doc as any).addImage(tint, 'PNG', wmX, wmY, wmW, wmH)
           }
-        } catch {}
+        } catch { }
 
         // Student Photo (professional positioning with border)
         let photoAdded = false
@@ -281,15 +275,15 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
               photoY = imgY
               photoW = imgW
               photoH = imgH
-              
+
               // Add photo border
               doc.setDrawColor(83, 36, 42)
               doc.setLineWidth(2)
               doc.rect(imgX - 2, imgY - 2, imgW + 4, imgH + 4, 'S')
-              
+
               // Try to infer image type from URL
               const fmt = /\.png($|\?)/i.test(possibleUrl) ? 'PNG' : 'JPEG'
-              try { 
+              try {
                 (doc as any).addImage(dataUrl, fmt, imgX, imgY, imgW, imgH)
                 photoAdded = true
               } catch { /* ignore addImage error */ }
@@ -306,7 +300,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
             // place towards top-right within content area
             const qx = pageWidth - margin - qSize
             const qy = photoY
-            ;(doc as any).addImage(qDataUrl, 'PNG', qx, qy, qSize, qSize)
+              ; (doc as any).addImage(qDataUrl, 'PNG', qx, qy, qSize, qSize)
           }
         } catch { /* ignore QR errors */ }
 
@@ -355,19 +349,19 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           // Maximum width allowed for this column's content area
           const adjustedColWidth = Math.min(colWidth, Math.max(50, rightLimitX - x))
           const labelWidth = 110
-          
+
           // Label styling
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(10)
           doc.setTextColor(70, 70, 70) // Dark gray
           doc.text(label + ':', x, y)
-          
+
           // Value styling with text wrapping for long content
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(10)
           doc.setTextColor(0, 0, 0) // Black
           const text = (value ?? '—').toString()
-          
+
           // Handle long text with proper wrapping
           const maxWidth = Math.max(40, adjustedColWidth - labelWidth - 5)
           if (text.length > 25) {
@@ -402,7 +396,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         kvSingle('Full Name', (s as any).fullName, summaryStartX, summaryRightX)
         kvSingle('Roll Number', (s as any).rollNumber, summaryStartX, summaryRightX)
         kvSingle('Class', (s as any).admissionFor, summaryStartX, summaryRightX)
-        kvSingle('GR Number', (s as any).grNumber , summaryStartX, summaryRightX)
+        kvSingle('GR Number', (s as any).grNumber, summaryStartX, summaryRightX)
 
         // Move y below the photo block before starting Personal Information
         if (photoAdded) {
@@ -464,13 +458,13 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
 
         // Ensure signatures fit on the page (moved a bit downward for spacing)
         const sigY = Math.min(y + 60, footerY - 100)
-        
+
         // Signature section background
         doc.setFillColor(255, 255, 255) // Very light background
         doc.setDrawColor(255, 255, 255)
         doc.setLineWidth(0.5)
         doc.rect(margin, sigY - 15, contentWidth, 60, 'FD')
-        
+
         // Signature lines with better spacing
         const sigLineWidth = 140
         const sigGap = (contentWidth - sigLineWidth * 3) / 2
@@ -478,22 +472,22 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         const sigX2 = margin + sigLineWidth + sigGap
         const sigX3 = margin + (sigLineWidth + sigGap) * 2 - 20
         const actualSigY = sigY + 20
-        
+
         // Draw signature lines
         doc.setDrawColor(0, 0, 0)
         doc.setLineWidth(1)
         doc.line(sigX1, actualSigY, sigX1 + sigLineWidth, actualSigY)
         doc.line(sigX2, actualSigY, sigX2 + sigLineWidth, actualSigY)
         doc.line(sigX3, actualSigY, sigX3 + sigLineWidth, actualSigY)
-        
+
         // Signature labels
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(0, 0, 0)
         const labelY = actualSigY + 15
-        doc.text('Student Signature', sigX1 + sigLineWidth/2, labelY, { align: 'center' })
-        doc.text('Parent/Guardian Signature', sigX2 + sigLineWidth/2, labelY, { align: 'center' })
-        doc.text('Principal Signature', sigX3 + sigLineWidth/2, labelY, { align: 'center' })
+        doc.text('Student Signature', sigX1 + sigLineWidth / 2, labelY, { align: 'center' })
+        doc.text('Parent/Guardian Signature', sigX2 + sigLineWidth / 2, labelY, { align: 'center' })
+        doc.text('Principal Signature', sigX3 + sigLineWidth / 2, labelY, { align: 'center' })
 
         // Footer with professional styling (bottom center)
         doc.setFont('helvetica', 'italic')
@@ -518,7 +512,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         window.URL.revokeObjectURL(url)
       }
     } catch (e: any) {
-      showToast(e?.message || 'ZIP prepare karte hue error aaya', 'error')
+      toast.error(e?.message || 'ZIP prepare karte hue error aaya')
     } finally {
       setZipPreparing(false)
     }
@@ -589,7 +583,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       if ((s.gender || '').toString().toLowerCase() === 'female') female++
 
       const age = ageFromDob(s.dob)
-      if (age == null) {/* ignore */}
+      if (age == null) {/* ignore */ }
       else if (age < 5) ageBuckets['<5']++
       else if (age <= 7) ageBuckets['5-7']++
       else if (age <= 10) ageBuckets['8-10']++
@@ -651,23 +645,23 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       case 'Female':
         return list.filter(s => String(s.gender || '').toLowerCase() === 'female')
       case 'Age <5': {
-        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a<5 }
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null); return a != null && a < 5 }
         return list.filter(f)
       }
       case 'Age 5-7': {
-        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a>=5 && a<=7 }
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null); return a != null && a >= 5 && a <= 7 }
         return list.filter(f)
       }
       case 'Age 8-10': {
-        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a>=8 && a<=10 }
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null); return a != null && a >= 8 && a <= 10 }
         return list.filter(f)
       }
       case 'Age 11-13': {
-        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a>=11 && a<=13 }
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null); return a != null && a >= 11 && a <= 13 }
         return list.filter(f)
       }
       case 'Age 14+': {
-        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime())/(365.25*24*60*60*1000)) : null); return a!=null && a>=14 }
+        const f = (s: any) => { const a = (s.dob ? Math.floor((Date.now() - new Date(s.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null); return a != null && a >= 14 }
         return list.filter(f)
       }
       default:
@@ -686,7 +680,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       else if (targetType === 'student') selected = (students as any[]).filter(s => s._id === studentId)
 
       if (selected.length === 0) {
-        showToast('Koi data nahi mila export ke liye.', 'error')
+        toast.error('Koi data nahi mila export ke liye.')
         return
       }
 
@@ -767,7 +761,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         window.URL.revokeObjectURL(url)
       }
     } catch (e: any) {
-      showToast(e?.message || 'Excel export mein error aaya', 'error')
+      toast.error(e?.message || 'Excel export mein error aaya')
     } finally {
       setExporting(false)
     }
@@ -988,7 +982,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
             )}
           </div>
           <div className="mt-4">
-            <button onClick={handleExportExcel} disabled={exporting || (targetType==='class' && !className) || (targetType==='student' && !studentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
+            <button onClick={handleExportExcel} disabled={exporting || (targetType === 'class' && !className) || (targetType === 'student' && !studentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
               {exporting ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
               <span>{exporting ? 'Exporting…' : 'Export'}</span>
             </button>
@@ -1053,7 +1047,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
             )}
           </div>
           <div className="mt-4">
-            <button onClick={handleExportFeesExcel} disabled={feeExporting || (feeTargetType==='class' && !feeClassName) || (feeTargetType==='student' && !feeStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
+            <button onClick={handleExportFeesExcel} disabled={feeExporting || (feeTargetType === 'class' && !feeClassName) || (feeTargetType === 'student' && !feeStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
               {feeExporting ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
               <span>{feeExporting ? 'Exporting…' : 'Export Fees'}</span>
             </button>
@@ -1118,7 +1112,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
             )}
           </div>
           <div className="mt-4">
-            <button onClick={handleDownloadFormsZip} disabled={zipPreparing || (formTargetType==='class' && !formClassName) || (formTargetType==='student' && !formStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
+            <button onClick={handleDownloadFormsZip} disabled={zipPreparing || (formTargetType === 'class' && !formClassName) || (formTargetType === 'student' && !formStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
               {zipPreparing ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
               <span>{zipPreparing ? 'Preparing…' : 'Download ZIP'}</span>
             </button>
@@ -1132,7 +1126,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           <div className="bg-white sm:rounded-2xl rounded-none p-4 sm:p-6 w-full sm:max-w-2xl max-w-none h-full sm:h-auto relative shadow-2xl border border-gray-200 overflow-y-auto sm:max-h-[90vh]">
             <div className="flex items-center justify-between pb-3 border-b">
               <h3 className="text-xl font-semibold">{insightModal.title}</h3>
-              <button className="text-gray-500 hover:text-red-600" onClick={() => setInsightModal({ open: false, title: '', items: [] })}><X/></button>
+              <button className="text-gray-500 hover:text-red-600" onClick={() => setInsightModal({ open: false, title: '', items: [] })}><X /></button>
             </div>
             <div className="mt-4">
               {insightModal.title === 'Unique Classes' ? (
@@ -1163,12 +1157,6 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         </div>
       )}
 
-      {/* Toast */}
-      {toast?.show && (
-        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-          {toast.message}
-        </div>
-      )}
     </div>
   )
 }

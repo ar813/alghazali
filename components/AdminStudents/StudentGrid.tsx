@@ -1,6 +1,7 @@
-import React from 'react';
+"use client";
 import Image from 'next/image';
-import { User, ClipboardList, BookOpen } from 'lucide-react';
+import { Phone } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 import type { Student } from '@/types/student';
 
@@ -16,76 +17,80 @@ interface StudentGridProps {
 const StudentGrid: React.FC<StudentGridProps> = ({ students, loading, onView, onEdit, onDelete, deleteLoadingId }) => {
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <div className="w-10 h-10 border-4 border-gray-900 border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-gray-500 font-medium animate-pulse">Loading directory...</p>
+            <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm md:hidden">
+                <div className="w-8 h-8 border-4 border-neutral-200 dark:border-neutral-800 border-t-neutral-900 dark:border-t-white rounded-full animate-spin" />
             </div>
         );
     }
 
     if (students.length === 0) {
         return (
-            <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-gray-400">No students found matching your criteria.</p>
+            <div className="text-center py-12 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 md:hidden">
+                <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest">No students found</p>
             </div>
         );
     }
 
     return (
-        <div className="grid grid-cols-1 gap-3 md:hidden">
-            {students.map((student) => (
-                <div
+        <div className="grid grid-cols-1 gap-4 md:hidden pb-10">
+            {students.map((student, idx) => (
+                <motion.div
                     key={student._id || student.grNumber}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03 }}
                     onClick={() => onView(student)}
-                    className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow active:scale-[0.99]"
+                    className="bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-900 p-4 shadow-sm active:scale-[0.99] transition-all"
                 >
-                    <div className="flex items-start gap-4">
-                        {/* Avatar */}
-                        <div className="flex-shrink-0">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="relative w-12 h-12 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 overflow-hidden flex items-center justify-center shrink-0">
                             {student.photoUrl ? (
-                                <Image src={student.photoUrl} alt={student.fullName} width={56} height={56} className="rounded-xl object-cover border border-gray-100 bg-gray-50" unoptimized />
+                                <Image src={student.photoUrl} alt={student.fullName} fill className="object-cover" unoptimized />
                             ) : (
-
-                                <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700 font-bold text-xl">
+                                <span className="text-base font-bold text-neutral-400">
                                     {student.fullName?.charAt(0) || '?'}
-                                </div>
+                                </span>
                             )}
                         </div>
 
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{student.fullName}</h3>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mb-1.5">
-                                <span className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
-                                    <BookOpen size={10} /> Class {student.admissionFor}
-                                </span>
-                                <span className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
-                                    <ClipboardList size={10} /> GR: {student.grNumber}
-                                </span>
-                            </div>
-                            <div className="text-xs text-slate-500 flex items-center gap-1">
-                                <User size={10} /> Father: {student.fatherName}
+                        <div className="min-w-0 flex-1">
+                            <h3 className="font-bold text-neutral-900 dark:text-white text-[15px] truncate">{student.fullName}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Class {student.admissionFor}</span>
+                                <span className="w-1 h-1 rounded-full bg-neutral-300" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">GR: {student.grNumber}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end gap-3">
+                    <div className="py-3 border-y border-neutral-50 dark:border-neutral-900 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-neutral-400 font-medium">Father:</span>
+                            <span className="text-neutral-700 dark:text-neutral-300 font-bold">{student.fatherName}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-neutral-400 font-medium">Contact:</span>
+                            <span className="text-neutral-700 dark:text-neutral-300 font-bold flex items-center gap-1">
+                                <Phone size={10} /> {student.phoneNumber || '—'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-end gap-2">
                         <button
                             onClick={(e) => { e.stopPropagation(); onEdit(student); }}
-                            className="text-xs font-semibold text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 border border-gray-200"
+                            className="px-4 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-xl hover:bg-neutral-100 transition-all"
                         >
                             Edit
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); if (student._id) onDelete(student._id); }}
-                            className="text-xs font-semibold text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-red-100"
+                            className="px-4 py-2 text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl hover:bg-rose-100 transition-all"
                         >
-
-                            {deleteLoadingId === student._id ? 'Deleting...' : 'Delete'}
+                            {deleteLoadingId === student._id ? '...' : 'Delete'}
                         </button>
                     </div>
-                </div>
+                </motion.div>
             ))}
         </div>
     );

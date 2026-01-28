@@ -1,5 +1,7 @@
+"use client";
 import React from 'react';
-import { Users, UserCheck, GraduationCap } from 'lucide-react';
+import { Users, UserCircle2, GraduationCap, UserSquare2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface HeaderStatsProps {
     stats: {
@@ -12,22 +14,32 @@ interface HeaderStatsProps {
 
 const HeaderStats = ({ stats }: HeaderStatsProps) => {
     const cards = [
-        { label: 'Total Students', value: stats.total || 0, icon: Users },
-        { label: 'Boys', value: stats.boys || 0, icon: UserCheck },
-        { label: 'Girls', value: stats.girls || 0, icon: UserCheck },
-        { label: 'KG Class', value: stats.kg || 0, icon: GraduationCap },
+        { label: 'Total Students', value: stats.total || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { label: 'Boys', value: stats.boys || 0, icon: UserCircle2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { label: 'Girls', value: stats.girls || 0, icon: UserSquare2, color: 'text-rose-600', bg: 'bg-rose-50' },
+        { label: 'KG Class', value: stats.kg || 0, icon: GraduationCap, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     ];
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            {cards.map((card) => (
-                <div key={card.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col items-center sm:items-start text-center sm:text-left transition-all hover:border-black/20 group">
-                    <div className={`p-2.5 rounded-lg bg-gray-50 text-gray-900 mb-3 group-hover:bg-primary group-hover:text-white transition-colors`}>
-                        <card.icon size={20} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {cards.map((card, idx) => (
+                <motion.div
+                    key={card.label}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 shadow-sm"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-xl ${card.bg} dark:bg-neutral-800 ${card.color} dark:text-white`}>
+                            <card.icon size={24} />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-neutral-900 dark:text-white">{card.value}</p>
+                            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{card.label}</p>
+                        </div>
                     </div>
-                    <p className="text-2xl font-bold text-gray-800 leading-tight">{card.value}</p>
-                    <p className="text-xs text-gray-500 font-medium">{card.label}</p>
-                </div>
+                </motion.div>
             ))}
         </div>
     );

@@ -5,7 +5,7 @@ const Footer = () => {
     const appUrl = process.env.NEXT_PUBLIC_MOBILE_APP_URL || '#';
 
     return (
-        <footer className="bg-background text-foreground border-t border-border py-12 lg:py-20">
+        <footer className="bg-background text-foreground border-t border-border py-12 lg:py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
                     <div>
@@ -60,16 +60,16 @@ const Footer = () => {
                         <h4 className="text-base sm:text-lg font-semibold mb-4 sm:mb-6">Contact Info</h4>
                         <div className="space-y-4">
                             <div className="flex items-start space-x-3">
-                                <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
-                                <p className="text-sm text-muted-foreground">Block 15, Gulshan-e-Iqbal, Karachi, Pakistan</p>
+                                <MapPin className="w-4 h-4 text-muted-foreground mt-1 shrink-0" />
+                                <p className="text-sm text-muted-foreground leading-relaxed">Area 36-B, Double Road, Landhi Town, Karachi</p>
                             </div>
                             <div className="flex items-center space-x-3">
                                 <Phone className="w-4 h-4 text-muted-foreground" />
-                                <p className="text-sm text-muted-foreground">+92 21 34567890</p>
+                                <p className="text-sm text-muted-foreground">+92 321 9230035</p>
                             </div>
                             <div className="flex items-center space-x-3">
                                 <Mail className="w-4 h-4 text-muted-foreground" />
-                                <p className="text-sm text-muted-foreground">info@alghazalischool.edu.pk</p>
+                                <p className="text-sm text-muted-foreground">ar3584158@gmail.com</p>
                             </div>
                         </div>
                     </div>

@@ -32,7 +32,7 @@ export const getAllStudentsQuery = `*[_type == "student"]{${studentFields}}`
 export const getPaginatedStudentsQuery = `*[_type == "student" 
   && ($classFilter == "All" || admissionFor == $classFilter)
   && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*" || grNumber match $search + "*")
-] | order(_createdAt desc) [$start...$end] {${studentFields}}`
+] | order(admissionFor asc, rollNumber asc) [$start...$end] {${studentFields}}`
 
 export const getStudentsCountQuery = `count(*[_type == "student" 
   && ($classFilter == "All" || admissionFor == $classFilter)

@@ -5,12 +5,11 @@ import { Megaphone, Save, Loader2, Edit2, Trash2, RefreshCw, X } from 'lucide-re
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
 import type { Student } from '@/types/student'
+import { toast } from "sonner";
 
 const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
   const [students, setStudents] = useState<Student[]>([])
   const [saving, setSaving] = useState<boolean>(false)
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
-  const showToast = (m: string, t: 'success' | 'error' = 'success') => { setToast({ show: true, message: m, type: t }); window.setTimeout(() => setToast(null), 2200) }
 
   useEffect(() => {
     const load = async () => {
@@ -34,10 +33,10 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
   const [studentQuickFilter, setStudentQuickFilter] = useState('')
 
   const submit = async () => {
-    if (!form.title.trim()) return showToast('Title is required', 'error')
-    if (!form.content.trim()) return showToast('Content is required', 'error')
-    if (form.targetType === 'class' && !form.className) return showToast('Class is required for class target', 'error')
-    if (form.targetType === 'student' && !form.studentId) return showToast('Student is required for student target', 'error')
+    if (!form.title.trim()) return toast.error('Title is required')
+    if (!form.content.trim()) return toast.error('Content is required')
+    if (form.targetType === 'class' && !form.className) return toast.error('Class is required for class target')
+    if (form.targetType === 'student' && !form.studentId) return toast.error('Student is required for student target')
     // email sending removed from UI
     setSaving(true)
     try {
@@ -56,10 +55,10 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
       })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to create notice')
-      showToast('Notice created', 'success')
+      toast.success('Notice created')
       setForm({ title: '', content: '', targetType: 'all', className: '', studentId: '', isEvent: false, eventDate: '', eventType: '', isHeadline: false })
     } catch (e: any) {
-      showToast(e?.message || 'Failed to create notice', 'error')
+      toast.error(e?.message || 'Failed to create notice')
     } finally { setSaving(false) }
   }
 
@@ -151,10 +150,6 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
       </div>
 
       <NoticesList onLoadingChange={onLoadingChange} students={students} classOptions={classOptions} />
-
-      {toast?.show && (
-        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>{toast.message}</div>
-      )}
     </div>
   )
 }
@@ -163,8 +158,6 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
   const [items, setItems] = useState<any[]>([])
   const [editing, setEditing] = useState<any | null>(null)
   const [workingId, setWorkingId] = useState<string | null>(null)
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
-  const showToast = (m: string, t: 'success' | 'error' = 'success') => { setToast({ show: true, message: m, type: t }); window.setTimeout(() => setToast(null), 2200) }
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
   const [deleteAllInput, setDeleteAllInput] = useState('')
 
@@ -212,7 +205,7 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setEditing(n)} className="px-2 py-1 text-xs border rounded inline-flex items-center gap-1"><Edit2 size={14} /> Edit</button>
-                  <button onClick={async () => { setWorkingId(n._id); try { await fetch(`/api/notices?id=${n._id}`, { method: 'DELETE' }); setItems(items.filter(i => i._id !== n._id)); showToast('Notice deleted.', 'success') } finally { setWorkingId(null) } }} disabled={workingId === n._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14} />{workingId === n._id ? '...' : 'Delete'}</button>
+                  <button onClick={async () => { setWorkingId(n._id); try { await fetch(`/api/notices?id=${n._id}`, { method: 'DELETE' }); setItems(items.filter(i => i._id !== n._id)); toast.success('Notice deleted.') } finally { setWorkingId(null) } }} disabled={workingId === n._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14} />{workingId === n._id ? '...' : 'Delete'}</button>
                 </div>
               </div>
               <div className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{n.content}</div>
@@ -245,13 +238,10 @@ const NoticesList = ({ onLoadingChange, students, classOptions }: { onLoadingCha
             <input value={deleteAllInput} onChange={e => setDeleteAllInput(e.target.value)} className="w-full border rounded px-3 py-2 mt-3" placeholder="Type DELETE" />
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowDeleteAllConfirm(false)} className="px-3 py-2 border rounded">Cancel</button>
-              <button disabled={deleteAllInput !== 'DELETE'} onClick={async () => { try { await fetch('/api/notices?all=true', { method: 'DELETE' }); setItems([]); showToast('All notices deleted', 'success') } finally { setShowDeleteAllConfirm(false); setDeleteAllInput('') } }} className={`px-4 py-2 rounded text-white ${deleteAllInput === 'DELETE' ? 'bg-red-600' : 'bg-red-300 cursor-not-allowed'}`}>Delete All</button>
+              <button disabled={deleteAllInput !== 'DELETE'} onClick={async () => { try { await fetch('/api/notices?all=true', { method: 'DELETE' }); setItems([]); toast.success('All notices deleted') } finally { setShowDeleteAllConfirm(false); setDeleteAllInput('') } }} className={`px-4 py-2 rounded text-white ${deleteAllInput === 'DELETE' ? 'bg-red-600' : 'bg-red-300 cursor-not-allowed'}`}>Delete All</button>
             </div>
           </div>
         </div>
-      )}
-      {toast?.show && (
-        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>{toast.message}</div>
       )}
     </div>
   )
@@ -278,9 +268,8 @@ const EditModal = ({ notice, onClose, onSaved, students, classOptions }: { notic
       if (!json?.ok) throw new Error(json?.error || 'Failed to update')
       onSaved({ ...notice, title, content, targetType, className, student: studentId ? { _id: studentId, fullName: notice.student?.fullName || 'Student' } : null, isEvent, eventDate: isEvent ? (eventDate ? new Date(eventDate).toISOString() : null) : null, eventType: isEvent ? (eventType || 'General') : null, isHeadline })
     } catch (e) {
-      // no-op basic error display for now
       console.error('Failed to update notice:', e);
-      alert('Failed to update notice')
+      toast.error('Failed to update notice')
     } finally { setSaving(false) }
   }
 

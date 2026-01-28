@@ -37,11 +37,11 @@ const SchoolEvents = () => {
   }
 
   return (
-    <section id="events" className="py-24 bg-background">
+    <section id="events" className="py-16 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-12 sm:mb-16">
+        <div className="text-center mb-10 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">Upcoming Events</h2>
-          <p className="text-base sm:text-xl text-muted-foreground max-w-3xl mx-auto px-2">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto px-2">
             Stay updated with our latest events and activities.
           </p>
         </div>
@@ -61,8 +61,8 @@ const SchoolEvents = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {events.map((event) => (
-              <div key={event._id} className="bg-card border border-border rounded-xl hover:border-primary/50 transition-all duration-300 p-4 sm:p-6 group">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div key={event._id} className="bg-card border border-border rounded-xl hover:border-primary/20 hover:shadow-sm transition-all duration-300 p-5 group">
+                <div className="flex items-center justify-between mb-3">
                   <div className="bg-primary/5 text-primary border border-border px-3 py-1 rounded-md text-xs sm:text-sm font-medium">
                     {formatBadgeDate(event.eventDate)}
                   </div>

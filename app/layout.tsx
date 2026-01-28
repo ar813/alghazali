@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: "Under the supervision of Al Razi Educational & Welfare Society",
 };
 
+import { Toaster } from "@/components/ui/sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,6 +35,7 @@ export default function RootLayout({
         <Provider>
           {children}
           <AppDownloadPromo />
+          <Toaster position="top-right" richColors closeButton />
         </Provider>
       </body>
     </html>

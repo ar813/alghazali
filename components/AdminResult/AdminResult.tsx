@@ -1,12 +1,13 @@
- "use client"
+"use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
+import { toast } from "sonner";
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
 import type { Student } from '@/types/student'
 import { RotateCw, CheckCircle2 } from 'lucide-react'
 
-const classes = ['KG','1','2','3','4','5','6','7','8','SSCI','SSCII']
+const classes = ['KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII']
 
 type Entry = {
   studentId: string
@@ -26,12 +27,11 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
   const [examTitle, setExamTitle] = useState('')
   const [subjectsCount, setSubjectsCount] = useState<number>(0)
   const [subjects, setSubjects] = useState<string[]>([])
-  const [step, setStep] = useState<'setup'|'table'>('setup')
+  const [step, setStep] = useState<'setup' | 'table'>('setup')
 
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [savedOk, setSavedOk] = useState(false)
   const [availableClasses, setAvailableClasses] = useState<string[]>([])
   const [existingResults, setExistingResults] = useState<any[]>([])
   const [maxMarksPerSubject, setMaxMarksPerSubject] = useState<number>(100)
@@ -46,7 +46,7 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
     const loadClasses = async () => {
       try {
         const list = await client.fetch("*[_type == 'student' && defined(admissionFor)].admissionFor")
-        const unique = Array.from(new Set((Array.isArray(list) ? list : []).map((v: any)=> String(v))))
+        const unique = Array.from(new Set((Array.isArray(list) ? list : []).map((v: any) => String(v))))
         // Sort using existing order fallback
         const order = (c: string) => {
           const idx = classes.indexOf(c)
@@ -54,9 +54,9 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
           const n = parseInt(c, 10)
           return isNaN(n) ? 999 : n
         }
-        unique.sort((a,b)=> order(a) - order(b))
+        unique.sort((a, b) => order(a) - order(b))
         setAvailableClasses(unique)
-      } catch {}
+      } catch { }
     }
     loadClasses()
   }, [])
@@ -70,8 +70,8 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
         const data: Student[] = await client.fetch(getAllStudentsQuery)
         const filtered = (Array.isArray(data) ? data : []).filter(s => (s.admissionFor || '') === className)
         // sort by rollNumber numeric
-        const num = (v: string) => { const n = parseInt((v||'').replace(/[^0-9]/g,''),10); return isNaN(n)? Number.POSITIVE_INFINITY : n }
-        filtered.sort((a,b)=> num(a.rollNumber) - num(b.rollNumber))
+        const num = (v: string) => { const n = parseInt((v || '').replace(/[^0-9]/g, ''), 10); return isNaN(n) ? Number.POSITIVE_INFINITY : n }
+        filtered.sort((a, b) => num(a.rollNumber) - num(b.rollNumber))
         setStudents(filtered)
         // init marks map if empty
         const init: Record<string, (number | null)[]> = {}
@@ -104,19 +104,19 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
     const loadTitles = async () => {
       try {
         const docs = await client.fetch(`*[_type == "result"${className ? ' && className == $cls' : ''}][]{ examTitle }`, className ? { cls: className } : {})
-        const uniq = Array.from(new Set((Array.isArray(docs) ? docs : []).map((d:any)=> String(d?.examTitle || '')).filter(Boolean)))
+        const uniq = Array.from(new Set((Array.isArray(docs) ? docs : []).map((d: any) => String(d?.examTitle || '')).filter(Boolean)))
         setExamTitles(uniq)
       } catch { setExamTitles([]) }
     }
     loadTitles()
-  }, [className, savedOk])
+  }, [className])
 
   const canContinue = useMemo(() => {
     if (!className) return false
     if (!examTitle.trim()) return false
     if (!subjectsCount || subjectsCount < 1) return false
     if (subjects.length !== subjectsCount) return false
-    if (subjects.some(s=>!s.trim())) return false
+    if (subjects.some(s => !s.trim())) return false
     if (!maxMarksPerSubject || maxMarksPerSubject <= 0) return false
     if (minPassPercentage < 0 || minPassPercentage > 100) return false
     return true
@@ -137,7 +137,7 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
   }
 
   const onChangeSubject = (idx: number, value: string) => {
-    setSubjects(prev => prev.map((s,i)=> i===idx ? value : s))
+    setSubjects(prev => prev.map((s, i) => i === idx ? value : s))
   }
 
   const entries: Entry[] = useMemo(() => {
@@ -172,14 +172,14 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
     setMarksMap(prev => ({
       ...prev,
       [studentKey]: (prev[studentKey]
-        ? prev[studentKey].map((v,i)=> i===subjIndex ? (n as any) : v)
-        : Array.from({ length: subjects.length }, (_,i)=> i===subjIndex ? (n as any) : null))
+        ? prev[studentKey].map((v, i) => i === subjIndex ? (n as any) : v)
+        : Array.from({ length: subjects.length }, (_, i) => i === subjIndex ? (n as any) : null))
     }))
   }
 
   const handleSave = async () => {
-    if (!subjects.length || students.length===0) return
-    setSaving(true); setSavedOk(false)
+    if (!subjects.length || students.length === 0) return
+    setSaving(true)
     try {
       const payload = {
         className,
@@ -194,18 +194,18 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
           rollNumber: e.rollNumber,
           grNumber: e.grNumber,
           className: e.className,
-          marks: e.marks.map(m => m==null ? 0 : Number(m)),
+          marks: e.marks.map(m => m == null ? 0 : Number(m)),
           percentage: e.percentage,
           grade: e.grade,
           remarks: e.remarks,
         }))
       }
       const res = await fetch('/api/results', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      const j = await res.json().catch(()=>({}))
+      const j = await res.json().catch(() => ({}))
       if (!res.ok || !j?.ok) throw new Error(j?.error || `HTTP ${res.status}`)
-      setSavedOk(true)
+      toast.success('Results saved successfully')
     } catch (e: any) {
-      alert(`Save failed: ${e?.message || e}`)
+      toast.error(`Save failed: ${e?.message || e}`)
     } finally {
       setSaving(false)
     }
@@ -218,29 +218,29 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
           <div className="grid sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Class</label>
-              <select value={className} onChange={e=>setClassName(e.target.value)} className="w-full border rounded px-3 py-2">
+              <select value={className} onChange={e => setClassName(e.target.value)} className="w-full border rounded px-3 py-2">
                 <option value="">Select Class</option>
                 {(availableClasses.length ? availableClasses : classes).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Exam Title</label>
-              <input value={examTitle} onChange={e=>setExamTitle(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="e.g. Mid Term 2025" />
+              <input value={examTitle} onChange={e => setExamTitle(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="e.g. Mid Term 2025" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">How many subjects?</label>
-              <input type="number" min={1} max={15} value={subjectsCount || ''} onChange={e=>handleSubjectsCount(Number(e.target.value))} className="w-full border rounded px-3 py-2" placeholder="e.g. 6" />
+              <input type="number" min={1} max={15} value={subjectsCount || ''} onChange={e => handleSubjectsCount(Number(e.target.value))} className="w-full border rounded px-3 py-2" placeholder="e.g. 6" />
             </div>
             <div className="flex items-end">
-              <button disabled={!canContinue} onClick={()=>setStep('table')} className={`px-4 py-2 rounded ${canContinue ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>Continue</button>
+              <button disabled={!canContinue} onClick={() => setStep('table')} className={`px-4 py-2 rounded ${canContinue ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>Continue</button>
             </div>
           </div>
           {subjectsCount > 0 && (
             <div className="grid sm:grid-cols-3 gap-3 mt-4">
-              {Array.from({ length: subjectsCount }).map((_,i)=> (
+              {Array.from({ length: subjectsCount }).map((_, i) => (
                 <div key={i}>
-                  <label className="block text-xs text-gray-600 mb-1">Subject {i+1}</label>
-                  <input value={subjects[i] || ''} onChange={e=>onChangeSubject(i, e.target.value)} className="w-full border rounded px-3 py-2" placeholder={`Subject ${i+1} name`} />
+                  <label className="block text-xs text-gray-600 mb-1">Subject {i + 1}</label>
+                  <input value={subjects[i] || ''} onChange={e => onChangeSubject(i, e.target.value)} className="w-full border rounded px-3 py-2" placeholder={`Subject ${i + 1} name`} />
                 </div>
               ))}
             </div>
@@ -253,14 +253,11 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm text-gray-700">Class: <span className="font-semibold">{className}</span> • Exam: <span className="font-semibold">{examTitle}</span> • Subjects: {subjects.join(', ')}</div>
             <div className="flex items-center gap-2">
-              <button onClick={()=>{ setStep('setup'); setSavedOk(false) }} className="px-3 py-2 border rounded">Back</button>
-              <button onClick={()=>{ setStudents([]); setMarksMap({}); setSavedOk(false) }} className="px-3 py-2 border rounded inline-flex items-center gap-2"><RotateCw size={16}/> Reset Marks</button>
-              <button onClick={handleSave} disabled={saving || students.length===0 || !examTitle.trim()} className={`px-4 py-2 rounded ${saving? 'bg-gray-300' : 'bg-emerald-600 text-white'}`}>{saving ? 'Saving...' : 'Enter'}</button>
+              <button onClick={() => { setStep('setup') }} className="px-3 py-2 border rounded">Back</button>
+              <button onClick={() => { setStudents([]); setMarksMap({}) }} className="px-3 py-2 border rounded inline-flex items-center gap-2"><RotateCw size={16} /> Reset Marks</button>
+              <button onClick={handleSave} disabled={saving || students.length === 0 || !examTitle.trim()} className={`px-4 py-2 rounded ${saving ? 'bg-gray-300' : 'bg-emerald-600 text-white'}`}>{saving ? 'Saving...' : 'Enter'}</button>
             </div>
           </div>
-          {savedOk && (
-            <div className="mb-3 p-2 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm inline-flex items-center gap-2"><CheckCircle2 size={16}/> Results saved</div>
-          )}
           {loading ? (
             <div className="text-sm text-gray-500">Loading students...</div>
           ) : students.length === 0 ? (
@@ -274,32 +271,32 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
                   <th className="p-2">Father Name</th>
                   <th className="p-2">Roll No</th>
                   <th className="p-2">GR Number</th>
-                  {subjects.map((s, i)=> <th key={i} className="p-2">{s || `Subject ${i+1}`}</th>)}
+                  {subjects.map((s, i) => <th key={i} className="p-2">{s || `Subject ${i + 1}`}</th>)}
                   <th className="p-2">Percentage</th>
                   <th className="p-2">Grade</th>
                   <th className="p-2">Remarks</th>
                 </tr>
               </thead>
               <tbody>
-                {students.map((s,idx)=> {
+                {students.map((s, idx) => {
                   const sid = s._id || s.grNumber
                   const row = entries[idx]
                   const rowMarks = marksMap[sid] || Array.from({ length: subjects.length }, () => 0)
                   return (
                     <tr key={sid} className="border-b">
-                      <td className="p-2">{idx+1}</td>
+                      <td className="p-2">{idx + 1}</td>
                       <td className="p-2">{s.fullName}</td>
                       <td className="p-2">{s.fatherName}</td>
                       <td className="p-2">{s.rollNumber}</td>
                       <td className="p-2">{s.grNumber}</td>
-                      {subjects.map((_,i)=> (
+                      {subjects.map((_, i) => (
                         <td key={i} className="p-1">
                           <input
                             type="number"
                             min={0}
                             max={maxMarksPerSubject}
                             value={rowMarks[i] == null ? '' : rowMarks[i]}
-                            onChange={e=> setMark(sid, i, e.target.value)}
+                            onChange={e => setMark(sid, i, e.target.value)}
                             className="w-20 border rounded px-2 py-1"
                           />
                         </td>
@@ -315,18 +312,17 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
           )}
           <div className="mt-3 flex items-center gap-2">
             <button
-              onClick={async ()=>{
-                if (!examTitle.trim() || !className) return alert('Select class and exam title')
+              onClick={async () => {
+                if (!examTitle.trim() || !className) return toast.error('Select class and exam title')
                 if (!confirm(`Delete all results for "${examTitle}" in class "${className}"?`)) return
                 try {
                   const res = await fetch(`/api/results?className=${encodeURIComponent(className)}&examTitle=${encodeURIComponent(examTitle)}`, { method: 'DELETE' })
-                  const j = await res.json().catch(()=>({}))
+                  const j = await res.json().catch(() => ({}))
                   if (!res.ok || !j?.ok) throw new Error(j?.error || `HTTP ${res.status}`)
                   setExistingResults([])
-                  setSavedOk(false)
-                  alert('Deleted')
-                } catch (e:any) {
-                  alert(`Delete failed: ${e?.message || e}`)
+                  toast.success('Deleted')
+                } catch (e: any) {
+                  toast.error(`Delete failed: ${e?.message || e}`)
                 }
               }}
               className="px-3 py-2 border border-red-300 text-red-700 rounded"
@@ -343,7 +339,7 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
                       <th className="p-2">Student</th>
                       <th className="p-2">GR</th>
                       <th className="p-2">Roll</th>
-                      {(existingResults[0]?.subjects || subjects).map((s: string, i: number)=> <th key={i} className="p-2">{s || `S${i+1}`}</th>)}
+                      {(existingResults[0]?.subjects || subjects).map((s: string, i: number) => <th key={i} className="p-2">{s || `S${i + 1}`}</th>)}
                       <th className="p-2">%</th>
                       <th className="p-2">Grade</th>
                       <th className="p-2">Remarks</th>
@@ -355,7 +351,7 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
                         <td className="p-2">{r.studentName}</td>
                         <td className="p-2">{r.grNumber}</td>
                         <td className="p-2">{r.rollNumber}</td>
-                        {(r.subjects || subjects).map((_: string, i: number)=> (
+                        {(r.subjects || subjects).map((_: string, i: number) => (
                           <td key={i} className="p-2">{Number(r.marks?.[i] ?? 0)}</td>
                         ))}
                         <td className="p-2">{r.percentage}%</td>
@@ -381,8 +377,8 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
               {examTitles.map(title => (
                 <button
                   key={title}
-                  onClick={async ()=>{
-                    if (!className) { alert('Please select a Class first'); return }
+                  onClick={async () => {
+                    if (!className) { toast.error('Please select a Class first'); return }
                     try {
                       // Fetch saved config for this exam to hydrate subjects/max/min
                       const cfg = await client.fetch(
@@ -413,18 +409,17 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
           {/* Delete All button here too for convenience when a title is selected */}
           <div className="mt-3">
             <button
-              onClick={async ()=>{
-                if (!className || !examTitle.trim()) { alert('Select Class and Exam Title'); return }
+              onClick={async () => {
+                if (!className || !examTitle.trim()) { toast.error('Select Class and Exam Title'); return }
                 if (!confirm(`Delete all results for "${examTitle}" in class "${className}"?`)) return
                 try {
                   const res = await fetch(`/api/results?className=${encodeURIComponent(className)}&examTitle=${encodeURIComponent(examTitle)}`, { method: 'DELETE' })
-                  const j = await res.json().catch(()=>({}))
+                  const j = await res.json().catch(() => ({}))
                   if (!res.ok || !j?.ok) throw new Error(j?.error || `HTTP ${res.status}`)
                   setExistingResults([])
-                  setSavedOk(false)
-                  alert('Deleted')
-                } catch (e:any) {
-                  alert(`Delete failed: ${e?.message || e}`)
+                  toast.success('Deleted')
+                } catch (e: any) {
+                  toast.error(`Delete failed: ${e?.message || e}`)
                 }
               }}
               className="px-3 py-2 border border-red-300 text-red-700 rounded"
@@ -435,42 +430,42 @@ const AdminResult = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
             <div className="text-sm font-semibold text-red-700 mb-2">Danger Zone</div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={async ()=>{
+                onClick={async () => {
                   if (!confirm('Delete ALL Manual Results (result) from Sanity? This cannot be undone.')) return
                   try {
                     const res = await fetch('/api/results?all=true&type=manual', { method: 'DELETE' })
-                    const j = await res.json().catch(()=>({}))
+                    const j = await res.json().catch(() => ({}))
                     if (!res.ok || !j?.ok) throw new Error(j?.error || `HTTP ${res.status}`)
                     setExistingResults([])
                     setExamTitles([])
-                    alert('All manual results deleted')
-                  } catch (e:any) { alert(`Delete failed: ${e?.message || e}`) }
+                    toast.success('All manual results deleted')
+                  } catch (e: any) { toast.error(`Delete failed: ${e?.message || e}`) }
                 }}
                 className="px-3 py-2 border border-red-300 text-red-700 rounded"
               >Delete ALL Manual Results</button>
               <button
-                onClick={async ()=>{
+                onClick={async () => {
                   if (!confirm('Delete ALL Quiz Results (quizResult) from Sanity? This cannot be undone.')) return
                   try {
                     const res = await fetch('/api/results?all=true&type=quiz', { method: 'DELETE' })
-                    const j = await res.json().catch(()=>({}))
+                    const j = await res.json().catch(() => ({}))
                     if (!res.ok || !j?.ok) throw new Error(j?.error || `HTTP ${res.status}`)
-                    alert('All quiz results deleted')
-                  } catch (e:any) { alert(`Delete failed: ${e?.message || e}`) }
+                    toast.success('All quiz results deleted')
+                  } catch (e: any) { toast.error(`Delete failed: ${e?.message || e}`) }
                 }}
                 className="px-3 py-2 border border-red-300 text-red-700 rounded"
               >Delete ALL Quiz Results</button>
               <button
-                onClick={async ()=>{
+                onClick={async () => {
                   if (!confirm('Delete ALL Results (manual + quiz) from Sanity? This cannot be undone.')) return
                   try {
                     const res = await fetch('/api/results?all=true&type=both', { method: 'DELETE' })
-                    const j = await res.json().catch(()=>({}))
+                    const j = await res.json().catch(() => ({}))
                     if (!res.ok || !j?.ok) throw new Error(j?.error || `HTTP ${res.status}`)
                     setExistingResults([])
                     setExamTitles([])
-                    alert('All results deleted (manual + quiz)')
-                  } catch (e:any) { alert(`Delete failed: ${e?.message || e}`) }
+                    toast.success('All results deleted (manual + quiz)')
+                  } catch (e: any) { toast.error(`Delete failed: ${e?.message || e}`) }
                 }}
                 className="px-3 py-2 border border-red-300 text-red-700 rounded"
               >Delete ALL Results</button>

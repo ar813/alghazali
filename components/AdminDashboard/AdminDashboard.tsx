@@ -103,15 +103,21 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
     // Components
     type Stat = { title: string; value: string; icon: React.ElementType; color: string }
     const StatCard = ({ stat }: { stat: Stat }) => (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md hover:border-gray-300 transition-all duration-300">
-            <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                    <p className="text-gray-500 text-xs sm:text-sm font-medium truncate">{stat.title}</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 truncate">{stat.value}</p>
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 sm:p-6 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 group">
+            <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                    <p className="text-neutral-500 dark:text-neutral-400 text-xs font-bold uppercase tracking-wider">{stat.title}</p>
+                    <p className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+                        {stat.value}
+                    </p>
                 </div>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
-                    <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-900" />
+                <div className="w-12 h-12 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 flex items-center justify-center transition-colors group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 group-hover:border-indigo-100 dark:group-hover:border-indigo-800">
+                    <stat.icon className="w-6 h-6 text-neutral-900 dark:text-neutral-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
                 </div>
+            </div>
+            {/* Subtle progress bar placeholder for SaaS feel */}
+            <div className="mt-4 h-1 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-500/20 w-[60%] rounded-full" />
             </div>
         </div>
     )
@@ -161,80 +167,125 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                 )}
             </div>
 
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2"><Wrench className="text-gray-900" size={18} /> Quick Actions</h3>
+            {/* Quick Actions - Enterprise Grid */}
+            <div className="bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+                <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">
+                        <Wrench size={16} className="text-indigo-500" />
+                        Administrative Hub
+                    </h3>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'students' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
-                        <UserCog size={16} /> Students
-                    </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'schedule' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
-                        <Calendar size={16} /> Schedule
-                    </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'reports' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
-                        <FileBarChart2 size={16} /> Reports
-                    </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'notice' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
-                        <Megaphone size={16} /> Notices
-                    </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'fees' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
-                        <Sparkles size={16} /> Fees
-                    </button>
-                    <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'quiz' }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all font-medium text-sm">
-                        <Calendar size={16} /> Quiz
-                    </button>
+                <div className="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    {[
+                        { id: 'students', label: 'Student Mgmt', icon: UserCog },
+                        { id: 'schedule', label: 'Academic Cal', icon: Calendar },
+                        { id: 'reports', label: 'Analytics', icon: FileBarChart2 },
+                        { id: 'notice', label: 'Broadcasts', icon: Megaphone },
+                        { id: 'fees', label: 'Revenue', icon: Sparkles },
+                        { id: 'quiz', label: 'Exam Center', icon: Activity },
+                    ].map((btn) => (
+                        <button
+                            key={btn.id}
+                            onClick={() => { if (typeof window !== 'undefined') window.location.hash = btn.id }}
+                            className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 hover:border-indigo-500/50 hover:bg-indigo-50/10 dark:hover:bg-indigo-500/5 transition-all group"
+                        >
+                            <div className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40 transition-colors">
+                                <btn.icon size={20} className="text-neutral-600 dark:text-neutral-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
+                            </div>
+                            <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors text-center">{btn.label}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
             {/* Top Classes & Notices summary */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">Top Classes by Strength</h3>
+                <div className="bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
+                    <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-900/30">
+                        <h3 className="text-sm font-black text-neutral-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">Enrollment by Class</h3>
                     </div>
-                    {insights.topClasses.length === 0 ? (
-                        <div className="text-sm text-gray-500">No data</div>
-                    ) : (
-                        <div className="divide-y">
-                            {insights.topClasses.map(([cls, cnt]) => (
-                                <div key={String(cls)} className="flex items-center justify-between py-2">
-                                    <span className="text-gray-700">Class {String(cls)}</span>
-                                    <span className="font-semibold">{cnt}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <div className="p-6">
+                        {insights.topClasses.length === 0 ? (
+                            <div className="text-sm text-neutral-500 font-medium italic">No enrollment data available.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {insights.topClasses.map(([cls, cnt]) => (
+                                    <div key={String(cls)} className="flex items-center justify-between group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(79,70,229,0.5)]" />
+                                            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Class {String(cls)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-4 flex-1 mx-4">
+                                            <div className="h-1.5 flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-indigo-500/40 rounded-full transition-all duration-1000"
+                                                    style={{ width: `${Math.min(100, (cnt / totalStudents) * 100 * 5)}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-black text-neutral-900 dark:text-white tabular-nums">{cnt}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">Notices Overview</h3>
-                        <div className="text-sm text-gray-600">Total: {totalNotices.toLocaleString()}</div>
+                <div className="bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
+                    <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-900/30 flex items-center justify-between">
+                        <h3 className="text-sm font-black text-neutral-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">Notice Center</h3>
+                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase tracking-tighter border border-indigo-500/20">Active: {totalNotices}</span>
                     </div>
-                    <div className="text-sm text-gray-500">Manage notices in the Notice tab. Events are auto-synced to the homepage.</div>
+                    <div className="p-6 space-y-4">
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed italic">
+                            All campus-wide announcements and event notices are synchronized automatically. Real-time updates are pushed to student portals upon publication.
+                        </p>
+                        <button
+                            onClick={() => { if (typeof window !== 'undefined') window.location.hash = 'notice' }}
+                            className="w-full py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[11px] font-black uppercase tracking-widest hover:border-indigo-500 hover:text-indigo-600 transition-all dark:text-neutral-400 dark:hover:text-indigo-400"
+                        >
+                            Open Publication Studio
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* System Health */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900">System Health</h3>
+            {/* System Health Section */}
+            <div className="bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-900/30">
+                    <h3 className="text-sm font-black text-neutral-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">
+                        Infrastructure Status
+                    </h3>
                 </div>
-                {health ? (
-                    <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-white border border-gray-200 text-gray-700">
-                            <Activity size={16} className={health.ok ? "text-green-600" : "text-red-600"} /> Status: {health.ok ? 'Operational' : 'Issues found'}
+                <div className="p-6">
+                    {health ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="flex items-center gap-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800">
+                                <Activity size={18} className={health.ok ? "text-emerald-500" : "text-rose-500"} />
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-tighter leading-none text-neutral-500">Global Status</p>
+                                    <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{health.ok ? 'Operational' : 'Partial Outage'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(79,70,229,0.5)]" />
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-tighter leading-none text-neutral-500">Config Audit</p>
+                                    <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{(health.missingEnv || []).length} Missing Vars</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800">
+                                <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-tighter leading-none text-neutral-500">Security Log</p>
+                                    <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{(health.issues || []).length} Alerts</p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="p-3 rounded-lg bg-white border border-gray-200 text-gray-700">
-                            Missing ENV: {(health.missingEnv || []).length}
+                    ) : (
+                        <div className="text-sm text-neutral-500 flex items-center gap-2 italic uppercase font-bold tracking-tighter">
+                            <Bell size={16} className="text-neutral-400" /> Infrastructure telemetry offline
                         </div>
-                        <div className="p-3 rounded-lg bg-white border border-gray-200 text-gray-700">
-                            Warnings: {(health.issues || []).length}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-sm text-gray-500 flex items-center gap-2"><Bell size={16} className="text-gray-400" /> Health endpoint unavailable or disabled.</div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Removed: Recent Admissions per request */}
