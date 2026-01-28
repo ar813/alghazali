@@ -16,11 +16,11 @@ const FEE_STRUCTURE_2025: { className: string; amount: number }[] = [
 
 const AdmissionDetail = () => {
     return (
-        <section id="admissions" className="py-24 bg-background">
-            <div className="max-w-7xl mt-10 mx-auto px-4 sm:px-6">
-                <div className="text-center mb-12 sm:mb-16">
+        <section id="admissions" className="py-16 bg-background">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+                <div className="text-center mb-10 sm:mb-12">
                     <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">Admissions Open 2025</h2>
-                    <p className="text-base sm:text-xl text-muted-foreground max-w-3xl mx-auto px-2">
+                    <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto px-2">
                         Join our community of learners and give your child the best foundation for their future success.
                     </p>
                 </div>
@@ -59,9 +59,9 @@ const AdmissionDetail = () => {
                             <span className="w-2 h-8 bg-primary rounded-full" />
                             Fee Structure 2025
                         </h3>
-                        <div className="space-y-3 relative z-10">
+                        <div className="space-y-2 relative z-10 text-sm">
                             {FEE_STRUCTURE_2025.map((row, idx) => (
-                                <div key={idx} className="flex justify-between items-center text-sm sm:text-base py-2.5 border-b border-border/50 hover:bg-secondary/30 px-2 transition-colors rounded-md">
+                                <div key={idx} className="flex justify-between items-center py-1.5 border-b border-border/50 hover:bg-secondary/30 px-2 transition-colors rounded-md">
                                     <span className="text-muted-foreground font-medium">{row.className}</span>
                                     <span className="font-mono font-bold text-foreground">Rs. {row.amount.toLocaleString()}</span>
                                 </div>

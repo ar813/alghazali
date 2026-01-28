@@ -1,6 +1,7 @@
 import { ArrowRight, Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { toast } from "sonner"
 
 const Contact = () => {
     const [settings, setSettings] = useState<any>(null)
@@ -17,18 +18,10 @@ const Contact = () => {
         message: ''
     });
     const [isLoading, setIsLoading] = useState(false);
-    const [status, setStatus] = useState<{
-        type: 'success' | 'error' | null;
-        message: string;
-    }>({
-        type: null,
-        message: ''
-    });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setStatus({ type: null, message: '' });
 
         try {
             const response = await fetch('/api/contact', {
@@ -42,9 +35,8 @@ const Contact = () => {
             const data = await response.json();
 
             if (response.ok) {
-                setStatus({
-                    type: 'success',
-                    message: 'Thank you! Your message has been sent successfully.'
+                toast.success('Message Sent!', {
+                    description: 'Thank you! Your message has been sent successfully.'
                 });
                 setFormData({
                     fullName: '',
@@ -56,9 +48,8 @@ const Contact = () => {
                 throw new Error(data.error || 'Failed to send message');
             }
         } catch {
-            setStatus({
-                type: 'error',
-                message: 'Sorry, there was an error sending your message. Please try again.'
+            toast.error('Submission Failed', {
+                description: 'Sorry, there was an error sending your message. Please try again.'
             });
         } finally {
             setIsLoading(false);
@@ -66,11 +57,11 @@ const Contact = () => {
     };
     return (
         <div className="bg-background">
-            <section id="contact" className="py-24 border-t border-border">
+            <section id="contact" className="py-16 border-t border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
+                    <div className="text-center mb-10 sm:mb-12">
                         <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">Contact Us</h2>
-                        <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto px-4 sm:px-0">
+                        <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto px-4 sm:px-0">
                             Get in touch with us for any inquiries about admissions, programs, or general information.
                         </p>
                     </div>
@@ -129,14 +120,7 @@ const Contact = () => {
                                             placeholder="Write your message here..."
                                         />
                                     </div>
-                                    {status.message && (
-                                        <div className={`p-3 rounded-lg text-sm ${status.type === 'success'
-                                            ? 'bg-green-50 text-green-800 border border-green-200'
-                                            : 'bg-red-50 text-red-800 border border-red-200'
-                                            }`}>
-                                            {status.message}
-                                        </div>
-                                    )}
+
                                     <button
                                         type="submit"
                                         disabled={isLoading}
@@ -232,7 +216,7 @@ const Contact = () => {
             </section>
 
             {/* Map Section */}
-            <section className="py-24 border-t border-border bg-background">
+            <section className="py-16 border-t border-border bg-background">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                         {/* Embedded Google Map */}

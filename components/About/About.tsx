@@ -12,42 +12,42 @@ const About = () => {
 
 
     return (
-        <section id="about" className="py-24 bg-background border-y border-border">
+        <section id="about" className="py-16 bg-background border-y border-border">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                <div className="text-center mb-12 sm:mb-16">
+                <div className="text-center mb-10 sm:mb-12">
                     <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">About Al Ghazali High School</h2>
-                    <p className="text-base sm:text-xl text-muted-foreground max-w-3xl mx-auto px-2">
+                    <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto px-2">
                         Established in 1993, Al Ghazali High School has been a beacon of educational excellence in Karachi, combining modern pedagogical approaches with Islamic values to create well-rounded individuals.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
-                    <div className="bg-card p-6 sm:p-8 rounded-xl border border-border hover:border-primary/50 transition-colors">
-                        <div className="w-12 h-12 bg-primary/5 rounded-lg flex items-center justify-center mb-4">
-                            <Award className="w-6 h-6 text-primary" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 mb-10 sm:mb-12">
+                    <div className="bg-card p-6 rounded-xl border border-border hover:border-primary/20 hover:shadow-sm transition-all">
+                        <div className="w-10 h-10 bg-primary/5 rounded-lg flex items-center justify-center mb-4">
+                            <Award className="w-5 h-5 text-primary" />
                         </div>
-                        <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-foreground">Our Mission</h3>
-                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                        <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground tracking-tight">Our Mission</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             To provide quality education that nurtures intellectual growth, character development, and Islamic values, preparing students for success in this world and the hereafter.
                         </p>
                     </div>
 
-                    <div className="bg-card p-6 sm:p-8 rounded-xl border border-border hover:border-primary/50 transition-colors">
-                        <div className="w-12 h-12 bg-primary/5 rounded-lg flex items-center justify-center mb-4">
-                            <Star className="w-6 h-6 text-primary" />
+                    <div className="bg-card p-6 rounded-xl border border-border hover:border-primary/20 hover:shadow-sm transition-all">
+                        <div className="w-10 h-10 bg-primary/5 rounded-lg flex items-center justify-center mb-4">
+                            <Star className="w-5 h-5 text-primary" />
                         </div>
-                        <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-foreground">Our Vision</h3>
-                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                        <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground tracking-tight">Our Vision</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             To be the leading educational institution in Pakistan, recognized for academic excellence, moral integrity, and producing future leaders who contribute positively to society.
                         </p>
                     </div>
 
-                    <div className="bg-card p-6 sm:p-8 rounded-xl border border-border hover:border-primary/50 transition-colors">
-                        <div className="w-12 h-12 bg-primary/5 rounded-lg flex items-center justify-center mb-4">
-                            <Users className="w-6 h-6 text-primary" />
+                    <div className="bg-card p-6 rounded-xl border border-border hover:border-primary/20 hover:shadow-sm transition-all">
+                        <div className="w-10 h-10 bg-primary/5 rounded-lg flex items-center justify-center mb-4">
+                            <Users className="w-5 h-5 text-primary" />
                         </div>
-                        <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-foreground">Our Values</h3>
-                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                        <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground tracking-tight">Our Values</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             Integrity, Excellence, Innovation, Compassion, and Responsibility guide everything we do, ensuring our students develop strong character alongside academic success.
                         </p>
                     </div>

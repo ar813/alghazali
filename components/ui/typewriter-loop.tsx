@@ -58,7 +58,7 @@ export const TypewriterLoop = ({
                     ease: "easeInOut"
                 }}
             >
-                <div className="font-bold text-black dark:text-white whitespace-nowrap" style={{ width: "fit-content" }}>
+                <div className="font-bold whitespace-nowrap" style={{ width: "fit-content" }}>
                     {texts[currentTextIndex]}
                 </div>
             </motion.div>
@@ -71,7 +71,7 @@ export const TypewriterLoop = ({
                     repeatType: "reverse",
                 }}
                 className={cn(
-                    "inline-block w-[3px] h-6 sm:h-8 md:h-10 bg-blue-600 rounded-sm -ml-1", // Negative margin to sit tight
+                    "inline-block w-[3px] h-6 sm:h-8 md:h-10 rounded-sm -ml-1",
                     cursorClassName
                 )}
             />

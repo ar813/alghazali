@@ -2,20 +2,27 @@
 
 import React, { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { RotateCw, Upload, Download, Search, Plus } from 'lucide-react'
+import { RotateCw, Upload, Download, Search, Plus, ChevronRight } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 import { client } from "@/sanity/lib/client";
 import { getPaginatedStudentsQuery, getStudentsCountQuery, getAllClassesQuery, getStudentStatsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
 import { auth } from '@/lib/firebase';
+import { toast } from "sonner";
 
 // New Components
 import HeaderStats from './HeaderStats';
 import StudentTable from './StudentTable';
 import StudentGrid from './StudentGrid';
-import StudentFormModal from './StudentFormModal';
+import StudentFormContent from './StudentFormContent';
 import StudentDetailModal from './StudentDetailModal';
 import SecurityConfirmationModal from './SecurityConfirmationModal';
+import {
+  Drawer,
+  DrawerOverlay,
+  DrawerContent
+} from "@chakra-ui/react"
 
 
 const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
@@ -54,9 +61,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [stats, setStats] = useState({ total: 0, boys: 0, girls: 0, kg: 0 });
   const [fetchedClasses, setFetchedClasses] = useState<string[]>([]);
 
-  // Toast
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null)
-
   // Load class options
   useEffect(() => {
     client.fetch(getAllClassesQuery).then((data: any[]) => {
@@ -68,15 +72,9 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     })
   }, [])
 
-  // Reset page on filter change
   useEffect(() => {
     setCurrentPage(1)
   }, [search, klass])
-
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ show: true, message, type })
-    window.setTimeout(() => setToast(null), 2200)
-  }
 
   // Normalize Student Helper
   // Define this BEFORE usage in useEffect
@@ -199,11 +197,11 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       if (!json.ok) throw new Error(json.error || 'Create failed')
 
       setShowAddModal(false)
-      showToast('Student created successfully!', 'success')
+      toast.success('Student created successfully!')
       await refreshStudents()
     } catch (err) {
       console.error('Failed to create student', err)
-      showToast('Failed to create student', 'error')
+      toast.error('Failed to create student')
     } finally {
       setCreateLoading(false)
     }
@@ -241,12 +239,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       if (!json.ok) throw new Error(json.error || 'Update failed')
 
       setEditingStudent(null) // Close modal
-      showToast('Student updated successfully!', 'success')
+      toast.success('Student updated successfully!')
       await refreshStudents()
     } catch (_error: any) {
       console.error('Failed to update student', _error)
 
-      showToast('Failed to update student', 'error')
+      toast.error('Failed to update student')
     } finally {
       setEditLoading(false)
     }
@@ -261,16 +259,16 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       if (!res.ok || !json.ok) {
         if (res.status === 409 && (json?.referencing || json?.blocked)) {
           const refs = (json.referencing || []).map((r: any) => `${r._type}:${r._id}`).join(', ')
-          showToast(`Cannot delete. Referenced by: ${refs || 'other documents'}`, 'error')
+          toast.error(`Cannot delete. Referenced by: ${refs || 'other documents'}`)
           return
         }
         throw new Error(json.error || 'Delete failed')
       }
       await refreshStudents()
-      showToast('Student deleted', 'success')
+      toast.success('Student deleted')
     } catch (err) {
       console.error('Failed to delete student', err)
-      showToast('Failed to delete student', 'error')
+      toast.error('Failed to delete student')
     } finally {
       setDeleteLoadingId(null)
       setConfirmDeleteId(null)
@@ -292,11 +290,11 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       if (!res.ok || !json.ok) throw new Error(json.error || 'Delete all failed')
 
       await refreshStudents()
-      showToast('All students deleted successfully', 'success')
+      toast.success('All students deleted successfully')
       setShowDeleteAllConfirm(false)
     } catch (error) {
       console.error(error)
-      showToast('Failed to delete all students', 'error')
+      toast.error('Failed to delete all students')
     } finally {
       setBulkActionLoading(false)
     }
@@ -313,11 +311,11 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       if (!res.ok || !json.ok) throw new Error(json.error || 'Delete class failed')
 
       await refreshStudents()
-      showToast(`Class ${deleteClassSelected} students deleted`, 'success')
+      toast.success(`Class ${deleteClassSelected} students deleted`)
       setShowDeleteByClassConfirm(false)
     } catch (error) {
       console.error(error)
-      showToast('Failed to delete class', 'error')
+      toast.error('Failed to delete class')
     } finally {
       setBulkActionLoading(false)
     }
@@ -338,7 +336,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const handleExportExcel = async () => {
     try {
       if (students.length === 0) {
-        showToast('No students to export', 'error')
+        toast.error('No students to export')
         return
       }
       const ExcelJS: any = await loadExcel()
@@ -405,12 +403,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       link.href = window.URL.createObjectURL(blob)
       link.download = `students_export_${new Date().toISOString().split('T')[0]}.xlsx`
       link.click()
-      showToast('Excel exported successfully!', 'success')
+      toast.success('Excel exported successfully!')
 
     } catch (_error: any) {
       console.error(_error)
 
-      showToast('Export failed', 'error')
+      toast.error('Export failed')
     }
   }
 
@@ -486,9 +484,9 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       }
 
       await refreshStudents()
-      showToast(`Imported ${successCount} of ${toCreate.length} students.`, 'success')
+      toast.success(`Imported ${successCount} of ${toCreate.length} students.`)
     } catch {
-      showToast('Import failed', 'error')
+      toast.error('Import failed')
     } finally {
       setImportLoading(false)
       if (document.getElementById(fileInputRefId) as any) (document.getElementById(fileInputRefId) as any).value = ''
@@ -506,145 +504,179 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       {/* 1. Header & Stats */}
       <HeaderStats stats={stats} />
 
-      {/* 2. Control Bar (Search, Filters, Actions) */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col xl:flex-row gap-4 justify-between items-center mb-6">
+      {/* 2. Control Bar (Unified Command Center) */}
+      <div className="bg-white dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-900 p-3 sm:p-4 rounded-[2rem] shadow-sm mb-8 flex flex-col xl:flex-row gap-4 items-center justify-between transition-all">
 
-        {/* Search & Filter Group */}
-        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        {/* Search & Intelligence Group */}
+        <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+          <div className="relative group/search w-full md:w-[400px]">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within/search:text-neutral-900 dark:group-focus-within/search:text-white transition-colors">
+              <Search size={18} />
+            </div>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search student, father, GR..."
-              className="pl-10 pr-4 py-2.5 w-full border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+              placeholder="Query Repository (Name, GR, CNIC...)"
+              className="w-full pl-12 pr-6 py-3 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-2xl focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-all text-[13px] font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400"
             />
           </div>
-          <select
-            value={klass}
-            onChange={(e) => setKlass(e.target.value)}
-            className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/10 outline-none transition-all min-w-[140px] bg-white cursor-pointer hover:border-gray-400"
-          >
-            <option value="All">All Classes</option>
-            {fetchedClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
-          </select>
+
+          <div className="relative w-full md:w-56 group/select">
+            <select
+              value={klass}
+              onChange={(e) => setKlass(e.target.value)}
+              className="w-full px-5 py-3 pr-10 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-2xl focus:outline-none focus:border-neutral-900 dark:focus:border-white text-[13px] font-bold text-neutral-600 dark:text-neutral-400 appearance-none cursor-pointer transition-all uppercase tracking-widest"
+            >
+              <option value="All">All Tiers</option>
+              {fetchedClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
+            </select>
+            <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-neutral-400 group-focus-within/select:rotate-180 transition-transform pointer-events-none" />
+          </div>
         </div>
 
-        {/* Actions Group */}
-        <div className="flex flex-wrap items-center gap-2 justify-end w-full xl:w-auto">
-          <button
-            onClick={refreshStudents}
-            className="p-2.5 text-gray-500 hover:text-primary hover:bg-secondary rounded-lg transition"
-            title="Refresh List"
-          >
-            <RotateCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
+        {/* Global Operations Group */}
+        <div className="flex flex-wrap items-center gap-2.5 justify-center sm:justify-end w-full xl:w-auto">
+          <div className="flex items-center gap-1 bg-neutral-50 dark:bg-neutral-900/50 p-1.5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+            <button
+              onClick={refreshStudents}
+              className={`p-2 rounded-xl hover:bg-white dark:hover:bg-neutral-800 transition-all text-neutral-400 hover:text-neutral-900 dark:hover:text-white shadow-sm ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              <RotateCw size={18} className={loading ? 'animate-spin' : ''} />
+            </button>
+            <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700 mx-1" />
+            <button
+              onClick={handleExportExcel}
+              className="p-2 rounded-xl hover:bg-white dark:hover:bg-neutral-800 transition-all text-neutral-400 hover:text-neutral-900 dark:hover:text-white shadow-sm"
+              title="Export Ledger"
+            >
+              <Download size={18} />
+            </button>
+            <button
+              onClick={handleImportExcelClick}
+              className="p-2 rounded-xl hover:bg-white dark:hover:bg-neutral-800 transition-all text-neutral-400 hover:text-neutral-900 dark:hover:text-white shadow-sm"
+              title="Import Buffer"
+            >
+              <Upload size={18} />
+            </button>
+            <input id={fileInputRefId} type="file" accept=".xlsx" className="hidden" onChange={handleImportExcelFile} />
+          </div>
 
-          <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block"></div>
-
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition shadow-sm"
-          >
-            <Upload size={16} /> <span className="hidden sm:inline">Export</span>
-          </button>
-
-          <button
-            onClick={handleImportExcelClick}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition shadow-sm"
-          >
-            <Download size={16} /> <span className="hidden sm:inline">Import</span>
-          </button>
-          <input id={fileInputRefId} type="file" accept=".xlsx" className="hidden" onChange={handleImportExcelFile} />
-
-          <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block"></div>
-
-          {/* Delete by Class (Cleaned up trigger) */}
-          <button
-            onClick={() => { setDeleteClassSelected('1'); setShowDeleteByClassConfirm(true) }}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition shadow-sm"
-          >
-            Delete Class
-          </button>
-
-
-          {/* Delete All */}
-          <button
-            onClick={() => setShowDeleteAllConfirm(true)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition shadow-sm"
-          >
-            Delete All
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setDeleteClassSelected('1'); setShowDeleteByClassConfirm(true) }}
+              className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 hover:text-white bg-amber-500/5 hover:bg-amber-500 rounded-xl transition-all border border-amber-500/10"
+            >
+              Purge
+            </button>
+            <button
+              onClick={() => setShowDeleteAllConfirm(true)}
+              className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 hover:text-white bg-rose-500/5 hover:bg-rose-500 rounded-xl transition-all border border-rose-500/10"
+            >
+              Wipe
+            </button>
+          </div>
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="ml-2 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 shadow-lg shadow-primary/20 active:scale-95 transition-all"
+            className="group relative px-6 py-3 rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-black flex items-center gap-3 overflow-hidden shadow-2xl transition-all hover:scale-[1.02] active:scale-95"
           >
-            <Plus size={18} /> Add Student
+            <div className="absolute inset-x-0 bottom-0 h-[2px] bg-white dark:bg-neutral-900 opacity-20 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+            <Plus size={18} strokeWidth={3} />
+            <span className="text-[12px] font-black uppercase tracking-[0.2em]">New Entry</span>
           </button>
         </div>
       </div>
 
-      {/* 3. Data Display (Table & Grid) */}
-      <StudentTable
-        students={filteredStudents}
-        loading={loading}
-        onView={setClickedStudent}
-        onEdit={(s) => setEditingStudent(s)}
-        onDelete={setConfirmDeleteId}
-        deleteLoadingId={deleteLoadingId}
-      />
+      {/* 3. Operational Data (Data Views) */}
+      <div className="space-y-8 min-h-[400px]">
+        <StudentTable
+          students={filteredStudents}
+          loading={loading}
+          onView={setClickedStudent}
+          onEdit={(s) => setEditingStudent(s)}
+          onDelete={setConfirmDeleteId}
+          deleteLoadingId={deleteLoadingId}
+        />
 
-      <StudentGrid
-        students={filteredStudents}
-        loading={loading}
-        onView={setClickedStudent}
-        onEdit={(s) => setEditingStudent(s)}
-        onDelete={setConfirmDeleteId}
-        deleteLoadingId={deleteLoadingId}
-      />
+        <StudentGrid
+          students={filteredStudents}
+          loading={loading}
+          onView={setClickedStudent}
+          onEdit={(s) => setEditingStudent(s)}
+          onDelete={setConfirmDeleteId}
+          deleteLoadingId={deleteLoadingId}
+        />
+      </div>
 
-      {/* Pagination Controls */}
-      <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-4">
-        <div className="text-sm text-gray-500">
-          Showing <span className="font-medium">{Math.min(students.length, pageSize)}</span> of <span className="font-medium">{totalCount}</span> results
+      {/* 4. Persistence Controls (Pagination) */}
+      <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 px-4 py-6 border-t border-neutral-100 dark:border-neutral-900">
+        <div className="flex flex-col gap-1 text-center sm:text-left">
+          <p className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.2em]">Registry Footprint</p>
+          <p className="text-[12px] text-neutral-400 font-medium">
+            Projecting <span className="text-neutral-900 dark:text-white font-bold">{students.length}</span> of <span className="text-neutral-900 dark:text-white font-bold">{totalCount}</span> identified records
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 p-1.5 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-inner">
           <button
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1 || loading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white disabled:opacity-30 transition-all hover:bg-white dark:hover:bg-neutral-800 shadow-sm"
           >
-            Previous
+            <ChevronRight size={20} className="rotate-180" />
           </button>
-          <span className="text-sm font-medium text-gray-700">Page {currentPage}</span>
+
+          <div className="px-6 py-1.5 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 shadow-sm">
+            <span className="text-[12px] font-black text-neutral-900 dark:text-white uppercase tracking-widest">
+              Stage {currentPage}
+            </span>
+          </div>
+
           <button
             onClick={() => setCurrentPage(p => p + 1)}
             disabled={students.length < pageSize || loading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white disabled:opacity-30 transition-all hover:bg-white dark:hover:bg-neutral-800 shadow-sm"
           >
-            Next
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>
+
 
 
       {/* --- MODALS --- */}
 
-      {/* Add / Edit Form Modal */}
-      <StudentFormModal
+      {/* Add / Edit Form - Enterprise Full-Screen Drawer */}
+      <Drawer
         isOpen={showAddModal || !!editingStudent}
         onClose={() => { setShowAddModal(false); setEditingStudent(null); }}
-        onSave={editingStudent ? handleUpdateStudent : handleCreateStudent}
-        initialData={editingStudent}
-        loading={editingStudent ? editLoading : createLoading}
-      />
+        size="full"
+      >
+        <DrawerOverlay className="backdrop-blur-md bg-black/40" />
+        <DrawerContent className="bg-white dark:bg-neutral-950 p-0 m-0">
+          <StudentFormContent
+            initialData={editingStudent}
+            loading={editingStudent ? editLoading : createLoading}
+            onCancel={() => { setShowAddModal(false); setEditingStudent(null); }}
+            onSave={editingStudent ? handleUpdateStudent : handleCreateStudent}
+          />
+        </DrawerContent>
+      </Drawer>
 
-      {/* View Details Modal */}
-      <StudentDetailModal
-        student={clickedStudent}
+      {/* View Details - Enterprise Drawer */}
+      <Drawer
+        isOpen={!!clickedStudent}
         onClose={() => setClickedStudent(null)}
-      />
+        size="full"
+      >
+        <DrawerOverlay className="backdrop-blur-md bg-black/40" />
+        <DrawerContent className="bg-white dark:bg-neutral-950 p-0 m-0">
+          <StudentDetailModal
+            student={clickedStudent}
+            onClose={() => setClickedStudent(null)}
+          />
+        </DrawerContent>
+      </Drawer>
 
       {/* Delete Confirmations (Simplifed inline for now to save files, can extract if needed) */}
       {confirmDeleteId && (
@@ -708,13 +740,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         loading={bulkActionLoading}
       />
 
-
-      {/* Toast */}
-      {toast && toast.show && (
-        <div className={`fixed bottom-6 right-6 px-6 py-3 rounded-xl shadow-2xl border flex items-center gap-3 z-[100] animate-in slide-in-from-bottom-5 duration-300 ${toast.type === 'error' ? 'bg-red-600 text-white border-red-700' : 'bg-gray-900 text-white border-black'}`}>
-          <span className="font-medium">{toast.message}</span>
-        </div>
-      )}
 
     </div>
   )

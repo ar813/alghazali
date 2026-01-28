@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { RefreshCw, Eye, EyeOff, Download, Trash2, X } from 'lucide-react'
+import { toast } from "sonner";
 
 type Quiz = { _id: string; title: string; subject: string; resultsAnnounced?: boolean; _createdAt?: string; createdAt?: string }
 
@@ -92,7 +93,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     } catch (err: any) {
       console.error('Error loading quizzes:', err)
       const errorMsg = err?.message || 'Failed to fetch quizzes'
-      
+
       if (errorMsg.includes('Failed to fetch')) {
         // Check system health for better error diagnosis
         try {
@@ -119,9 +120,10 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       const res = await fetch(`/api/quiz-results?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
       const j = await res.json()
       if (!j?.ok) throw new Error(j?.error || 'Failed to delete')
-      setResults(prev => prev.filter(r => r._id !== id))
+      setResults((prev: Result[]) => prev.filter((r: Result) => r._id !== id))
+      toast.success('Result deleted')
     } catch (e: any) {
-      alert(e?.message || 'Delete failed')
+      toast.error(e?.message || 'Delete failed')
     } finally { setWorking(null) }
   }
 
@@ -189,11 +191,11 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     compute()
   }, [selected])
 
-  const toggleAnnounce = async (quizId: string, current: boolean|undefined) => {
+  const toggleAnnounce = async (quizId: string, current: boolean | undefined) => {
     setWorking(quizId)
     try {
       await fetch('/api/quizzes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: quizId, resultsAnnounced: !current }) })
-      setQuizzes(prev => prev.map(q => q._id === quizId ? { ...q, resultsAnnounced: !current } : q))
+      setQuizzes((prev: Quiz[]) => prev.map((q: Quiz) => q._id === quizId ? { ...q, resultsAnnounced: !current } : q))
     } finally { setWorking(null) }
   }
 
@@ -215,8 +217,8 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         groups[cls].push(r)
       }
       Object.values(groups).forEach(list => {
-        list.sort((a,b)=> (b.score||0) - (a.score||0))
-        list.forEach((r, idx)=> positionMap.set(r._id, idx+1))
+        list.sort((a, b) => (b.score || 0) - (a.score || 0))
+        list.forEach((r, idx) => positionMap.set(r._id, idx + 1))
       })
 
       ws.columns = [
@@ -264,7 +266,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       }
       const buffer = await wb.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-      ;(fileSaver as any).saveAs(blob, `quiz_results_${quiz.title.replace(/\s+/g,'_')}.xlsx`)
+        ; (fileSaver as any).saveAs(blob, `quiz_results_${quiz.title.replace(/\s+/g, '_')}.xlsx`)
     } catch (e) {
       console.error('Error exporting as Excel, falling back to CSV:', e);
       // Fallback: CSV export to ensure the user still gets a file if ExcelJS is unavailable in runtime
@@ -278,12 +280,12 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           groups[cls].push(r)
         }
         Object.values(groups).forEach(list => {
-          list.sort((a,b)=> (b.score||0) - (a.score||0))
-          list.forEach((r, idx)=> positionMap.set(r._id, idx+1))
+          list.sort((a, b) => (b.score || 0) - (a.score || 0))
+          list.forEach((r, idx) => positionMap.set(r._id, idx + 1))
         })
 
         const rows = [
-          ['Quiz Title','Subject','Quiz Date','Student Name','GR Number','Roll Number','Class','Email','Total Questions','Score','Percentage','Grade','Position','Status','Submitted At'],
+          ['Quiz Title', 'Subject', 'Quiz Date', 'Student Name', 'GR Number', 'Roll Number', 'Class', 'Email', 'Total Questions', 'Score', 'Percentage', 'Grade', 'Position', 'Status', 'Submitted At'],
           ...results.map(r => {
             const total = r.quiz?.totalQuestions ?? (Array.isArray(r.answers) ? r.answers.length : 0)
             const pct = total > 0 ? Math.round((r.score / total) * 100) : 0
@@ -308,16 +310,16 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
             ]
           })
         ]
-        const csv = rows.map(r => r.map(v => {
+        const csv = rows.map(r => r.map((v: string | number | null) => {
           const s = String(v ?? '')
-          return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s
+          return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
         }).join(',')).join('\n')
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-        const fname = `quiz_results_${quiz.title.replace(/\s+/g,'_')}.csv`
+        const fname = `quiz_results_${quiz.title.replace(/\s+/g, '_')}.csv`
         const a = document.createElement('a');
         const url = URL.createObjectURL(blob); a.href = url; a.download = fname; a.click(); URL.revokeObjectURL(url)
       } catch {
-        alert('Failed to export Excel')
+        toast.error('Failed to export Excel')
       }
     }
   }
@@ -327,7 +329,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       <div className="bg-white rounded-2xl shadow p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base sm:text-lg font-bold text-gray-800">Quiz Results Control</h3>
-          <button onClick={loadQuizzes} className="px-3 py-1.5 border rounded text-sm inline-flex items-center gap-2"><RefreshCw size={14}/> Refresh</button>
+          <button onClick={loadQuizzes} className="px-3 py-1.5 border rounded text-sm inline-flex items-center gap-2"><RefreshCw size={14} /> Refresh</button>
         </div>
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -338,15 +340,18 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Select Quiz</label>
-            <select value={selectedQuiz} onChange={e=>setSelectedQuiz(e.target.value)} className="w-full border rounded px-3 py-2">
+            <select value={selectedQuiz} onChange={e => setSelectedQuiz(e.target.value)} className="w-full border rounded px-3 py-2">
               <option value="">Select Quiz</option>
-              {quizzes.map(q => <option key={q._id} value={q._id}>{q.title} ({q.subject})</option>)}
+              {quizzes.map((q: Quiz) => <option key={q._id} value={q._id}>{q.title} ({q.subject})</option>)}
             </select>
           </div>
           {!!selectedQuiz && (
             <div className="flex items-end">
-              <button onClick={()=>toggleAnnounce(selectedQuiz, quizzes.find(q=>q._id===selectedQuiz)?.resultsAnnounced)} disabled={working===selectedQuiz} className="px-4 py-2 border rounded inline-flex items-center gap-2">
-                {quizzes.find(q=>q._id===selectedQuiz)?.resultsAnnounced ? <><EyeOff size={16}/> Hide Results</> : <><Eye size={16}/> Announce Results</>}
+              <button onClick={() => {
+                const q = quizzes.find((qi: Quiz) => qi._id === selectedQuiz);
+                toggleAnnounce(selectedQuiz, q?.resultsAnnounced)
+              }} disabled={working === selectedQuiz} className="px-4 py-2 border rounded inline-flex items-center gap-2">
+                {quizzes.find((q: Quiz) => q._id === selectedQuiz)?.resultsAnnounced ? <><EyeOff size={16} /> Hide Results</> : <><Eye size={16} /> Announce Results</>}
               </button>
             </div>
           )}
@@ -357,7 +362,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base sm:text-lg font-bold text-gray-800">Quiz Results</h3>
           <div className="flex items-center gap-2">
-            <button onClick={exportExcel} disabled={!selectedQuiz || results.length===0} className="px-3 py-1.5 border rounded text-sm inline-flex items-center gap-2"><Download size={14}/> Export Excel</button>
+            <button onClick={exportExcel} disabled={!selectedQuiz || results.length === 0} className="px-3 py-1.5 border rounded text-sm inline-flex items-center gap-2"><Download size={14} /> Export Excel</button>
           </div>
         </div>
         {!selectedQuiz ? (
@@ -391,8 +396,8 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                   </tr>
                 </thead>
                 <tbody>
-                  {results.map(r => (
-                    <tr key={r._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={()=>setSelected(r)}>
+                  {results.map((r: Result) => (
+                    <tr key={r._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => setSelected(r)}>
                       <td className="p-2">{r.studentName || r.student?.fullName}</td>
                       <td className="p-2">{r.studentGrNumber || r.student?.grNumber}</td>
                       <td className="p-2">{r.studentRollNumber || ''}</td>
@@ -401,7 +406,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                       <td className="p-2">{r.score}</td>
                       <td className="p-2">{formatDateTime(r.submittedAt || r._createdAt)}</td>
                       <td className="p-2">
-                        <button onClick={(e)=>{ e.stopPropagation(); deleteOne(r._id) }} disabled={working===r._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14}/> {working===r._id ? '...' : 'Delete'}</button>
+                        <button onClick={(e) => { e.stopPropagation(); deleteOne(r._id) }} disabled={working === r._id} className="px-2 py-1 text-xs border rounded text-red-600 inline-flex items-center gap-1"><Trash2 size={14} /> {working === r._id ? '...' : 'Delete'}</button>
                       </td>
                     </tr>
                   ))}
@@ -433,7 +438,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-5 max-h-[85vh] overflow-auto">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-lg font-bold">{selected.quiz?.title}</h4>
-              <button onClick={()=>setSelected(null)} className="text-gray-600 hover:text-red-600" aria-label="Close">
+              <button onClick={() => setSelected(null)} className="text-gray-600 hover:text-red-600" aria-label="Close">
                 <X size={18} />
               </button>
             </div>
@@ -487,7 +492,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
               <div className="mt-4">
                 <h5 className="font-semibold mb-2">Question-wise Details</h5>
                 <div className="space-y-3">
-                  {(selected.answers || []).map((_, idx: number) => {
+                  {(selected.answers || []).map((_val: number, idx: number) => {
                     const origIdx = Array.isArray(selected.questionOrder) ? Number(selected.questionOrder[idx]) : idx
                     const baseQ = quizDetail.questions[origIdx]
                     if (!baseQ) return null
@@ -496,12 +501,12 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
                     const isCorrect = chosen === correct
                     return (
                       <div key={idx} className={`border rounded p-3 ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                        <div className="font-medium">Q{idx+1}. {baseQ.question}</div>
+                        <div className="font-medium">Q{idx + 1}. {baseQ.question}</div>
                         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                           {baseQ.options.map((opt: string, oi: number) => (
-                            <div key={oi} className={`px-2 py-1 rounded border ${oi===correct ? 'border-emerald-400 bg-emerald-100' : oi===chosen ? 'border-amber-400 bg-amber-100' : 'border-gray-200 bg-white'}`}>
-                              {String.fromCharCode(65+oi)}. {opt}
-                              {oi===correct ? <span className="ml-1 text-emerald-600 font-semibold">✔</span> : oi===chosen ? <span className="ml-1 text-red-600 font-semibold">✘</span> : ''}
+                            <div key={oi} className={`px-2 py-1 rounded border ${oi === correct ? 'border-emerald-400 bg-emerald-100' : oi === chosen ? 'border-amber-400 bg-amber-100' : 'border-gray-200 bg-white'}`}>
+                              {String.fromCharCode(65 + oi)}. {opt}
+                              {oi === correct ? <span className="ml-1 text-emerald-600 font-semibold">✔</span> : oi === chosen ? <span className="ml-1 text-red-600 font-semibold">✘</span> : ''}
                             </div>
                           ))}
                         </div>

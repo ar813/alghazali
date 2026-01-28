@@ -19,6 +19,8 @@ import AdminResults from '@/components/AdminResults/AdminResults';
 import AdminMobileAttendance from '@/components/AdminMobileAttendance/AdminMobileAttendance';
 import AdminChatBot from '@/components/AdminChatBot/AdminChatBot';
 // import { useRouter } from 'next/router';
+import AuthLayout from '@/components/Auth/AuthLayout';
+import AdminLoginForm from '@/components/Auth/AdminLoginForm';
 
 const AdminPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -58,228 +60,29 @@ const AdminPage = () => {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <AuthLayout
+        title="Admin Portal"
+        subtitle="Sign in to manage the school dashboard."
+        type="admin"
+      >
+        <AdminLoginForm onLoginSuccess={() => setIsAuthenticated(true)} />
+      </AuthLayout>
+    );
+  }
+
   return (
     <div className="relative pt-20">
       <NavBar />
       {/* Top non-blocking progress bar for child loading */}
       <TopLoader loading={childLoading} />
-      {isAuthenticated && <AdminPortal onLoadingChange={setChildLoading} />}
-      {/* <Footer /> */}
-      {!isAuthenticated && <Popup onLoginSuccess={() => setIsAuthenticated(true)} />}
+      <AdminPortal onLoadingChange={setChildLoading} />
     </div>
   );
 };
 
 export default AdminPage;
-
-// ✅ Login Popup Component (Enhanced UI with Firebase Auth)
-const Popup = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string>('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-
-  // Load saved credentials when component mounts
-  useEffect(() => {
-    const savedCredentials = localStorage.getItem('adminCredentials');
-    if (savedCredentials) {
-      try {
-        const { email: savedEmail, password: savedPassword } = JSON.parse(savedCredentials);
-        setEmail(savedEmail || '');
-        setPassword(savedPassword || '');
-        setRememberMe(true);
-      } catch (error) {
-        // If there's an error parsing, just ignore it
-        console.error('Error loading saved credentials:', error);
-      }
-    }
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    try {
-      // Import Firebase Auth dynamically to avoid SSR issues
-      const { auth } = await import('@/lib/firebase');
-      const { signInWithEmailAndPassword } = await import('firebase/auth');
-
-      // Authenticate with Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-
-      // Update display name logic moved to AdminPortal post-login check
-
-      // Sync full user data to Firestore
-      const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
-
-      const user = userCredential.user;
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        emailVerified: user.emailVerified,
-        displayName: user.displayName,
-        phoneNumber: user.phoneNumber,
-        photoURL: user.photoURL,
-        metadata: {
-          creationTime: user.metadata.creationTime,
-          lastSignInTime: user.metadata.lastSignInTime,
-        },
-        lastLoginAt: new Date().toISOString()
-      }, { merge: true });
-
-      // Store session in localStorage with timestamp
-      const sessionData = {
-        timestamp: new Date().getTime(),
-        user: userCredential.user.email
-      };
-      localStorage.setItem('adminSession', JSON.stringify(sessionData));
-
-      // Save credentials if "Remember Me" is checked
-      if (rememberMe) {
-        const credentials = {
-          email,
-          password
-        };
-        localStorage.setItem('adminCredentials', JSON.stringify(credentials));
-      } else {
-        // Remove saved credentials if "Remember Me" is unchecked
-        localStorage.removeItem('adminCredentials');
-      }
-
-      onLoginSuccess();
-    } catch (err: any) {
-      // Handle Firebase authentication errors
-      let errorMessage = 'Invalid credentials. Please check and try again.';
-
-      if (err.code) {
-        switch (err.code) {
-          case 'auth/user-not-found':
-            errorMessage = 'No account found with this email.';
-            break;
-          case 'auth/wrong-password':
-            errorMessage = 'Incorrect password. Please try again.';
-            break;
-          case 'auth/invalid-email':
-            errorMessage = 'Invalid email format.';
-            break;
-          case 'auth/user-disabled':
-            errorMessage = 'This account has been disabled.';
-            break;
-          case 'auth/too-many-requests':
-            errorMessage = 'Too many failed attempts. Please try again later.';
-            break;
-          case 'auth/network-request-failed':
-            errorMessage = 'Network error. Please check your connection.';
-            break;
-          case 'auth/invalid-credential':
-            errorMessage = 'Invalid credentials. Please check your email and password.';
-            break;
-          default:
-            errorMessage = err.message || 'Login failed. Please try again.';
-        }
-      }
-
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleClose = () => {
-    window.location.href = "/"
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-label="Admin Login">
-      <div className="relative bg-white sm:rounded-2xl rounded-xl shadow-xl p-6 sm:p-8 w-full sm:w-[90%] sm:max-w-md">
-        {/* Close Button */}
-        <button
-          onClick={handleClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition p-2 rounded-full focus:outline-none focus:ring focus:ring-gray-200"
-          aria-label="Close popup"
-        >
-          <X size={22} />
-        </button>
-
-        <div className="text-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Admin Login</h2>
-          <p className="text-sm text-gray-500 mt-1">Please enter your credentials to continue.</p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter email"
-              required
-            />
-            <p className="mt-1 text-xs text-gray-500">Your admin email address.</p>
-          </div>
-
-
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full border rounded-lg px-4 py-2.5 pr-16 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter password"
-                required
-              />
-              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute inset-y-0 right-2 my-1 px-2 text-xs rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100">{showPassword ? 'Hide' : 'Show'}</button>
-            </div>
-            <p className="mt-1 text-xs text-gray-500">Your password is case sensitive.</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-            />
-            <label htmlFor="rememberMe" className="text-sm text-gray-700 cursor-pointer select-none">
-              Remember my credentials
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:opacity-95 transition-all shadow disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Logging in...</span>
-              </>
-            ) : (
-              'Login'
-            )}
-          </button>
-          <div className="text-[11px] text-gray-500 text-center">Tip: You can configure credentials via environment variables.</div>
-        </form>
-      </div>
-    </div>
-  );
-};
 
 // ✅ Admin Portal (sidebar layout similar to student portal)
 const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
