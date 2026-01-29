@@ -16,8 +16,53 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Al Ghazali High School",
-  description: "Under the supervision of Al Razi Educational & Welfare Society",
+  title: {
+    default: "Al Ghazali High School | Nurturing Minds, Building Character",
+    template: "%s | Al Ghazali High School",
+  },
+  description: "Established in 1993, Al Ghazali High School provides quality education combining modern pedagogy with Islamic values in Landhi, Karachi. Under the supervision of Al Razi Educational & Welfare Society.",
+  keywords: ["Al Ghazali High School", "School in Landhi", "Best school in Karachi", "Islamic Education", "Academic Excellence", "Mahad Usman Bin Affan", "Al Razi Educational Society"],
+  authors: [{ name: "Al Ghazali High School" }],
+  creator: "Al Ghazali High School",
+  publisher: "Al Razi Educational & Welfare Society",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    title: "Al Ghazali High School | Academic Excellence in Karachi",
+    description: "Nurturing young minds with academic excellence, Islamic values, and modern education since 1993.",
+    url: "https://alghazali.vercel.app",
+    siteName: "Al Ghazali High School",
+    images: [
+      {
+        url: "/logo.png",
+        width: 800,
+        height: 600,
+        alt: "Al Ghazali High School Logo",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Al Ghazali High School | Academic Excellence in Karachi",
+    description: "Nurturing young minds with academic excellence, Islamic values, and modern education since 1993.",
+    images: ["/logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 import { Toaster } from "@/components/ui/sonner";
