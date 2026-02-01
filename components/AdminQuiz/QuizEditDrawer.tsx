@@ -6,6 +6,7 @@ import { X, Save, Loader2, ListChecks, Plus, Book } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import QuestionItem from './QuestionItem';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
 
 interface QuizEditDrawerProps {
     quiz: any;
@@ -25,6 +26,8 @@ const QuizEditDrawer = ({ quiz, onClose, onSaved, students, classOptions, genId 
     const [saving, setSaving] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
 
+
+    const { user } = useAuth();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -57,9 +60,14 @@ const QuizEditDrawer = ({ quiz, onClose, onSaved, students, classOptions, genId 
         if (!form.title.trim()) return toast.error('Title required');
         setSaving(true);
         try {
+
+            const token = await user?.getIdToken();
             const res = await fetch('/api/quizzes', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     id: quiz._id,
                     ...form,

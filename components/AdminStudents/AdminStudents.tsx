@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { RotateCw, Upload, Download, Search, Plus, ChevronRight } from 'lucide-react'
+import { RotateCw, Upload, Download, Search, Plus, ChevronRight, Lock } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 import { client } from "@/sanity/lib/client";
 import { getPaginatedStudentsQuery, getStudentsCountQuery, getAllClassesQuery, getStudentStatsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
 import { auth } from '@/lib/firebase';
+import { useAuth } from '@/hooks/use-auth';
 import { toast } from "sonner";
 
 // New Components
@@ -18,6 +19,7 @@ import StudentGrid from './StudentGrid';
 import StudentFormContent from './StudentFormContent';
 import StudentDetailModal from './StudentDetailModal';
 import SecurityConfirmationModal from './SecurityConfirmationModal';
+import AccessDeniedDialog from '@/components/Auth/AccessDeniedDialog';
 import {
   Drawer,
   DrawerOverlay,
@@ -26,6 +28,8 @@ import {
 
 
 const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+  const { isSuperAdmin } = useAuth();
+
   // Search/Filter state
   const [search, setSearch] = useState("")
   const [klass, setKlass] = useState<string>('All')
@@ -53,6 +57,9 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [showDeleteByClassConfirm, setShowDeleteByClassConfirm] = useState(false)
   const [deleteClassSelected, setDeleteClassSelected] = useState('1')
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+
+  // Access Control Dialog State
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
 
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -184,6 +191,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   // Handle Create (Called from StudentFormModal)
   const handleCreateStudent = async (data: any, photoFile: File | null) => {
+    if (!isSuperAdmin) {
+      setShowAccessDenied(true);
+      return;
+    }
     setCreateLoading(true)
     try {
       const body: any = { ...data }
@@ -210,6 +221,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   // Handle Update (Called from StudentFormModal)
   const handleUpdateStudent = async (data: any, photoFile: File | null) => {
     if (!editingStudent) return
+    if (!isSuperAdmin) {
+      setShowAccessDenied(true);
+      return;
+    }
     setEditLoading(true)
     try {
       const body: any = { ...data }
@@ -251,6 +266,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   }
 
   const handleDeleteStudent = async (id: string) => {
+    if (!isSuperAdmin) {
+      setShowAccessDenied(true);
+      return;
+    }
     setDeleteLoadingId(id)
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -277,12 +296,13 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   // Handle Delete All
   const handleDeleteAll = async () => {
+    if (!isSuperAdmin) {
+      setShowDeleteAllConfirm(false); // Close confirmation if open
+      setShowAccessDenied(true);
+      return;
+    }
     setBulkActionLoading(true)
     try {
-      // Assuming endpoint exists or handling logic on server
-      // If no specific "Delete All" endpoint, we might need to iterate or add a query param
-      // For now, let's assume we send a special DELETE request or multiple
-      // Ideally: DELETE /api/students?action=deleteAll
       const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/students?action=deleteAll', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
       const json = await res.json()
@@ -302,6 +322,11 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   // Handle Delete By Class
   const handleDeleteClass = async () => {
+    if (!isSuperAdmin) {
+      setShowDeleteByClassConfirm(false);
+      setShowAccessDenied(true);
+      return;
+    }
     setBulkActionLoading(true)
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -415,9 +440,11 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const fileInputRefId = 'students-import-input'
   const handleImportExcelClick = () => { document.getElementById(fileInputRefId)?.click() }
   const handleImportExcelFile = async (e: ChangeEvent<HTMLInputElement>) => {
-    // ... Import logic kept roughly the same but simplified for brevity in this replace
-    // Assuming user wants functionality preserved, so I will restore the logic
-    // to allow import. 
+    if (!isSuperAdmin) {
+      setShowAccessDenied(true);
+      e.target.value = ''; // Reset input
+      return;
+    }
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -446,7 +473,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
           fullName: s(1),
           fatherName: s(2),
           fatherCnic: s(3),
-          dob: s(4), // Assume valid or improve parsing if needed
+          dob: s(4),
           rollNumber: s(5),
           grNumber: s(6),
           gender: s(7) || 'male',
@@ -501,13 +528,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   return (
     <div className="pb-20">
 
-      {/* 1. Header & Stats */}
+      <AccessDeniedDialog open={showAccessDenied} onOpenChange={setShowAccessDenied} />
+
       <HeaderStats stats={stats} />
 
-      {/* 2. Control Bar (Unified Command Center) */}
       <div className="bg-white dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-900 p-3 sm:p-4 rounded-[2rem] shadow-sm mb-8 flex flex-col xl:flex-row gap-4 items-center justify-between transition-all">
 
-        {/* Search & Intelligence Group */}
         <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
           <div className="relative group/search w-full md:w-[400px]">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within/search:text-neutral-900 dark:group-focus-within/search:text-white transition-colors">
@@ -516,7 +542,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Query Repository (Name, GR, CNIC...)"
+              placeholder="Search Student (Name, GR, CNIC...)"
               className="w-full pl-12 pr-6 py-3 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-2xl focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-all text-[13px] font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400"
             />
           </div>
@@ -527,14 +553,13 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               onChange={(e) => setKlass(e.target.value)}
               className="w-full px-5 py-3 pr-10 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-2xl focus:outline-none focus:border-neutral-900 dark:focus:border-white text-[13px] font-bold text-neutral-600 dark:text-neutral-400 appearance-none cursor-pointer transition-all uppercase tracking-widest"
             >
-              <option value="All">All Tiers</option>
+              <option value="All">All Classes</option>
               {fetchedClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
             </select>
             <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-neutral-400 group-focus-within/select:rotate-180 transition-transform pointer-events-none" />
           </div>
         </div>
 
-        {/* Global Operations Group */}
         <div className="flex flex-wrap items-center gap-2.5 justify-center sm:justify-end w-full xl:w-auto">
           <div className="flex items-center gap-1 bg-neutral-50 dark:bg-neutral-900/50 p-1.5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
             <button
@@ -563,57 +588,82 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { setDeleteClassSelected('1'); setShowDeleteByClassConfirm(true) }}
-              className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 hover:text-white bg-amber-500/5 hover:bg-amber-500 rounded-xl transition-all border border-amber-500/10"
+              onClick={() => {
+                if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+                setDeleteClassSelected('1');
+                setShowDeleteByClassConfirm(true)
+              }}
+              className="px-4 py-2.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 hover:text-white bg-amber-500/5 hover:bg-amber-500 rounded-xl transition-all border border-amber-500/10"
             >
-              Purge
+              <span>Clear Class</span>
+              {!isSuperAdmin && <Lock size={10} className="mb-0.5" />}
             </button>
             <button
-              onClick={() => setShowDeleteAllConfirm(true)}
-              className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 hover:text-white bg-rose-500/5 hover:bg-rose-500 rounded-xl transition-all border border-rose-500/10"
+              onClick={() => {
+                if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+                setShowDeleteAllConfirm(true)
+              }}
+              className="px-4 py-2.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 hover:text-white bg-rose-500/5 hover:bg-rose-500 rounded-xl transition-all border border-rose-500/10"
             >
-              Wipe
+              <span>Delete All</span>
+              {!isSuperAdmin && <Lock size={10} className="mb-0.5" />}
             </button>
           </div>
 
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+              setShowAddModal(true)
+            }}
             className="group relative px-6 py-3 rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-black flex items-center gap-3 overflow-hidden shadow-2xl transition-all hover:scale-[1.02] active:scale-95"
           >
             <div className="absolute inset-x-0 bottom-0 h-[2px] bg-white dark:bg-neutral-900 opacity-20 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
             <Plus size={18} strokeWidth={3} />
             <span className="text-[12px] font-black uppercase tracking-[0.2em]">New Entry</span>
+            {!isSuperAdmin && <Lock size={12} className="opacity-70" />}
           </button>
         </div>
       </div>
 
-      {/* 3. Operational Data (Data Views) */}
       <div className="space-y-8 min-h-[400px]">
         <StudentTable
           students={filteredStudents}
           loading={loading}
           onView={setClickedStudent}
-          onEdit={(s) => setEditingStudent(s)}
-          onDelete={setConfirmDeleteId}
+          onEdit={(s) => {
+            if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+            setEditingStudent(s)
+          }}
+          onDelete={(id) => {
+            if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+            setConfirmDeleteId(id)
+          }}
           deleteLoadingId={deleteLoadingId}
+          isSuperAdmin={isSuperAdmin}
         />
 
         <StudentGrid
           students={filteredStudents}
           loading={loading}
           onView={setClickedStudent}
-          onEdit={(s) => setEditingStudent(s)}
-          onDelete={setConfirmDeleteId}
+          onEdit={(s) => {
+            if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+            setEditingStudent(s)
+          }}
+          onDelete={(id) => {
+            if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+            setConfirmDeleteId(id)
+          }}
           deleteLoadingId={deleteLoadingId}
+          isSuperAdmin={isSuperAdmin}
         />
       </div>
 
-      {/* 4. Persistence Controls (Pagination) */}
       <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 px-4 py-6 border-t border-neutral-100 dark:border-neutral-900">
         <div className="flex flex-col gap-1 text-center sm:text-left">
-          <p className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.2em]">Registry Footprint</p>
+          <p className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.2em]">Total Students</p>
           <p className="text-[12px] text-neutral-400 font-medium">
-            Projecting <span className="text-neutral-900 dark:text-white font-bold">{students.length}</span> of <span className="text-neutral-900 dark:text-white font-bold">{totalCount}</span> identified records
+            Showing <span className="text-neutral-900 dark:text-white font-bold">{students.length}</span> of <span className="text-neutral-900 dark:text-white font-bold">{totalCount}</span> student records
           </p>
         </div>
 
@@ -628,7 +678,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
           <div className="px-6 py-1.5 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 shadow-sm">
             <span className="text-[12px] font-black text-neutral-900 dark:text-white uppercase tracking-widest">
-              Stage {currentPage}
+              Page {currentPage}
             </span>
           </div>
 
@@ -643,10 +693,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       </div>
 
 
-
-      {/* --- MODALS --- */}
-
-      {/* Add / Edit Form - Enterprise Full-Screen Drawer */}
       <Drawer
         isOpen={showAddModal || !!editingStudent}
         onClose={() => { setShowAddModal(false); setEditingStudent(null); }}
@@ -663,7 +709,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </DrawerContent>
       </Drawer>
 
-      {/* View Details - Enterprise Drawer */}
       <Drawer
         isOpen={!!clickedStudent}
         onClose={() => setClickedStudent(null)}
@@ -678,7 +723,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </DrawerContent>
       </Drawer>
 
-      {/* Delete Confirmations (Simplifed inline for now to save files, can extract if needed) */}
       {confirmDeleteId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] backdrop-blur-sm p-4" onClick={() => setConfirmDeleteId(null)}>
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>

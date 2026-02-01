@@ -61,8 +61,8 @@ const FeeToolbar = ({
                         <input
                             value={search}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="Search Receipt, Roll, GR..."
-                            className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-sm focus:bg-white dark:focus:bg-zinc-900 focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100 focus:border-transparent outline-none transition-all placeholder:text-zinc-400"
+                            placeholder="Search by Receipt or Name..."
+                            className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-sm focus:bg-white dark:focus:bg-zinc-900 focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100 focus:border-transparent outline-none transition-all placeholder:text-zinc-400 font-medium"
                         />
                     </div>
 
@@ -147,7 +147,7 @@ const FeeToolbar = ({
                             className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all shadow-sm active:scale-95 shrink-0"
                         >
                             <Plus size={16} />
-                            <span>Add Fee</span>
+                            <span>New Entry</span>
                         </button>
                     </div>
                 </div>

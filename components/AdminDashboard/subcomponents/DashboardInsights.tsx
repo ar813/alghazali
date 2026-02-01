@@ -19,7 +19,7 @@ const DashboardInsights = ({ topClasses, totalStudents, totalNotices, onNoticeCl
                     {topClasses.length === 0 ? (
                         <div className="text-sm text-neutral-500 font-medium italic">No enrollment data available.</div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                             {topClasses.map(([cls, cnt]) => (
                                 <div key={String(cls)} className="flex items-center justify-between group">
                                     <div className="flex items-center gap-3">

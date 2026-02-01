@@ -6,6 +6,7 @@ import StatCard from './subcomponents/StatCard';
 import QuickActions from './subcomponents/QuickActions';
 import DashboardInsights from './subcomponents/DashboardInsights';
 import SystemStatus from './subcomponents/SystemStatus';
+import HonorRoll from './subcomponents/HonorRoll';
 
 const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
     // Stats
@@ -99,7 +100,11 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
             if ((s?.medicalCondition || '').toString().toLowerCase() === 'yes') medicalYes++;
             if (s?.photoUrl || s?.imageUrl) withPhoto++;
         }
-        const topClasses = Array.from(classMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5) as [string, number][];
+        // Sort by Class Name (Natural Sort) instead of Count, and show ALL classes
+        const topClasses = Array.from(classMap.entries()).sort((a, b) => {
+            return a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: 'base' });
+        }) as [string, number][];
+
         return { uniqClassCount: uniqClasses.size, male, female, medicalYes, withPhoto, topClasses };
     }, [students]);
 
@@ -144,6 +149,34 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
                     statsConfig.map((stat, i) => <StatCard key={i} stat={stat} />)
                 )}
             </div>
+
+            {/* Honor Roll / Perfect Attendance */}
+            <HonorRoll />
+
+            {/* 
+            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold text-yellow-800">⚠️ Helper: Bootstrap Super Admin</h3>
+                    <p className="text-sm text-yellow-700">Click this to make yourself a Super Admin (since you can't access the Users tab yet).</p>
+                </div>
+                <button
+                    onClick={async () => {
+                        const { makeSuperAdmin } = await import('@/utils/setSuperAdmin');
+                        const { getAuth } = await import('firebase/auth');
+                        const { app } = await import('@/lib/firebase');
+                        const auth = getAuth(app);
+                        if (auth.currentUser) {
+                            await makeSuperAdmin(auth.currentUser.uid);
+                        } else {
+                            alert("Please wait for login to finish or reload.");
+                        }
+                    }}
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors"
+                >
+                    Make Me Super Admin
+                </button>
+            </div>
+            */}
 
             <QuickActions onActionClick={handleActionClick} />
 

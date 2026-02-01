@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Loader2, Calendar, Target, User, Type, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Student } from '@/types/student';
@@ -14,6 +15,7 @@ interface EditNoticeModalProps {
 }
 
 const EditNoticeModal = ({ notice, onClose, onSaved, students, classOptions }: EditNoticeModalProps) => {
+    const [mounted, setMounted] = useState(false);
     const [form, setForm] = useState({
         title: notice.title,
         content: notice.content,
@@ -27,6 +29,11 @@ const EditNoticeModal = ({ notice, onClose, onSaved, students, classOptions }: E
     });
     const [saving, setSaving] = useState(false);
     const [studentQuickFilter, setStudentQuickFilter] = useState('');
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
 
     const save = async () => {
         setSaving(true);
@@ -55,9 +62,9 @@ const EditNoticeModal = ({ notice, onClose, onSaved, students, classOptions }: E
         } finally { setSaving(false); }
     };
 
-    return (
-        <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 sm:p-6 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+    const modalContent = (
+        <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 sm:p-6 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
 
                 {/* Modal Header */}
                 <div className="p-5 sm:p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
@@ -168,6 +175,10 @@ const EditNoticeModal = ({ notice, onClose, onSaved, students, classOptions }: E
             </div>
         </div>
     );
+
+    if (!mounted) return null;
+    return createPortal(modalContent, document.body);
 };
 
 export default EditNoticeModal;
+

@@ -45,7 +45,7 @@ const NoticeForm = ({ students, classOptions, onSubmit, saving }: NoticeFormProp
                         <Megaphone size={18} />
                     </div>
                     <div>
-                        <h3 className="text-base font-semibold text-zinc-900 dark:text-white">Create New Notice</h3>
+                        <h3 className="text-base font-semibold text-zinc-900 dark:text-white">New Notice</h3>
                         <p className="text-xs text-zinc-500">Post announcements or events for students and staff.</p>
                     </div>
                 </div>
@@ -170,7 +170,7 @@ const NoticeForm = ({ students, classOptions, onSubmit, saving }: NoticeFormProp
                                 onChange={e => setForm({ ...form, isHeadline: e.target.checked })}
                                 className="w-4 h-4 rounded-md border-zinc-300 text-red-600 focus:ring-red-500"
                             />
-                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">Important Headline</span>
+                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">Important</span>
                         </label>
                     </div>
 
@@ -211,7 +211,7 @@ const NoticeForm = ({ students, classOptions, onSubmit, saving }: NoticeFormProp
                     className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg active:scale-95 disabled:opacity-50"
                 >
                     {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                    <span>Post Notice</span>
+                    <span>Publish</span>
                 </button>
             </div>
         </form>

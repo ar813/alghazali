@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import QuizForm from './QuizForm';
 import QuizList from './QuizList';
 import QuizEditDrawer from './QuizEditDrawer';
+import { useAuth } from '@/hooks/use-auth';
 
 type Quiz = {
   _id: string
@@ -28,7 +29,10 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [workingId, setWorkingId] = useState<string | null>(null)
+
   const [editing, setEditing] = useState<any | null>(null)
+  const { user } = useAuth();
+
 
   const genId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? (crypto as any).randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`)
 
@@ -61,9 +65,13 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const handleCreate = async (formData: any) => {
     setSaving(true)
     try {
+      const token = await user?.getIdToken();
       const res = await fetch('/api/quizzes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData)
       })
       const json = await res.json()
@@ -78,7 +86,13 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
     if (!confirm('Permanentely delete this module?')) return
     setWorkingId(id)
     try {
-      const res = await fetch(`/api/quizzes?id=${id}`, { method: 'DELETE' })
+      const token = await user?.getIdToken();
+      const res = await fetch(`/api/quizzes?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       const json = await res.json()
       if (json?.ok) {
         setItems(prev => prev.filter(i => i._id !== id))

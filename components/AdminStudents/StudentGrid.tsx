@@ -1,6 +1,6 @@
 "use client";
 import Image from 'next/image';
-import { Phone } from 'lucide-react';
+import { Phone, Edit, Trash2, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import type { Student } from '@/types/student';
@@ -12,9 +12,10 @@ interface StudentGridProps {
     onEdit: (student: Student) => void;
     onDelete: (id: string) => void;
     deleteLoadingId: string | null;
+    isSuperAdmin?: boolean;
 }
 
-const StudentGrid: React.FC<StudentGridProps> = ({ students, loading, onView, onEdit, onDelete, deleteLoadingId }) => {
+const StudentGrid: React.FC<StudentGridProps> = ({ students, loading, onView, onEdit, onDelete, deleteLoadingId, isSuperAdmin = false }) => {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm md:hidden">
@@ -79,15 +80,17 @@ const StudentGrid: React.FC<StudentGridProps> = ({ students, loading, onView, on
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <button
                             onClick={(e) => { e.stopPropagation(); onEdit(student); }}
-                            className="px-4 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-xl hover:bg-neutral-100 transition-all"
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-xl hover:bg-neutral-100 transition-all"
                         >
-                            Edit
+                            {isSuperAdmin ? 'Edit' : <Lock size={12} />}
+                            {isSuperAdmin && <Edit size={12} className="opacity-50" />}
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); if (student._id) onDelete(student._id); }}
-                            className="px-4 py-2 text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl hover:bg-rose-100 transition-all"
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl hover:bg-rose-100 transition-all"
                         >
-                            {deleteLoadingId === student._id ? '...' : 'Delete'}
+                            {deleteLoadingId === student._id ? '...' : (isSuperAdmin ? 'Delete' : <Lock size={12} />)}
+                            {isSuperAdmin && <Trash2 size={12} className="opacity-50" />}
                         </button>
                     </div>
                 </motion.div>

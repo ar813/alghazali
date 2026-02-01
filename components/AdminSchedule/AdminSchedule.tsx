@@ -366,7 +366,9 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               <Plus size={16} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-zinc-900 dark:text-white leading-tight">Add or Update Schedule</h3>
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white leading-tight">Schedule Editor</h3>
+              </div>
             </div>
           </div>
           <button
@@ -382,14 +384,14 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-zinc-100 dark:border-zinc-800">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1">Class Level</label>
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1">Class</label>
               <select value={formClass} onChange={e => setFormClass(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all outline-none">
                 <option value="">Select Class</option>
                 {classOptions.map(c => <option key={c} value={c}>Class {c}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1">Day of Week</label>
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1">Day</label>
               <select value={formDay} onChange={e => setFormDay(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all outline-none">
                 <option value="">Select Day</option>
                 {dayOptions.map(d => <option key={d} value={d}>{d}</option>)}
@@ -458,21 +460,12 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </div>
 
         {loadingSchedules ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-[300px] rounded-xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 animate-pulse space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded" />
-                    <div className="h-3 w-16 bg-zinc-100 dark:bg-zinc-800 rounded" />
-                  </div>
-                </div>
-                <div className="space-y-2 pt-4">
-                  {[...Array(3)].map((__, j) => <div key={j} className="h-10 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg" />)}
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
+            <div className="relative mb-4">
+              <div className="w-10 h-10 border-4 border-indigo-50 dark:border-indigo-900/30 rounded-full"></div>
+              <div className="absolute inset-0 w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-widest animate-pulse">Loading Schedules...</h3>
           </div>
         ) : filteredSchedules.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center">

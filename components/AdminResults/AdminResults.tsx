@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 import ResultsHeader from './ResultsHeader';
 import ResultsTable from './ResultsTable';
 import ResultDetailDrawer from './ResultDetailDrawer';
@@ -46,6 +47,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const [quizDetail, setQuizDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   // --- Data Loading ---
 
@@ -151,9 +153,13 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     setIsAnnouncing(true);
     try {
       const newVal = !quiz.resultsAnnounced;
+      const token = await user?.getIdToken();
       await fetch('/api/quizzes', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ id: quiz._id, resultsAnnounced: newVal })
       });
 
@@ -171,7 +177,11 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
 
     setWorkingId(id);
     try {
-      const res = await fetch(`/api/quiz-results?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const token = await user?.getIdToken();
+      const res = await fetch(`/api/quiz-results?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const j = await res.json();
       if (!j?.ok) throw new Error(j?.error);
 

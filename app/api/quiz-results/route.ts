@@ -1,6 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
 
+import { headers } from 'next/headers'
+import { dbAdmin, authAdmin } from '@/lib/firebase-admin'
+
+// Helper to verify Super Admin
+async function isSuperAdmin() {
+  try {
+    const headersList = headers();
+    const token = headersList.get('Authorization')?.replace('Bearer ', '');
+
+    if (!token) return false;
+
+    // Verify token using Firebase Admin SDK
+    const decodedToken = await authAdmin.verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    // Check role in Firestore (Server-side check)
+    const userDoc = await dbAdmin.collection('users').doc(uid).get();
+    const userData = userDoc.data();
+
+    return userData?.role === 'super_admin';
+  } catch (error) {
+    console.error("Auth Verification Error:", error);
+    return false;
+  }
+}
+
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -95,6 +123,13 @@ export async function DELETE(req: NextRequest) {
     if (!process.env.SANITY_API_WRITE_TOKEN) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
+
+    // Security Check
+    const allowed = await isSuperAdmin();
+    if (!allowed) {
+      return NextResponse.json({ ok: false, error: 'Access Denied: Super Admin privileges required.' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     const quizId = searchParams.get('quizId')

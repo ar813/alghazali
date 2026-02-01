@@ -24,38 +24,20 @@ const AdminChatBot = dynamic(() => import('@/components/AdminChatBot/AdminChatBo
 
 import AuthLayout from '@/components/Auth/AuthLayout';
 import AdminLoginForm from '@/components/Auth/AdminLoginForm';
+import { useAuth } from '@/hooks/use-auth';
+import AccessDeniedDialog from '@/components/Auth/AccessDeniedDialog';
+
+// Lazy load AdminUsers
+const AdminUsers = dynamic(() => import('@/components/AdminUsers/AdminUsers'), { ssr: false });
 
 const AdminPage = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, loading } = useAuth();
   const [childLoading, setChildLoading] = useState(true);
 
-  // Check for existing session on component mount
-  useEffect(() => {
-    const checkSession = () => {
-      const sessionData = localStorage.getItem('adminSession');
-      if (sessionData) {
-        const { timestamp } = JSON.parse(sessionData);
-        const now = new Date().getTime();
-        const sessionDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
-
-        if (now - timestamp < sessionDuration) {
-          setIsAuthenticated(true);
-        } else {
-          // Session expired, remove it
-          localStorage.removeItem('adminSession');
-        }
-      }
-      setIsLoading(false);
-    };
-
-    checkSession();
-  }, []);
-
   // Show loading spinner only while checking session
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
         <div className="text-center">
           <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         </div>
@@ -63,14 +45,14 @@ const AdminPage = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <AuthLayout
         title="Admin Portal"
         subtitle="Sign in to manage the school dashboard."
         type="admin"
       >
-        <AdminLoginForm onLoginSuccess={() => setIsAuthenticated(true)} />
+        <AdminLoginForm onLoginSuccess={() => { }} />
       </AuthLayout>
     );
   }
@@ -80,7 +62,7 @@ const AdminPage = () => {
       <NavBar />
       {/* Top non-blocking progress bar for child loading */}
       <TopLoader loading={childLoading} />
-      <AdminPortal onLoadingChange={setChildLoading} />
+      <AdminPortal onLoadingChange={setChildLoading} childLoading={childLoading} />
     </div>
   );
 };
@@ -88,49 +70,33 @@ const AdminPage = () => {
 export default AdminPage;
 
 // ✅ Admin Portal (sidebar layout similar to student portal)
-const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance' | 'chatbot'>('dashboard');
-  const [user, setUser] = useState<{ email: string | null; displayName: string | null } | null>(null);
+const AdminPortal = ({ isBlurred = false, onLoadingChange, childLoading }: { isBlurred?: boolean; onLoadingChange?: (loading: boolean) => void; childLoading?: boolean }) => {
+  // useAuth hook for global state
+  const { user, loading: authLoading, isSuperAdmin, role, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'reports' | 'cards' | 'fees' | 'notice' | 'quiz' | 'results' | 'examResults' | 'mobile-attendance' | 'chatbot' | 'users'>('dashboard');
   const [showNamePopup, setShowNamePopup] = useState(false);
   const [newName, setNewName] = useState('');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
 
-  // Get current user from Firebase
+  // Effect to handle access denied for non-super admins trying to access restricted tabs
   useEffect(() => {
-    const getCurrentUser = async () => {
-      try {
-        const { auth } = await import('@/lib/firebase');
-        const { onAuthStateChanged } = await import('firebase/auth');
+    if (activeTab === 'users' && !isSuperAdmin && !authLoading) {
+      setShowAccessDenied(true);
+      setActiveTab('dashboard'); // Redirect back to safe tab
+    }
+  }, [activeTab, isSuperAdmin, authLoading]);
 
-        // Listen for auth state changes
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-          if (currentUser) {
-            setUser({
-              email: currentUser.email,
-              displayName: currentUser.displayName
-            });
-
-            // Show popup if display name is missing
-            if (!currentUser.displayName) {
-              setShowNamePopup(true);
-            }
-          } else {
-            setUser(null);
-          }
-        });
-
-        return unsubscribe;
-      } catch (error) {
-        console.error('Error getting user:', error);
-      }
-    };
-
-    const unsubscribePromise = getCurrentUser();
-
-    return () => {
-      unsubscribePromise?.then(unsub => unsub?.());
-    };
-  }, []);
+  // Loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        </div>
+      </div>
+    );
+  }
 
   const handleNameUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,9 +122,10 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
           updatedAt: new Date().toISOString()
         }, { merge: true });
 
-        // Update local state
-        setUser(prev => prev ? ({ ...prev, displayName: newName.trim() }) : null);
+        // Force reload or just close popup
         setShowNamePopup(false);
+        // Ideally we would trigger a context refresh here, but for now strictly relying on firebase auth state
+        window.location.reload();
       }
     } catch (error) {
       console.error('Error updating name:', error);
@@ -167,19 +134,27 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
     }
   };
 
-  const sidebarItems = useMemo(() => [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'students', label: 'Students', icon: UsersIcon },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
-    { id: 'cards', label: 'Cards', icon: IdCard },
-    { id: 'fees', label: 'Fees', icon: Banknote },
-    { id: 'notice', label: 'Notice', icon: Megaphone },
-    { id: 'quiz', label: 'Quiz', icon: FileQuestion },
-    { id: 'results', label: 'Results', icon: ClipboardList },
-    { id: 'mobile-attendance', label: 'Mobile Attendance', icon: Smartphone },
-    { id: 'chatbot', label: 'AI Assistant', icon: MessageSquare },
-  ], []);
+  const sidebarItems = useMemo(() => {
+    const items = [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'students', label: 'Students', icon: UsersIcon },
+      { id: 'schedule', label: 'Schedule', icon: Calendar },
+      { id: 'reports', label: 'Reports', icon: BarChart3 },
+      { id: 'cards', label: 'Cards', icon: IdCard },
+      { id: 'fees', label: 'Fees', icon: Banknote },
+      { id: 'notice', label: 'Notice', icon: Megaphone },
+      { id: 'quiz', label: 'Quiz', icon: FileQuestion },
+      { id: 'results', label: 'Results', icon: ClipboardList },
+      { id: 'mobile-attendance', label: 'Mobile Attendance', icon: Smartphone },
+      { id: 'chatbot', label: 'AI Assistant', icon: MessageSquare },
+    ];
+
+    if (isSuperAdmin) {
+      items.push({ id: 'users', label: 'User Management', icon: UsersIcon });
+    }
+
+    return items;
+  }, [isSuperAdmin]);
 
   // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
   useEffect(() => {
@@ -265,6 +240,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
             setActiveTab(id as any);
             if (typeof window !== 'undefined') window.location.hash = id;
           }}
+          loading={authLoading || isUpdatingName || childLoading} // Basic auth loading + content loading
         />
 
         {/* Main Content (separate scroll) */}
@@ -306,8 +282,8 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
 
                   {/* Logout Button */}
                   <button
-                    onClick={() => {
-                      try { localStorage.removeItem('adminSession'); } catch { }
+                    onClick={async () => {
+                      await logout();
                       window.location.href = '/admin';
                     }}
                     className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -330,9 +306,11 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
             {activeTab === 'results' && <AdminResults onLoadingChange={onLoadingChange} />}
             {activeTab === 'mobile-attendance' && <AdminMobileAttendance onLoadingChange={onLoadingChange} />}
             {activeTab === 'chatbot' && <AdminChatBot />}
+            {activeTab === 'users' && isSuperAdmin && <AdminUsers onLoadingChange={onLoadingChange} />}
           </div>
         </main>
       </div>
+      <AccessDeniedDialog open={showAccessDenied} onOpenChange={setShowAccessDenied} />
     </div>
   );
 };

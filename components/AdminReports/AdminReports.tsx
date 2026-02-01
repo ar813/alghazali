@@ -634,7 +634,18 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         return list.filter(s => !!s.whatsappNumber)
       case 'With Phone':
         return list.filter(s => !!s.phoneNumber)
-      case 'Medical Cases':
+      case 'Unique Classes': {
+        const m = new Map<string, number>()
+        for (const s of list) { const c = (s.admissionFor || '—').toString(); m.set(c, (m.get(c) || 0) + 1) }
+        return Array.from(m.entries()).map(([cls, cnt]) => ({ _id: cls, fullName: `Class ${cls}`, count: cnt }))
+      }
+      case 'With Email':
+        return list.filter(s => !!s.email)
+      case 'With WhatsApp':
+        return list.filter(s => !!s.whatsappNumber)
+      case 'With Phone':
+        return list.filter(s => !!s.phoneNumber)
+      case 'Medical Record':
         return list.filter(s => String(s.medicalCondition || '').toLowerCase() === 'yes')
       case 'Missing B-Form':
         return list.filter(s => !s.cnicOrBform)
@@ -789,20 +800,16 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {loading ? (
-          <>
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl shadow p-4 flex items-center justify-between animate-pulse">
-                <div>
-                  <div className="h-3 w-24 bg-gray-200 rounded mb-2" />
-                  <div className="h-6 w-12 bg-gray-200 rounded" />
-                </div>
-                <div className="w-8 h-8 rounded-lg bg-gray-200" />
-              </div>
-            ))}
-          </>
+          <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white rounded-2xl border border-neutral-100 shadow-sm gap-4">
+            <div className="relative">
+              <div className="w-10 h-10 border-4 border-indigo-50 rounded-full"></div>
+              <div className="absolute inset-0 w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Generating Statistics...</p>
+          </div>
         ) : (
           <>
-            <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between">
+            <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between border border-neutral-50">
               <div>
                 <p className="text-sm text-gray-500">Total Students</p>
                 <p className="text-2xl font-bold">{totals.total.toLocaleString()}</p>
@@ -828,16 +835,16 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       </div>
 
       {/* Data Insights (15+ quick metrics) */}
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Data Insights</h3>
+      <div className="bg-white rounded-2xl shadow-lg p-6 border border-neutral-50 relative overflow-hidden">
+        <h3 className="text-lg font-bold text-neutral-900 mb-4">Data Insights</h3>
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-pulse">
-            {Array.from({ length: 16 }).map((_, i) => (
-              <div key={i} className="p-4 border rounded-xl">
-                <div className="h-3 w-24 bg-gray-200 rounded mb-2" />
-                <div className="h-6 w-12 bg-gray-200 rounded" />
-              </div>
-            ))}
+          <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-[2px] flex flex-col items-center justify-center">
+            {/* Overlay loader is handled by parent, but we add a subtle skeleton here just in case */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full p-6 opacity-20">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-20 bg-neutral-100 rounded-xl" />
+              ))}
+            </div>
           </div>
         ) : (
           <>

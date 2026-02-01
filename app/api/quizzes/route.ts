@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
+import { dbAdmin, authAdmin } from '@/lib/firebase-admin'
+import { headers } from 'next/headers'
 
 // This tells Next.js that this route is dynamic and should not be statically generated
 export const dynamic = 'force-dynamic'
+
+// Helper to verify Super Admin
+async function isSuperAdmin() {
+  try {
+    const headersList = headers();
+    const token = headersList.get('Authorization')?.replace('Bearer ', '');
+
+    if (!token) return false;
+
+    // Verify token using Firebase Admin SDK
+    const decodedToken = await authAdmin.verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    // Check role in Firestore (Server-side check)
+    const userDoc = await dbAdmin.collection('users').doc(uid).get();
+    const userData = userDoc.data();
+
+    return userData?.role === 'super_admin';
+  } catch (error) {
+    console.error("Auth Verification Error:", error);
+    return false;
+  }
+}
+// Fix manual import inside helper if not using global admin
 
 export async function GET(req: NextRequest) {
   try {
@@ -57,6 +83,13 @@ export async function POST(req: NextRequest) {
     if (!process.env.SANITY_API_WRITE_TOKEN) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
+
+    // Security Check
+    const allowed = await isSuperAdmin();
+    if (!allowed) {
+      return NextResponse.json({ ok: false, error: 'Access Denied: Super Admin privileges required.' }, { status: 403 })
+    }
+
     const body = await req.json()
     const { title, subject, examKey, targetType, className, studentId, questions, durationMinutes, questionLimit } = body || {}
     if (!title || !subject || !examKey || !targetType || !Array.isArray(questions) || questions.length === 0) {
@@ -99,12 +132,19 @@ export async function PUT(req: NextRequest) {
     if (!process.env.SANITY_API_WRITE_TOKEN) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
+
+    // Security Check
+    const allowed = await isSuperAdmin();
+    if (!allowed) {
+      return NextResponse.json({ ok: false, error: 'Access Denied: Super Admin privileges required.' }, { status: 403 })
+    }
+
     const body = await req.json()
     const { id, ...rest } = body || {}
     if (!id) return NextResponse.json({ ok: false, error: 'id is required' }, { status: 400 })
 
     const patch: any = {}
-    for (const k of ['title','subject','examKey','targetType','className','resultsAnnounced','durationMinutes','questionLimit'] as const) {
+    for (const k of ['title', 'subject', 'examKey', 'targetType', 'className', 'resultsAnnounced', 'durationMinutes', 'questionLimit'] as const) {
       if (k in rest) patch[k] = (rest as any)[k]
     }
     if ('studentId' in rest) patch.student = rest.studentId ? { _type: 'reference', _ref: rest.studentId } : undefined
@@ -122,6 +162,13 @@ export async function DELETE(req: NextRequest) {
     if (!process.env.SANITY_API_WRITE_TOKEN) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
+
+    // Security Check
+    const allowed = await isSuperAdmin();
+    if (!allowed) {
+      return NextResponse.json({ ok: false, error: 'Access Denied: Super Admin privileges required.' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ ok: false, error: 'id is required' }, { status: 400 })
