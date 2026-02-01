@@ -1,5 +1,6 @@
 import { Award, BookOpen, Star, Users } from 'lucide-react'
 import React from 'react'
+import LordIcon from '@/components/ui/LordIcon'
 
 const About = () => {
 
@@ -24,7 +25,12 @@ const About = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 mb-10 sm:mb-12">
                     <div className="bg-card p-6 rounded-xl border border-border hover:border-primary/20 hover:shadow-sm transition-all">
                         <div className="w-10 h-10 bg-primary/5 rounded-lg flex items-center justify-center mb-4">
-                            <Award className="w-5 h-5 text-primary" />
+                            <LordIcon
+                                src="https://cdn.lordicon.com/hpivxauj.json"
+                                trigger="hover"
+                                size={24}
+                                colors="primary:#16a34a,secondary:#16a34a"
+                            />
                         </div>
                         <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground tracking-tight">Our Mission</h3>
                         <p className="text-sm text-muted-foreground leading-relaxed">

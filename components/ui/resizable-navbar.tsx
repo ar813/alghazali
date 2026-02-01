@@ -66,7 +66,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
 
     return (
         <motion.header
-            className={cn("fixed inset-x-0 top-0 z-[100] w-full pointer-events-none", className)}
+            className={cn("fixed inset-x-0 top-0 z-[10] w-full pointer-events-none", className)}
         >
             <div className="pointer-events-auto w-full">
                 {React.Children.map(children, (child) =>

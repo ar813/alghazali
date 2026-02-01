@@ -2,23 +2,26 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import AdminDashboard from '@/components/AdminDashboard/AdminDashboard';
-import AdminReports from '@/components/AdminReports/AdminReports';
-import AdminStudents from '@/components/AdminStudents/AdminStudents';
-import AdminSchedule from '@/components/AdminSchedule/AdminSchedule';
+import dynamic from 'next/dynamic';
 import NavBar from '@/components/NavBar/NavBar';
 import { X } from 'lucide-react';
 import Sidebar from '@/components/Sidebar/Sidebar';
-import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, Calendar, LogOut, IdCard, Banknote, Megaphone, Smartphone, MessageSquare, Edit2 } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, BarChart3, GraduationCap, Calendar, LogOut, IdCard, Banknote, Megaphone, Smartphone, MessageSquare, Edit2, FileQuestion, ClipboardList } from 'lucide-react';
 import TopLoader from '@/components/TopLoader/TopLoader'
-import AdminCards from '@/components/AdminCards/AdminCards';
-import AdminNotice from '@/components/AdminNotice/AdminNotice';
-import AdminFees from '@/components/AdminFees/AdminFees';
-import AdminQuiz from '@/components/AdminQuiz/AdminQuiz';
-import AdminResults from '@/components/AdminResults/AdminResults';
-import AdminMobileAttendance from '@/components/AdminMobileAttendance/AdminMobileAttendance';
-import AdminChatBot from '@/components/AdminChatBot/AdminChatBot';
-// import { useRouter } from 'next/router';
+
+// Lazy load admin components for better performance
+const AdminDashboard = dynamic(() => import('@/components/AdminDashboard/AdminDashboard'), { ssr: false });
+const AdminReports = dynamic(() => import('@/components/AdminReports/AdminReports'), { ssr: false });
+const AdminStudents = dynamic(() => import('@/components/AdminStudents/AdminStudents'), { ssr: false });
+const AdminSchedule = dynamic(() => import('@/components/AdminSchedule/AdminSchedule'), { ssr: false });
+const AdminCards = dynamic(() => import('@/components/AdminCards/AdminCards'), { ssr: false });
+const AdminNotice = dynamic(() => import('@/components/AdminNotice/AdminNotice'), { ssr: false });
+const AdminFees = dynamic(() => import('@/components/AdminFees/AdminFees'), { ssr: false });
+const AdminQuiz = dynamic(() => import('@/components/AdminQuiz/AdminQuiz'), { ssr: false });
+const AdminResults = dynamic(() => import('@/components/AdminResults/AdminResults'), { ssr: false });
+const AdminMobileAttendance = dynamic(() => import('@/components/AdminMobileAttendance/AdminMobileAttendance'), { ssr: false });
+const AdminChatBot = dynamic(() => import('@/components/AdminChatBot/AdminChatBot'), { ssr: false });
+
 import AuthLayout from '@/components/Auth/AuthLayout';
 import AdminLoginForm from '@/components/Auth/AdminLoginForm';
 
@@ -169,12 +172,11 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange }: { isBlurred?: boole
     { id: 'students', label: 'Students', icon: UsersIcon },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
-    { id: 'cards', label: 'Card', icon: IdCard },
+    { id: 'cards', label: 'Cards', icon: IdCard },
     { id: 'fees', label: 'Fees', icon: Banknote },
     { id: 'notice', label: 'Notice', icon: Megaphone },
-    { id: 'quiz', label: 'Quiz', icon: GraduationCap },
-    { id: 'results', label: 'Results', icon: GraduationCap },
-    { id: 'examResults', label: 'Exam Results', icon: GraduationCap },
+    { id: 'quiz', label: 'Quiz', icon: FileQuestion },
+    { id: 'results', label: 'Results', icon: ClipboardList },
     { id: 'mobile-attendance', label: 'Mobile Attendance', icon: Smartphone },
     { id: 'chatbot', label: 'AI Assistant', icon: MessageSquare },
   ], []);

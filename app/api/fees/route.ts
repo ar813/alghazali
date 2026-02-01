@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
 
 // Helpers
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December','admission'] as const
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'admission'] as const
 
 type QueryFilters = {
   studentId?: string
   className?: string
   month?: string
   year?: number
-  status?: 'paid'|'partial'|'unpaid'
+  status?: 'paid' | 'partial' | 'unpaid'
   q?: string
   cursor?: string
   limit?: number
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
       year,
       amountPaid,
       status: 'paid' as const,
-      paidDate: paidDate || new Date().toISOString().slice(0,10),
+      paidDate: paidDate || new Date().toISOString().slice(0, 10),
       receiptNumber,
       bookNumber,
       feeType: effectiveFeeType,
@@ -142,10 +142,19 @@ export async function PATCH(req: NextRequest) {
       patch.student = { _type: 'reference', _ref: patch.studentId }
       delete patch.studentId
     }
-    // Enforce status 'paid' and remove dueDate if provided inadvertently
-    patch.status = 'paid'
+    // Do not enforce 'paid' status. Respect what is passed.
+    // If status is 'unpaid', we should likely unset paidDate and amountPaid if desired, 
+    // or just keep them as record. For now, let's just respect the status change.
+
+    // Logic: If setting to 'paid' and no date, set today.
+    if (patch.status === 'paid' && !patch.paidDate) {
+      patch.paidDate = new Date().toISOString().slice(0, 10)
+    }
+    // If setting to 'unpaid', maybe we should clear paidDate? 
+    // It depends on business logic. Let's start with just updating status.
+
     if ('dueDate' in patch) delete patch.dueDate
-    if (!patch.paidDate) patch.paidDate = new Date().toISOString().slice(0,10)
+
     const res = await serverClient.patch(id).set(patch).commit()
     return NextResponse.json({ ok: true, res })
   } catch (err: any) {
