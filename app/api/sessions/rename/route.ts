@@ -15,38 +15,50 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: false, error: 'Both oldSession and newSession are required' }, { status: 400 });
         }
 
-        console.log(`[Session Rename] Renaming from ${oldSession} to ${newSession}`);
-
-        // Define types to update
-        const typesToUpdate = ['student', 'fee', 'notice', 'examResultSet'];
-
-        // Fetch all IDs to update
-        const query = `*[_type in $types && session == $oldSession]._id`;
-        const ids = await serverClient.fetch(query, { types: typesToUpdate, oldSession });
-
-        console.log(`[Session Rename] Found ${ids.length} documents to update.`);
-
-        // Batch update
-        let totalUpdated = 0;
-        const batchSize = 100;
-
-        for (let i = 0; i < ids.length; i += batchSize) {
-            const batch = ids.slice(i, i + batchSize);
-            const transaction = serverClient.transaction();
-
-            batch.forEach((id: string) => {
-                transaction.patch(id, { set: { session: newSession } });
-            });
-
-            await transaction.commit();
-            totalUpdated += batch.length;
-            console.log(`[Session Rename] Updated batch ${i / batchSize + 1}, total: ${totalUpdated}`);
+        // PROTECT MASTER SESSION
+        if (oldSession === "2024-2025") {
+            return NextResponse.json({ ok: false, error: 'Master session "2024-2025" cannot be renamed.' }, { status: 403 });
         }
+
+        console.log(`[Session Rename] Renaming from "${oldSession}" to "${newSession}"`);
+
+        // 1. Update related records
+        const dataTypes = ['student', 'fee', 'notice', 'examResultSet', 'schedule', 'attendance', 'quizResult'];
+        const dataQuery = `*[_type in $types && session == $oldSession]._id`;
+        const dataIds = await serverClient.fetch(dataQuery, { types: dataTypes, oldSession });
+
+        // 2. Update sessionMeta document
+        const metaQuery = `*[_type == "sessionMeta" && sessionName == $oldSession]._id`;
+        const metaIds = await serverClient.fetch(metaQuery, { oldSession });
+
+        console.log(`[Session Rename] Found ${dataIds.length} data records and ${metaIds.length} metadata docs to rename.`);
+
+        const allDataBatch = [...dataIds];
+        const allMetaBatch = [...metaIds];
+
+        if (allDataBatch.length === 0 && allMetaBatch.length === 0) {
+            return NextResponse.json({ ok: false, error: 'Session not found or already renamed.' }, { status: 404 });
+        }
+
+        // Execute transactions
+        const transaction = serverClient.transaction();
+
+        // Patch data docs (set 'session' field)
+        allDataBatch.forEach(id => {
+            transaction.patch(id, { set: { session: newSession } });
+        });
+
+        // Patch meta docs (set 'sessionName' field)
+        allMetaBatch.forEach(id => {
+            transaction.patch(id, { set: { sessionName: newSession } });
+        });
+
+        await transaction.commit();
 
         return NextResponse.json({
             ok: true,
-            message: `Successfully renamed session to ${newSession}. Updated ${totalUpdated} records.`,
-            count: totalUpdated
+            message: `Successfully renamed session to "${newSession}".`,
+            count: allDataBatch.length + allMetaBatch.length
         });
 
     } catch (error: any) {

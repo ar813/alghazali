@@ -84,9 +84,8 @@ export default function NavBar() {
           </div>
 
           <div className="flex items-center gap-4">
-            <IslamicDate variant="nav" className="hidden xl:flex" />
-            <div className="h-4 w-[1px] bg-neutral-200 dark:bg-neutral-800 hidden xl:block" />
-            <div className="h-4 w-[1px] bg-neutral-200 dark:bg-neutral-800 hidden xl:block" />
+            <IslamicDate variant="nav" className="hidden md:flex" />
+            <div className="h-4 w-[1px] bg-neutral-200 dark:bg-neutral-800 hidden md:block" />
 
             {loading ? (
               // Skeleton Loader for Button area

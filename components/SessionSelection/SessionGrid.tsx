@@ -22,15 +22,23 @@ import {
     X,
     Code,
     Copy,
-    Database
+    Database,
+    LayoutDashboard,
+    CalendarClock,
+    Smartphone,
+    UserCog
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
+import { cn } from "@/lib/utils";
+import Image from "next/image";
+import Link from 'next/link';
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuTrigger,
     DropdownMenuSeparator,
@@ -55,14 +63,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AccessDeniedDialog from '@/components/Auth/AccessDeniedDialog';
 import LogoutConfirmationDialog from "../Auth/LogoutConfirmationDialog";
+import ProfileUpdateDialog from "../Auth/ProfileUpdateDialog";
 
 export default function SessionGrid() {
-    const { sessions, addSession, renameSession, deleteSession } = useSession();
+    const { sessions, addSession, renameSession, deleteSession, isLoading, refreshSessions } = useSession();
     const router = useRouter();
     const { user, logout, isSuperAdmin } = useAuth();
     const [isProcessing, setIsProcessing] = useState(false);
     const [showAccessDenied, setShowAccessDenied] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [showProfileUpdate, setShowProfileUpdate] = useState(false);
 
     // UI View State
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -130,13 +140,20 @@ export default function SessionGrid() {
         router.push(`/admin/${session}`);
     };
 
-    const handleCreateSession = (e: React.FormEvent) => {
+    const handleCreateSession = async (e: React.FormEvent) => {
         e.preventDefault();
         if (newSessionName.trim()) {
-            addSession(newSessionName.trim());
-            setNewSessionName('');
-            setCreateDialogOpen(false);
-            toast.success("Folder created");
+            setIsProcessing(true);
+            try {
+                await addSession(newSessionName.trim());
+                setNewSessionName('');
+                setCreateDialogOpen(false);
+                toast.success("Session created successfully!");
+            } catch (error: any) {
+                toast.error(error?.message || "Failed to create session");
+            } finally {
+                setIsProcessing(false);
+            }
         }
     };
 
@@ -193,10 +210,10 @@ export default function SessionGrid() {
         setDeleteAlertOpen(true);
     };
 
-    const handleLogout = async () => {
+    const handleLogoutConfirm = async () => {
         try {
             await logout();
-            router.push('/admin');
+            router.refresh();
             toast.success("Logged out successfully");
         } catch (_error) {
             toast.error("Failed to logout");
@@ -211,7 +228,7 @@ export default function SessionGrid() {
             <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/50 backdrop-blur-md sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium text-neutral-500 dark:text-neutral-400">
-                        <span className="hover:text-black dark:hover:text-white cursor-pointer transition-colors" onClick={() => router.push('/admin')}>alghazali</span>
+                        <Link href="/" className="hover:text-black dark:hover:text-white cursor-pointer transition-colors">alghazali</Link>
                         <ChevronRight className="w-4 h-4 text-neutral-300" />
                         <span className="text-black dark:text-white font-semibold flex items-center gap-2">
                             <FolderOpen className="w-4 h-4 text-blue-500" />
@@ -265,43 +282,107 @@ export default function SessionGrid() {
 
                         <div className="h-4 w-[1px] bg-neutral-200 dark:bg-neutral-800 mx-1"></div>
 
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-2 hover:bg-neutral-100 dark:hover:bg-neutral-900 p-1 rounded-full transition-colors">
-                                    <div className="w-7 h-7 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-neutral-500 border border-neutral-200 dark:border-neutral-700">
-                                        <UserIcon size={14} />
+                                <button className="relative outline-none rounded-full transition-transform active:scale-95 focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-800 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black">
+                                    <div className={cn(
+                                        "h-9 w-9 rounded-full flex items-center justify-center overflow-hidden",
+                                        "bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700",
+                                        "hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors duration-200"
+                                    )}>
+                                        {user?.photoURL ? (
+                                            <Image
+                                                src={user.photoURL}
+                                                alt="Profile"
+                                                width={36}
+                                                height={36}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 select-none">
+                                                {user?.displayName
+                                                    ? user.displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
+                                                    : "AD"}
+                                            </span>
+                                        )}
                                     </div>
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 mt-2 rounded-xl border-neutral-200 dark:border-neutral-800 p-1.5">
-                                <DropdownMenuLabel className="px-2 py-1.5">
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">
-                                            {user?.email || 'Administrator'}
-                                        </span>
-                                        <span className="text-[10px] text-neutral-500 font-normal truncate uppercase tracking-tighter">
-                                            Manage Account
-                                        </span>
+
+                            <DropdownMenuContent className="w-60 p-1.5" align="end" sideOffset={8}>
+                                {/* Header */}
+                                <div className="flex items-center gap-3 p-2 mb-1">
+                                    <div className="h-8 w-8 shrink-0 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400 font-medium text-xs border border-neutral-200 dark:border-neutral-700 select-none">
+                                        {user?.displayName
+                                            ? user.displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
+                                            : "AD"}
                                     </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator className="bg-neutral-100 dark:bg-neutral-800" />
-                                <DropdownMenuItem onClick={() => setShowLogoutConfirm(true)} className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-950/30 rounded-lg cursor-pointer transition-colors px-2 py-2">
-                                    <LogOut className="mr-2 h-3.5 w-3.5" />
-                                    <span className="text-xs font-medium">Log out</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-neutral-100 dark:bg-neutral-800" />
-                                <DropdownMenuItem
-                                    onClick={() => {
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-sm font-medium truncate text-neutral-900 dark:text-neutral-100">
+                                            {user?.displayName || "Admin User"}
+                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] text-neutral-500 truncate">
+                                                {user?.email}
+                                            </span>
+                                            <span className={cn(
+                                                "text-[9px] px-1.5 py-px rounded-full font-medium uppercase tracking-wide border",
+                                                isSuperAdmin
+                                                    ? "bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800"
+                                                    : "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                                            )}>
+                                                {isSuperAdmin ? "S. Admin" : "Admin"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <DropdownMenuSeparator className="my-1" />
+
+                                <DropdownMenuGroup>
+                                    <DropdownMenuItem onClick={() => {
                                         if (!isSuperAdmin) {
                                             setShowAccessDenied(true);
                                             return;
                                         }
                                         setMasterApiDialogOpen(true);
-                                    }}
-                                    className="rounded-lg cursor-pointer transition-colors px-2 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                                    }} className="gap-2.5 py-2 cursor-pointer focus:bg-blue-50 dark:focus:bg-blue-950/20">
+                                        <Database size={15} className="text-blue-500" />
+                                        <span className="text-sm font-medium">Copy Master API</span>
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem onClick={() => refreshSessions()} className="gap-2.5 py-2 cursor-pointer focus:bg-neutral-100 dark:focus:bg-neutral-800">
+                                        <Loader2 size={15} className="text-neutral-500" />
+                                        <span className="text-sm">Refresh List</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuGroup>
+
+                                <DropdownMenuSeparator className="my-1" />
+
+                                <div className="px-2 py-1.5 flex items-center gap-2 text-[10px] text-neutral-400 font-medium select-none">
+                                    <CalendarClock size={12} />
+                                    <span>Session: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+
+                                <DropdownMenuSeparator className="my-1" />
+
+                                <DropdownMenuItem
+                                    onClick={() => setShowProfileUpdate(true)}
+                                    className="gap-2.5 py-2 cursor-pointer focus:bg-neutral-100 dark:focus:bg-neutral-800"
                                 >
-                                    <Database className="mr-2 h-3.5 w-3.5 text-blue-500" />
-                                    <span className="text-xs font-medium">Copy Master API</span>
+                                    <UserCog size={15} className="text-neutral-500" />
+                                    <span className="text-sm">Edit Profile</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setShowLogoutConfirm(true);
+                                    }}
+                                    className="gap-2.5 py-2 text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 cursor-pointer"
+                                >
+                                    <LogOut size={15} />
+                                    <span className="text-sm font-medium">Log out</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -348,88 +429,134 @@ export default function SessionGrid() {
                     New Session
                 </Button>
 
-                {filteredSessions.length === 0 ? (
+                {isLoading ? (
+                    <div className={viewMode === 'grid' ? "grid grid-cols-2 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4" : "flex flex-col gap-2"}>
+                        {[...Array(5)].map((_, i) => (
+                            <div
+                                key={i}
+                                className={`
+                                    animate-pulse bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800
+                                    ${viewMode === 'grid'
+                                        ? 'rounded-xl aspect-[4/3] sm:aspect-square md:aspect-[4/3] p-4 flex flex-col items-center justify-center gap-3'
+                                        : 'rounded-lg p-3 flex items-center justify-between'
+                                    }
+                                `}
+                            >
+                                {viewMode === 'grid' ? (
+                                    <>
+                                        <div className="w-12 h-10 bg-neutral-200 dark:bg-neutral-800 rounded-lg mb-2" />
+                                        <div className="w-16 h-3 bg-neutral-200 dark:bg-neutral-800 rounded mb-1" />
+                                        <div className="w-10 h-2 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-3 w-full">
+                                            <div className="w-5 h-5 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                                            <div className="w-24 h-3 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                                        </div>
+                                        <div className="w-20 h-2 bg-neutral-200 dark:bg-neutral-800 rounded hidden sm:block" />
+                                    </>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                ) : filteredSessions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-neutral-400">
                         <FolderOpen size={48} strokeWidth={1} className="mb-4 text-neutral-200 dark:text-neutral-800" />
                         <p>No sessions found.</p>
                     </div>
                 ) : (
                     <div className={viewMode === 'grid' ? "grid grid-cols-2 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4" : "flex flex-col gap-2"}>
-                        {filteredSessions.map((session, index) => (
-                            <motion.div
-                                key={session}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.03 }}
-                                onClick={() => handleSessionClick(session)}
-                                className={`
+                        {filteredSessions.map((session, index) => {
+                            const isMasterSession = session === "2024-2025";
+                            return (
+                                <motion.div
+                                    key={session}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.03 }}
+                                    onClick={() => handleSessionClick(session)}
+                                    className={`
                                     group relative cursor-pointer
-                                    border border-neutral-200 dark:border-neutral-800 
+                                    ${isMasterSession
+                                            ? 'border-2 border-red-500 dark:border-red-500 ring-2 ring-red-500/20'
+                                            : 'border border-neutral-200 dark:border-neutral-800'
+                                        }
                                     bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900/50
                                     transition-all duration-200
                                     ${viewMode === 'grid'
-                                        ? 'rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2 sm:gap-3 aspect-[4/3] sm:aspect-square md:aspect-[4/3] hover:shadow-lg hover:border-neutral-300 dark:hover:border-neutral-700'
-                                        : 'rounded-lg p-2.5 sm:p-3 flex items-center justify-between hover:border-neutral-300 dark:hover:border-neutral-700'
-                                    }
+                                            ? 'rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2 sm:gap-3 aspect-[4/3] sm:aspect-square md:aspect-[4/3] hover:shadow-lg hover:border-neutral-300 dark:hover:border-neutral-700'
+                                            : 'rounded-lg p-2.5 sm:p-3 flex items-center justify-between hover:border-neutral-300 dark:hover:border-neutral-700'
+                                        }
+                                    ${isMasterSession ? 'hover:border-red-400 dark:hover:border-red-400' : ''}
                                 `}
-                            >
-                                {/* Grid View Content */}
-                                {viewMode === 'grid' && (
-                                    <>
-                                        <div className="w-16 h-12 relative flex items-center justify-center">
-                                            <Folder className="w-full h-full text-blue-500 fill-blue-500/20 group-hover:fill-blue-500/30 transition-colors" strokeWidth={1.5} />
-                                            <div className="absolute top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 mt-1">
-                                                <span className="text-[0.6rem] font-bold text-blue-700 dark:text-blue-300 bg-white/80 dark:bg-black/80 px-1 py-0.5 rounded-[2px] shadow-sm tracking-tighter block w-max max-w-[50px] truncate">
-                                                    {session}
-                                                </span>
+                                >
+                                    {/* Master Session Badge */}
+                                    {isMasterSession && (
+                                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
+                                            <span className="px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider rounded-full shadow-sm whitespace-nowrap">
+                                                Master Data
+                                            </span>
+                                        </div>
+                                    )}
+                                    {/* Grid View Content */}
+                                    {viewMode === 'grid' && (
+                                        <>
+                                            <div className="w-16 h-12 relative flex items-center justify-center">
+                                                <Folder className="w-full h-full text-blue-500 fill-blue-500/20 group-hover:fill-blue-500/30 transition-colors" strokeWidth={1.5} />
+                                                <div className="absolute top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 mt-1">
+                                                    <span className="text-[0.6rem] font-bold text-blue-700 dark:text-blue-300 bg-white/80 dark:bg-black/80 px-1 py-0.5 rounded-[2px] shadow-sm tracking-tighter block w-max max-w-[50px] truncate">
+                                                        {session}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="w-full px-2">
-                                            <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate w-full">
-                                                {session}
-                                            </h3>
-                                            <p className="text-[10px] text-neutral-400 mt-0.5">Folder</p>
-                                        </div>
-                                    </>
-                                )}
+                                            <div className="w-full px-2">
+                                                <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate w-full">
+                                                    {session}
+                                                </h3>
+                                                <p className="text-[10px] text-neutral-400 mt-0.5">Folder</p>
+                                            </div>
+                                        </>
+                                    )}
 
-                                {/* List View Content */}
-                                {viewMode === 'list' && (
-                                    <>
-                                        <div className="flex items-center gap-3">
-                                            <Folder className="w-5 h-5 text-blue-500 fill-blue-500/20" />
-                                            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{session}</span>
-                                        </div>
-                                        <div className="text-xs text-neutral-400 hidden sm:block">Academic Session</div>
-                                    </>
-                                )}
+                                    {/* List View Content */}
+                                    {viewMode === 'list' && (
+                                        <>
+                                            <div className="flex items-center gap-3">
+                                                <Folder className="w-5 h-5 text-blue-500 fill-blue-500/20" />
+                                                <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{session}</span>
+                                            </div>
+                                            <div className="text-xs text-neutral-400 hidden sm:block">Academic Session</div>
+                                        </>
+                                    )}
 
-                                {/* Action Menu */}
-                                <div className={`${viewMode === 'grid' ? 'absolute top-1 sm:top-2 right-1 sm:right-2' : ''}`} onClick={(e) => e.stopPropagation()}>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <button className="p-1.5 rounded-md text-neutral-500 hover:text-black dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors bg-white/50 dark:bg-black/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm">
-                                                <MoreHorizontal size={14} />
-                                            </button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-48 text-xs font-medium">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={(e) => openRenameDialog(session, e)}>
-                                                <Pencil className="mr-2 h-3.5 w-3.5" /> Rename
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={(e) => handleCopySessionAPI(session, e)}>
-                                                <Code className="mr-2 h-3.5 w-3.5 text-blue-500" /> Copy API
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={(e) => openDeleteAlert(session, e)} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20">
-                                                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </motion.div>
-                        ))}
+                                    {/* Action Menu */}
+                                    <div className={`${viewMode === 'grid' ? 'absolute top-1 sm:top-2 right-1 sm:right-2' : ''}`} onClick={(e) => e.stopPropagation()}>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="p-1.5 rounded-md text-neutral-500 hover:text-black dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors bg-white/50 dark:bg-black/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm">
+                                                    <MoreHorizontal size={14} />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-48 text-xs font-medium">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={(e) => openRenameDialog(session, e)}>
+                                                    <Pencil className="mr-2 h-3.5 w-3.5" /> Rename
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={(e) => handleCopySessionAPI(session, e)}>
+                                                    <Code className="mr-2 h-3.5 w-3.5 text-blue-500" /> Copy API
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={(e) => openDeleteAlert(session, e)} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20">
+                                                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </div>
                 )}
             </main>
@@ -459,8 +586,19 @@ export default function SessionGrid() {
                             <Button type="button" variant="ghost" className="order-2 sm:order-1 flex-1 text-xs h-10 rounded-lg" onClick={() => setCreateDialogOpen(false)}>
                                 Cancel
                             </Button>
-                            <Button type="submit" className="order-1 sm:order-2 flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 text-xs h-10 rounded-lg font-semibold shadow-lg shadow-blue-500/10">
-                                Create Session
+                            <Button
+                                type="submit"
+                                disabled={isProcessing}
+                                className="order-1 sm:order-2 flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 text-xs h-10 rounded-lg font-semibold shadow-lg shadow-blue-500/10"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    "Create Session"
+                                )}
                             </Button>
                         </div>
                     </form>
@@ -604,7 +742,12 @@ export default function SessionGrid() {
             <LogoutConfirmationDialog
                 open={showLogoutConfirm}
                 onOpenChange={setShowLogoutConfirm}
-                onConfirm={handleLogout}
+                onConfirm={handleLogoutConfirm}
+            />
+
+            <ProfileUpdateDialog
+                open={showProfileUpdate}
+                onOpenChange={setShowProfileUpdate}
             />
         </div>
     );
