@@ -48,14 +48,13 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
   const [quizDetail, setQuizDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
   // --- Data Loading ---
 
   const loadQuizzes = useCallback(async () => {
     if (!selectedSession) return;
-    setLoading(true); onLoadingChange?.(true); setError(null);
+    setLoading(true); onLoadingChange?.(true);
     try {
       const res = await fetch(`/api/quizzes?limit=200&session=${encodeURIComponent(selectedSession)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -64,13 +63,12 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       else throw new Error(json?.error || 'Failed to load quizzes');
     } catch (err: any) {
       console.error('Error loading quizzes:', err);
-      setError(err?.message || 'Failed to fetch quizzes');
     } finally { setLoading(false); onLoadingChange?.(false); }
   }, [onLoadingChange, selectedSession]);
 
   const loadResults = useCallback(async (quizId: string) => {
     if (!quizId || !selectedSession) { setResults([]); return; }
-    setLoading(true); onLoadingChange?.(true); setError(null);
+    setLoading(true); onLoadingChange?.(true);
     try {
       const res = await fetch(`/api/quiz-results?quizId=${encodeURIComponent(quizId)}&limit=500&session=${encodeURIComponent(selectedSession)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -95,7 +93,6 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       }
     } catch (err: any) {
       console.error('Error loading results:', err);
-      setError(err?.message || 'Failed to fetch results');
     } finally { setLoading(false); onLoadingChange?.(false); }
   }, [onLoadingChange, selectedSession]);
 
@@ -126,7 +123,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       }
     };
     fetchQuizDetail();
-  }, [selectedResult]);
+  }, [selectedResult, quizDetail?._id]);
 
   // --- Computed Stats ---
 
@@ -168,7 +165,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
 
       setQuizzes(prev => prev.map(q => q._id === quiz._id ? { ...q, resultsAnnounced: newVal } : q));
       toast.success(newVal ? 'Results Announced Successfully' : 'Results Hidden Successfully');
-    } catch (e) {
+    } catch {
       toast.error('Failed to update status');
     } finally {
       setIsAnnouncing(false);

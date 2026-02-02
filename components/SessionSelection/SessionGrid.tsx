@@ -49,9 +49,7 @@ import {
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTitle,
-    DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -149,7 +147,7 @@ export default function SessionGrid() {
             await renameSession(sessionToRename, newName.trim());
             toast.success("Renamed successfully");
             setRenameDialogOpen(false);
-        } catch (error) {
+        } catch (_error) {
             toast.error("Failed to rename");
         } finally {
             setIsProcessing(false);
@@ -163,7 +161,7 @@ export default function SessionGrid() {
             await deleteSession(sessionToDelete);
             toast.success("Deleted successfully");
             setDeleteAlertOpen(false);
-        } catch (error) {
+        } catch (_error) {
             toast.error("Failed to delete");
         } finally {
             setIsProcessing(false);
@@ -200,7 +198,7 @@ export default function SessionGrid() {
             await logout();
             router.push('/admin');
             toast.success("Logged out successfully");
-        } catch (error) {
+        } catch (_error) {
             toast.error("Failed to logout");
         }
     };

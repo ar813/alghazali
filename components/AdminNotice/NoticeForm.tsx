@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Megaphone, Save, Loader2, Calendar, Target, User, Layers, Type } from 'lucide-react';
-import { cn } from '@/lib/utils';
+// Removed unused cn import
 import type { Student } from '@/types/student';
 
 interface NoticeFormProps {

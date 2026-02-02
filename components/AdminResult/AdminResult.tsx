@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
 import type { Student } from '@/types/student'
-import { RotateCw, CheckCircle2 } from 'lucide-react'
+import { RotateCw } from 'lucide-react'
 
 const classes = ['KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII']
 

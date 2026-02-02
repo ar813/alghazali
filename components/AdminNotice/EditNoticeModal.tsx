@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Loader2, Calendar, Target, User, Type, Layers } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { X, Save, Loader2, Layers } from 'lucide-react';
+// Removed unused cn import
 import type { Student } from '@/types/student';
 
 interface EditNoticeModalProps {
@@ -57,8 +57,8 @@ const EditNoticeModal = ({ notice, onClose, onSaved, students, classOptions }: E
                     _updatedAt: new Date().toISOString()
                 });
             }
-        } catch (e) {
-            console.error('Update failed', e);
+        } catch (_e) {
+            console.error('Update failed', _e);
         } finally { setSaving(false); }
     };
 

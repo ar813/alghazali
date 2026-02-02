@@ -50,7 +50,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
       const res = await fetch(`/api/quizzes?limit=50&session=${selectedSession}`, { cache: 'no-store' })
       const json = await res.json()
       if (json?.ok) setItems(json.data)
-    } catch (e) {
+    } catch {
       toast.error('Data loading failure')
     } finally {
       setLoading(false)

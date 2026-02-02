@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { X, Calendar, User, BookOpen, CreditCard } from 'lucide-react';
+import { X, User, BookOpen, CreditCard } from 'lucide-react';
 
 interface FeeDetailsProps {
     fee: any;

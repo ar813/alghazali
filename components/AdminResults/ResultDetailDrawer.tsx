@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Check, X as XIcon, Clock, Calendar, Hash, User, Mail, GraduationCap } from 'lucide-react';
+import { X, Check, X as XIcon, Hash, User, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ResultDetailDrawerProps {

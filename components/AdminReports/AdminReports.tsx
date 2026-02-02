@@ -132,8 +132,8 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a)
         window.URL.revokeObjectURL(url)
       }
-    } catch (e: any) {
-      toast.error(e?.message || 'Fee export mein error aaya')
+    } catch (_e: any) {
+      toast.error(_e?.message || 'Fee export mein error aaya')
     } finally {
       setFeeExporting(false)
     }
@@ -523,8 +523,8 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         a.href = url; a.download = zipName; document.body.appendChild(a); a.click(); document.body.removeChild(a)
         window.URL.revokeObjectURL(url)
       }
-    } catch (e: any) {
-      toast.error(e?.message || 'ZIP prepare karte hue error aaya')
+    } catch (_e: any) {
+      toast.error(_e?.message || 'ZIP prepare karte hue error aaya')
     } finally {
       setZipPreparing(false)
     }
@@ -587,8 +587,8 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         window.URL.revokeObjectURL(url)
       }
       toast.success('Pictures ZIP download ke liye tayyar hai.')
-    } catch (e: any) {
-      toast.error(e?.message || 'Pictures ZIP prepare karte hue error aaya')
+    } catch (_e: any) {
+      toast.error(_e?.message || 'Pictures ZIP prepare karte hue error aaya')
     } finally {
       setPicDownloading(false)
     }
@@ -689,8 +689,8 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     try {
       const ExcelJS = await import('exceljs')
       return (ExcelJS as any).default || ExcelJS
-    } catch (e) {
-      console.error('ExcelJS library could not be loaded:', e);
+    } catch (_e) {
+      console.error('ExcelJS library could not be loaded:', _e);
       throw new Error('ExcelJS library could not be loaded. Please make sure it is installed.')
     }
   }
@@ -814,7 +814,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           const res = await fetch(url + '?w=200&h=200&fit=crop', { cache: 'no-store' }); // Request thumbnail size
           if (!res.ok) return null;
           return await res.arrayBuffer();
-        } catch (e) {
+        } catch {
           return null;
         }
       }
@@ -893,9 +893,9 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
       }
-    } catch (e: any) {
+    } catch (_e: any) {
       toast.dismiss()
-      toast.error(e?.message || 'Excel export mein error aaya')
+      toast.error(_e?.message || 'Excel export mein error aaya')
     } finally {
       setExporting(false)
     }

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { DownloadCloud, Smartphone } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
 
 const AppDownloadPromo = () => {
   const appUrl = process.env.NEXT_PUBLIC_MOBILE_APP_URL || '#';

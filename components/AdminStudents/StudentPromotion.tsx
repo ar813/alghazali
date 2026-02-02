@@ -9,13 +9,22 @@ import {
     Zap,
     RefreshCcw,
     X,
-    Settings2,
     Loader2
 } from 'lucide-react';
 import { useSession } from '@/context/SessionContext';
 import { client } from '@/sanity/lib/client';
 import { toast } from 'sonner';
 import { auth } from '@/lib/firebase';
+
+// Standard Class Order for Sorting
+const CLASS_ORDER = ['PG', 'Nursery', 'KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'];
+
+const sortClasses = (a: string, b: string) => {
+    const idxA = CLASS_ORDER.indexOf(a);
+    const idxB = CLASS_ORDER.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    return a.localeCompare(b);
+};
 
 interface StudentPromotionProps {
     onClose: () => void;
@@ -35,16 +44,6 @@ const StudentPromotion = ({ onClose, onSuccess }: StudentPromotionProps) => {
     const [classStats, setClassStats] = useState<ClassStat[]>([]);
     const [isLoadingClasses, setIsLoadingClasses] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);
-
-    // Standard Class Order for Sorting
-    const CLASS_ORDER = ['PG', 'Nursery', 'KG', '1', '2', '3', '4', '5', '6', '7', '8', 'SSCI', 'SSCII'];
-
-    const sortClasses = (a: string, b: string) => {
-        const idxA = CLASS_ORDER.indexOf(a);
-        const idxB = CLASS_ORDER.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        return a.localeCompare(b);
-    };
 
     // Load classes for mapping
     useEffect(() => {
