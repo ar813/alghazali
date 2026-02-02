@@ -1,5 +1,6 @@
 import { type SchemaTypeDefinition } from 'sanity'
 import student from './student'
+import adminUser from './adminUser'
 import schedule from './schedule'
 import fees from './fees'
 import notice from './notice'
@@ -8,5 +9,5 @@ import quizResult from './quizResult'
 import examResultSet from './examResultSet'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [student, schedule, fees, notice, quiz, quizResult, examResultSet],
+  types: [student, adminUser, schedule, fees, notice, quiz, quizResult, examResultSet],
 }

@@ -8,6 +8,7 @@ import QuizForm from './QuizForm';
 import QuizList from './QuizList';
 import QuizEditDrawer from './QuizEditDrawer';
 import { useAuth } from '@/hooks/use-auth';
+import { useSession } from '@/context/SessionContext';
 
 type Quiz = {
   _id: string
@@ -24,6 +25,7 @@ type Quiz = {
 }
 
 const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+  const { selectedSession } = useSession()
   const [students, setStudents] = useState<any[]>([])
   const [items, setItems] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(false)
@@ -38,13 +40,14 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
 
   // Load Data
   const loadData = useCallback(async () => {
+    if (!selectedSession) return
     setLoading(true)
     onLoadingChange?.(true)
     try {
-      const s = await client.fetch(getAllStudentsQuery)
+      const s = await client.fetch(getAllStudentsQuery, { session: selectedSession })
       setStudents(s)
 
-      const res = await fetch('/api/quizzes?limit=50', { cache: 'no-store' })
+      const res = await fetch(`/api/quizzes?limit=50&session=${selectedSession}`, { cache: 'no-store' })
       const json = await res.json()
       if (json?.ok) setItems(json.data)
     } catch (e) {
@@ -53,9 +56,9 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
       setLoading(false)
       onLoadingChange?.(false)
     }
-  }, [onLoadingChange])
+  }, [onLoadingChange, selectedSession])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData() }, [loadData, selectedSession])
 
   const classOptions = useMemo(() =>
     Array.from(new Set(students.map(s => s.admissionFor).filter(Boolean))).sort() as string[]
@@ -72,7 +75,7 @@ const AdminQuiz = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, session: selectedSession })
       })
       const json = await res.json()
       if (json?.ok) {

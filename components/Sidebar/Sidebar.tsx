@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { LucideIcon, PanelLeftClose, PanelLeftOpen, Loader2 } from "lucide-react";
 import Image from 'next/image';
 import { useAuth } from "@/hooks/use-auth";
+import LogoutConfirmationDialog from "../Auth/LogoutConfirmationDialog";
 
 interface SidebarItem {
   id: string;
@@ -26,6 +27,7 @@ const Sidebar = ({ items, activeTab, onTabChange, loading }: SidebarProps) => {
   const [open, setOpen] = useState(false);
   // const [user, setUser] = useState<{ email: string | null; displayName: string | null; photoURL: string | null } | null>(null);
   const { user, logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // useEffect removed as we use global auth context
 
@@ -171,7 +173,7 @@ const Sidebar = ({ items, activeTab, onTabChange, loading }: SidebarProps) => {
 
           {/* Logout Button */}
           <div
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="cursor-pointer rounded-lg group/logout hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
           >
             <SidebarLink
@@ -189,7 +191,12 @@ const Sidebar = ({ items, activeTab, onTabChange, loading }: SidebarProps) => {
           </div>
         </div>
       </SidebarBody>
-    </AceternitySidebar>
+      <LogoutConfirmationDialog
+        open={showLogoutConfirm}
+        onOpenChange={setShowLogoutConfirm}
+        onConfirm={handleLogout}
+      />
+    </AceternitySidebar >
   );
 };
 

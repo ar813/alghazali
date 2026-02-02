@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { toast } from "sonner";
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
+import { useSession } from '@/context/SessionContext'
 
 type StudentType = {
   _id: string
@@ -11,9 +12,11 @@ type StudentType = {
   admissionFor?: string
   grNumber?: string
   rollNumber?: string
+  photoUrl?: string
 }
 
 const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+  const { selectedSession } = useSession()
   const [students, setStudents] = useState<StudentType[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
@@ -40,17 +43,25 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const [formStudentId, setFormStudentId] = useState<string>('')
   const [formStudentQuickFilter, setFormStudentQuickFilter] = useState('')
 
+  // Student Pictures target state
+  const [picDownloading, setPicDownloading] = useState(false)
+  const [picTargetType, setPicTargetType] = useState<TargetType>('all')
+  const [picClassName, setPicClassName] = useState<string>('')
+  const [picStudentId, setPicStudentId] = useState<string>('')
+  const [picStudentQuickFilter, setPicStudentQuickFilter] = useState('')
+
   useEffect(() => {
     const fetchStudents = async () => {
+      if (!selectedSession) return
       setLoading(true)
       onLoadingChange?.(true)
-      const data: StudentType[] = await client.fetch(getAllStudentsQuery)
+      const data: StudentType[] = await client.fetch(getAllStudentsQuery, { session: selectedSession })
       setStudents(data)
       setLoading(false)
       onLoadingChange?.(false)
     }
     fetchStudents()
-  }, [onLoadingChange])
+  }, [onLoadingChange, selectedSession])
 
   const handleExportFeesExcel = async () => {
     try {
@@ -66,6 +77,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         const q = (st?.grNumber || st?.rollNumber || '').toString()
         if (q) params.set('q', q)
       }
+      if (selectedSession) params.set('session', selectedSession)
 
       const res = await fetch(`/api/fees?${params.toString()}`, { cache: 'no-store' })
       const json = await res.json()
@@ -518,6 +530,70 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
     }
   }
 
+  const handleDownloadPicturesZip = async () => {
+    try {
+      setPicDownloading(true)
+      let list: any[] = []
+      if (picTargetType === 'all') list = students as any[]
+      else if (picTargetType === 'class') list = (students as any[]).filter(s => (s.admissionFor || '') === picClassName)
+      else if (picTargetType === 'student') list = (students as any[]).filter(s => s._id === picStudentId)
+
+      const studentsWithPhotos = list.filter(s => !!(s.photoUrl || s.imageUrl))
+
+      if (studentsWithPhotos.length === 0) {
+        toast.error('Koi student images nahi milien.')
+        return
+      }
+
+      const { default: JSZip } = await import('jszip') as any
+      const fileSaver = await import('file-saver')
+      const saveAs = (fileSaver as any).default?.saveAs || (fileSaver as any).saveAs
+      const zip = new JSZip()
+
+      const fetchImageAsBlob = async (url: string) => {
+        try {
+          // Append fm=png to ensure Sanity serves it as PNG
+          const urlObj = new URL(url)
+          urlObj.searchParams.set('fm', 'png')
+          urlObj.searchParams.set('q', '80')
+          const res = await fetch(urlObj.toString(), { cache: 'no-store' })
+          if (!res.ok) return null
+          return await res.blob()
+        } catch { return null }
+      }
+
+      toast.info(`${studentsWithPhotos.length} images are in process...`)
+
+      for (const s of studentsWithPhotos) {
+        const url = s.photoUrl || s.imageUrl
+        if (!url) continue
+        const blob = await fetchImageAsBlob(url)
+        if (blob) {
+          const safeName = (s.fullName || 'student').toString().replace(/[^a-z0-9_\-]+/gi, '_')
+          const fileName = `${safeName}_${s.grNumber || s.rollNumber || s._id}.png`
+          zip.file(fileName, blob)
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const suffix = picTargetType === 'all' ? 'all' : picTargetType === 'class' ? `class_${picClassName}` : 'single'
+      const zipName = `student_pictures_${suffix}_${new Date().toISOString().split('T')[0]}.zip`
+
+      if (saveAs && typeof saveAs === 'function') saveAs(zipBlob, zipName)
+      else {
+        const url = window.URL.createObjectURL(zipBlob)
+        const a = document.createElement('a')
+        a.href = url; a.download = zipName; document.body.appendChild(a); a.click(); document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      }
+      toast.success('Pictures ZIP download ke liye tayyar hai.')
+    } catch (e: any) {
+      toast.error(e?.message || 'Pictures ZIP prepare karte hue error aaya')
+    } finally {
+      setPicDownloading(false)
+    }
+  }
+
   const totals = useMemo(() => {
     const total = students.length
     const male = students.filter(s => s.gender === 'male').length
@@ -683,6 +759,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   const handleExportExcel = async () => {
     try {
       setExporting(true)
+      const toastId = toast.loading('Exporting data with images... This may take time depending on internet speed.')
 
       // Filter students based on target
       let selected: any[] = []
@@ -691,7 +768,9 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       else if (targetType === 'student') selected = (students as any[]).filter(s => s._id === studentId)
 
       if (selected.length === 0) {
+        toast.dismiss(toastId)
         toast.error('Koi data nahi mila export ke liye.')
+        setExporting(false)
         return
       }
 
@@ -703,6 +782,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       const ws = wb.addWorksheet('Students')
 
       ws.columns = [
+        { header: 'Picture', key: 'picture', width: 12 },
         { header: 'Full Name', key: 'fullName', width: 25 },
         { header: "Father's Name", key: 'fatherName', width: 25 },
         { header: 'Father CNIC', key: 'fatherCnic', width: 18 },
@@ -725,10 +805,25 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         { header: 'Guardian Contact', key: 'guardianContact', width: 18 },
         { header: 'Guardian CNIC', key: 'guardianCnic', width: 18 },
         { header: 'Relation', key: 'guardianRelation', width: 12 },
+        { header: 'Picture URL', key: 'photoUrl', width: 50 },
       ]
 
-      selected.forEach((student) => {
-        ws.addRow({
+      // Helper to fetch image blob
+      const fetchImageBlob = async (url: string) => {
+        try {
+          const res = await fetch(url + '?w=200&h=200&fit=crop', { cache: 'no-store' }); // Request thumbnail size
+          if (!res.ok) return null;
+          return await res.arrayBuffer();
+        } catch (e) {
+          return null;
+        }
+      }
+
+      for (let i = 0; i < selected.length; i++) {
+        const student = selected[i];
+
+        const row = ws.addRow({
+          picture: '', // Placeholder
           fullName: student.fullName || '',
           fatherName: (student as any).fatherName || '',
           fatherCnic: (student as any).fatherCnic || '',
@@ -750,15 +845,42 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
           guardianName: (student as any).guardianName || '',
           guardianContact: (student as any).guardianContact || '',
           guardianCnic: (student as any).guardianCnic || '',
-          guardianRelation: (student as any).guardianRelation || ''
+          guardianRelation: (student as any).guardianRelation || '',
+          photoUrl: (student as any).photoUrl || ''
         })
-      })
+
+        // Set rough height for image (80px approx)
+        row.height = 60;
+
+        // Embed Image
+        const url = (student as any).photoUrl || (student as any).imageUrl;
+        if (url) {
+          const buffer = await fetchImageBlob(url);
+          if (buffer) {
+            const ext = url.toLowerCase().includes('png') ? 'png' : 'jpeg';
+            const imageId = wb.addImage({
+              buffer: buffer,
+              extension: ext,
+            });
+
+            // Add to first column (index 0) of the current data row (0-indexed row is i+1 because header is 0)
+            ws.addImage(imageId, {
+              tl: { col: 0, row: i + 1 },
+              br: { col: 1, row: i + 2 },
+              editAs: 'oneCell'
+            });
+          }
+        }
+      }
 
       const buffer = await wb.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 
       const suffix = targetType === 'all' ? 'all' : targetType === 'class' ? `class_${className}` : 'single'
-      const fileName = `students_${suffix}_${new Date().toISOString().split('T')[0]}.xlsx`
+      const fileName = `students_with_images_${suffix}_${new Date().toISOString().split('T')[0]}.xlsx`
+
+      toast.dismiss(toastId)
+      toast.success('Export completed successfully!')
 
       if (saveAs && typeof saveAs === 'function') saveAs(blob, fileName)
       else {
@@ -772,6 +894,7 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         window.URL.revokeObjectURL(url)
       }
     } catch (e: any) {
+      toast.dismiss()
       toast.error(e?.message || 'Excel export mein error aaya')
     } finally {
       setExporting(false)
@@ -1122,6 +1245,71 @@ const AdminReports = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
             <button onClick={handleDownloadFormsZip} disabled={zipPreparing || (formTargetType === 'class' && !formClassName) || (formTargetType === 'student' && !formStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
               {zipPreparing ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
               <span>{zipPreparing ? 'Preparing…' : 'Download ZIP'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Download Student Pictures (in zip file) */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Download Student Pictures (in zip file)</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Target</label>
+              <select value={picTargetType} onChange={e => setPicTargetType(e.target.value as TargetType)} className="w-full border rounded px-3 py-2">
+                <option value="all">Whole School</option>
+                <option value="class">Class</option>
+                <option value="student">Particular Student</option>
+              </select>
+            </div>
+            {picTargetType === 'class' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Class</label>
+                <select value={picClassName} onChange={e => setPicClassName(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Class</option>
+                  {classOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            {picTargetType === 'student' && (
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Student</label>
+                <input
+                  value={picStudentQuickFilter}
+                  onChange={e => setPicStudentQuickFilter(e.target.value)}
+                  placeholder="Filter by Roll or GR"
+                  className="w-full border rounded px-3 py-2 mb-2 text-sm"
+                />
+                <select value={picStudentId} onChange={e => setPicStudentId(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <option value="">Select Student</option>
+                  {(students as any[])
+                    .filter(s => {
+                      const q = picStudentQuickFilter.trim().toLowerCase()
+                      if (!q) return true
+                      const roll = String((s as any).rollNumber || '').toLowerCase()
+                      const gr = String((s as any).grNumber || '').toLowerCase()
+                      return roll.includes(q) || gr.includes(q)
+                    })
+                    .slice()
+                    .sort((a: any, b: any) => {
+                      const ra = parseInt(String((a as any).rollNumber || '').replace(/[^0-9]/g, ''), 10)
+                      const rb = parseInt(String((b as any).rollNumber || '').replace(/[^0-9]/g, ''), 10)
+                      const na = isNaN(ra) ? Infinity : ra
+                      const nb = isNaN(rb) ? Infinity : rb
+                      return na - nb
+                    })
+                    .map(s => (
+                      <option key={s._id} value={s._id}>
+                        {(s as any).fullName} — {(s as any).grNumber} — Roll {(s as any).rollNumber}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="mt-4">
+            <button onClick={handleDownloadPicturesZip} disabled={picDownloading || (picTargetType === 'class' && !picClassName) || (picTargetType === 'student' && !picStudentId)} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 shadow-sm text-sm disabled:opacity-60">
+              {picDownloading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
+              <span>{picDownloading ? 'Processing…' : 'Download Pictures ZIP'}</span>
             </button>
           </div>
         </div>

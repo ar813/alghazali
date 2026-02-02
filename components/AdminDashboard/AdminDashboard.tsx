@@ -8,6 +8,8 @@ import DashboardInsights from './subcomponents/DashboardInsights';
 import SystemStatus from './subcomponents/SystemStatus';
 import HonorRoll from './subcomponents/HonorRoll';
 
+import { useSession } from '@/context/SessionContext';
+
 const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
     // Stats
     const [totalStudents, setTotalStudents] = useState<number>(0);
@@ -19,27 +21,32 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
     const [error, setError] = useState<string | null>(null);
     const [health, setHealth] = useState<{ ok?: boolean; issues?: string[]; missingEnv?: string[] } | null>(null);
 
+    const { selectedSession } = useSession();
+
     // Data fetching for dashboard
     useEffect(() => {
+        if (!selectedSession) return;
         const fetchStats = async () => {
             onLoadingChange?.(true);
             setLoading(true);
             setError(null);
             try {
+                const params = { session: selectedSession };
+
                 // Fetch Total Students from Sanity
                 try {
-                    const list: any[] = await client.fetch(getAllStudentsQuery);
+                    const list: any[] = await client.fetch(getAllStudentsQuery, params);
                     setStudents(Array.isArray(list) ? list : []);
                     setTotalStudents(Array.isArray(list) ? list.length : 0);
                 } catch {
-                    const res = await fetch('/api/stats');
+                    const res = await fetch(`/api/stats?session=${encodeURIComponent(selectedSession)}`);
                     const json = await res.json().catch(() => ({}));
                     const data = json?.data || {};
                     setTotalStudents(data.totalStudents || 0);
                 }
 
                 // Load other stats
-                const res = await fetch('/api/stats');
+                const res = await fetch(`/api/stats?session=${encodeURIComponent(selectedSession)}`);
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}));
                     throw new Error(err?.details || err?.error || `HTTP ${res.status}`);
@@ -51,7 +58,7 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
 
                 // Compute Announced Results (last 30 days)
                 try {
-                    const r = await fetch('/api/quiz-results?lastDays=30&limit=1000', { cache: 'no-store' });
+                    const r = await fetch(`/api/quiz-results?lastDays=30&limit=1000&session=${encodeURIComponent(selectedSession)}`, { cache: 'no-store' });
                     const jr = await r.json();
                     const list = Array.isArray(jr?.data) ? jr.data : [];
                     const ids = new Set<string>();
@@ -81,7 +88,7 @@ const AdminDashboard = ({ onLoadingChange }: { onLoadingChange?: (loading: boole
             }
         };
         fetchStats();
-    }, [onLoadingChange]);
+    }, [onLoadingChange, selectedSession]);
 
     // Derived insights
     const insights = useMemo(() => {

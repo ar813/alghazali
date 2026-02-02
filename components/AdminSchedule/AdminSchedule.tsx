@@ -1,12 +1,32 @@
 "use client"
 
 import React, { useCallback, useEffect, useState, useMemo } from 'react'
-import { Calendar, Plus, Save, Trash2, Upload, Download, Search, Info, FileSpreadsheet, Loader2, X } from 'lucide-react'
+import { Calendar, Plus, Save, Trash2, Upload, Download, Search, Info, FileSpreadsheet, Loader2, X, AlertTriangle, ListFilter } from 'lucide-react'
 import { toast } from "sonner";
 import ScheduleCard from './ScheduleCard';
+import { useSession } from '@/context/SessionContext';
 import { ScheduleDoc } from './types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+  const { selectedSession } = useSession();
   const [schedules, setSchedules] = useState<ScheduleDoc[]>([])
   const [loadingSchedules, setLoadingSchedules] = useState<boolean>(false)
 
@@ -141,7 +161,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       for (const k of Object.keys(byKey)) {
         const rec = byKey[k]
         const res = await fetch('/api/schedule', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ className: rec.className, day: rec.day, periods: rec.periods })
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ className: rec.className, day: rec.day, periods: rec.periods, session: selectedSession })
         })
         const j = await res.json()
         if (j?.ok) saved++
@@ -159,16 +179,17 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   const loadSchedules = React.useCallback(async () => {
     try {
+      if (!selectedSession) return;
       setLoadingSchedules(true)
       onLoadingChange?.(true)
-      const res = await fetch('/api/schedule', { cache: 'no-store' })
+      const res = await fetch(`/api/schedule?session=${selectedSession}`, { cache: 'no-store' })
       const json = await res.json()
       if (json?.ok) setSchedules(json.data as ScheduleDoc[])
     } catch {
       toast.error('Failed to load schedules')
     }
     finally { setLoadingSchedules(false); onLoadingChange?.(false) }
-  }, [onLoadingChange])
+  }, [onLoadingChange, selectedSession])
 
   useEffect(() => {
     loadSchedules()
@@ -201,7 +222,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ className: editClass, day: editDay, periods: editPeriods })
+        body: JSON.stringify({ className: editClass, day: editDay, periods: editPeriods, session: selectedSession })
       })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to save schedule')
@@ -230,7 +251,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ className: formClass, day: formDay, periods: formPeriods })
+        body: JSON.stringify({ className: formClass, day: formDay, periods: formPeriods, session: selectedSession })
       })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to save schedule')
@@ -252,14 +273,14 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const deleteScheduleDay = async (className: string, day: string) => {
     try {
       // Many runtimes don't accept a body on DELETE; prefer query params
-      const url = `/api/schedule?className=${encodeURIComponent(className)}&day=${encodeURIComponent(day)}`
+      const url = `/api/schedule?className=${encodeURIComponent(className)}&day=${encodeURIComponent(day)}&session=${encodeURIComponent(selectedSession || '')}`
       let res = await fetch(url, { method: 'DELETE' })
       // Fallback: if server doesn't support DELETE, try POST with action
       if (!res.ok) {
         res = await fetch('/api/schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete', className, day })
+          body: JSON.stringify({ action: 'delete', className, day, session: selectedSession })
         })
       }
       const json = await res.json().catch(() => ({ ok: res.ok }))
@@ -278,7 +299,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'deleteFullClass', className })
+        body: JSON.stringify({ action: 'deleteFullClass', className, session: selectedSession })
       })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to delete class schedule')
@@ -301,7 +322,8 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         body: JSON.stringify({
           className: targetClass,
           day: targetDay,
-          periods: copyingSchedule.periods
+          periods: copyingSchedule.periods,
+          session: selectedSession
         })
       })
       const json = await res.json()
@@ -359,16 +381,15 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       </div>
 
       {/* Editor Section */}
-      <div id="manage-schedule" className="bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/20">
+      <div id="manage-schedule" className="bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl overflow-hidden mb-12">
+        <div className="px-6 py-5 border-b border-zinc-100/50 dark:border-zinc-800/50 flex items-center justify-between bg-white/40 dark:bg-zinc-900/40">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-zinc-900 shrink-0">
-              <Plus size={16} />
+            <div className="w-9 h-9 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-zinc-900 shrink-0 shadow-lg shadow-zinc-900/10 dark:shadow-white/5">
+              <Plus size={18} />
             </div>
             <div>
-              <div>
-                <h3 className="text-base font-bold text-zinc-900 dark:text-white leading-tight">Schedule Editor</h3>
-              </div>
+              <h3 className="text-lg font-black text-zinc-900 dark:text-white leading-tight uppercase tracking-tight">Schedule Editor</h3>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">Configure Academic Timetable</p>
             </div>
           </div>
           <button
@@ -496,148 +517,167 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       </div>
 
       {/* Edit Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-zinc-950 rounded-2xl w-full max-w-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/20">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-zinc-900 shadow-sm">
-                  <Save size={16} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Edit Schedule</h3>
-                  <p className="text-xs text-zinc-500">Updating Class {editClass} • {editDay || 'New Day'}</p>
-                </div>
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl rounded-md flex flex-col max-h-[95vh] sm:max-h-[85vh]">
+          <DialogHeader className="px-4 py-3 sm:px-6 sm:py-5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/60 shrink-0">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 dark:bg-white rounded-lg sm:rounded-xl flex items-center justify-center text-white dark:text-zinc-900 shadow-sm shrink-0">
+                <Calendar size={16} className="sm:w-5 sm:h-5" />
               </div>
-              <button
-                className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
-                onClick={() => setShowEditModal(false)}
-              >
-                <X size={20} />
-              </button>
+              <div className="text-left">
+                <DialogTitle className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white leading-tight">Edit Schedule</DialogTitle>
+                <DialogDescription className="text-[10px] sm:text-sm text-zinc-500 font-medium leading-none mt-0.5 sm:mt-1">
+                  Class {editClass} • {editDay || 'New Day'}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 mb-5 sm:mb-8">
+              <div className="space-y-1">
+                <label className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Class</label>
+                <select
+                  value={editClass}
+                  onChange={e => setEditClass(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 sm:p-3 text-xs sm:text-sm font-medium outline-none focus:ring-1 focus:ring-zinc-900 transition-all cursor-pointer"
+                >
+                  <option value="">Select Class</option>
+                  {classOptions.map(c => <option key={c} value={c}>Class {c}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Day</label>
+                <select
+                  value={editDay}
+                  onChange={e => setEditDay(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 sm:p-3 text-xs sm:text-sm font-medium outline-none focus:ring-1 focus:ring-zinc-900 transition-all cursor-pointer"
+                >
+                  <option value="">Select Day</option>
+                  {dayOptions.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
             </div>
 
-            <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1">Class</label>
-                  <select value={editClass} onChange={e => setEditClass(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-zinc-900 transition-all">
-                    <option value="">Select Class</option>
-                    {classOptions.map(c => <option key={c} value={c}>Class {c}</option>)}
-                  </select>
+            <div className="space-y-4 sm:space-y-5">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <ListFilter size={12} className="text-zinc-400 sm:w-[14px] sm:h-[14px]" />
+                  <h4 className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Periods Configuration</h4>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1">Day</label>
-                  <select value={editDay} onChange={e => setEditDay(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-zinc-900 transition-all">
-                    <option value="">Select Day</option>
-                    {dayOptions.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
+                <button
+                  onClick={addEditPeriodRow}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-bold text-zinc-700 bg-zinc-100 rounded-md hover:bg-zinc-200 transition-all active:scale-95 shadow-sm"
+                >
+                  <Plus size={12} className="sm:w-[14px] sm:h-[14px]" /> Add Slot
+                </button>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-1">
-                  <h4 className="text-xs font-black text-zinc-400 uppercase tracking-widest">Periods</h4>
-                  <button onClick={addEditPeriodRow} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-zinc-700 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-all">
-                    <Plus size={14} /> Add
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {editPeriods.map((p, idx) => (
-                    <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-3 items-stretch sm:items-end bg-zinc-50/50 p-3 rounded-xl border border-zinc-100">
-                      <div className="hidden sm:flex sm:col-span-1 items-center justify-center font-mono text-zinc-300 text-sm">
-                        {(idx + 1).toString().padStart(2, '0')}
-                      </div>
-                      <div className="sm:col-span-10 flex flex-col sm:grid sm:grid-cols-2 gap-3">
+              <div className="space-y-2 sm:space-y-3">
+                {editPeriods.map((p, idx) => (
+                  <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-3 items-stretch sm:items-center bg-zinc-50 dark:bg-zinc-900/30 p-2.5 sm:p-4 rounded-md border border-zinc-100 dark:border-zinc-800 transition-all hover:bg-white dark:hover:bg-zinc-900 shadow-sm sm:shadow-none">
+                    <div className="hidden sm:flex sm:col-span-1 items-center justify-center font-mono text-zinc-300 dark:text-zinc-700 text-[10px]">
+                      {(idx + 1).toString().padStart(2, '0')}
+                    </div>
+                    <div className="sm:col-span-10 grid grid-cols-2 gap-2 sm:gap-3">
+                      <div className="space-y-0.5">
+                        <label className="sm:hidden text-[8px] font-bold text-zinc-400 uppercase px-1 leading-none mb-1 inline-block">Subject</label>
                         <select
                           value={p.subject}
                           onChange={e => updateEditPeriod(idx, 'subject', e.target.value)}
-                          className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-medium outline-none focus:ring-2 focus:ring-zinc-900"
+                          className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-1.5 sm:p-2.5 text-[10px] sm:text-xs font-medium outline-none focus:ring-1 focus:ring-zinc-900 h-8 sm:h-auto"
                         >
                           <option value="">Subject</option>
                           {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="sm:hidden text-[8px] font-bold text-zinc-400 uppercase px-1 leading-none mb-1 inline-block">Time</label>
                         <select
                           value={p.time}
                           onChange={e => updateEditPeriod(idx, 'time', e.target.value)}
-                          className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-mono outline-none focus:ring-2 focus:ring-zinc-900"
+                          className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-1.5 sm:p-2.5 text-[10px] sm:text-xs font-mono outline-none focus:ring-1 focus:ring-zinc-900 h-8 sm:h-auto"
                         >
                           <option value="">Time</option>
                           {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </div>
-                      <div className="sm:col-span-1 flex justify-end">
-                        <button onClick={() => removeEditPeriodRow(idx)} className="p-2 text-zinc-400 hover:text-red-600 rounded-lg">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="sm:col-span-1 flex justify-end">
+                      <button
+                        onClick={() => removeEditPeriodRow(idx)}
+                        className="p-1.5 sm:p-2.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all sm:w-auto h-8 sm:h-auto flex items-center justify-center gap-2"
+                      >
+                        <Trash2 size={14} className="sm:w-4 sm:h-4" />
+                        <span className="sm:hidden text-[10px] font-bold">Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div className="p-5 border-t border-zinc-50 bg-zinc-50/30 flex justify-end gap-3">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-5 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitEditSchedule}
-                disabled={editSubmitting}
-                className="px-6 py-2 text-sm font-bold text-white bg-zinc-900 rounded-lg hover:opacity-90 transition-all disabled:opacity-60"
-              >
-                {editSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Save Changes'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter className="p-4 sm:p-6 border-t border-zinc-50 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/40 flex flex-row items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowEditModal(false)}
+              className="flex-1 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-all active:scale-95"
+            >
+              Discard
+            </button>
+            <button
+              onClick={submitEditSchedule}
+              disabled={editSubmitting}
+              className="flex-[2] sm:flex-none px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-zinc-900 dark:bg-white dark:text-zinc-900 rounded-md hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+            >
+              {editSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {editSubmitting ? 'Saving' : 'Save Changes'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation */}
-      {confirmDelete?.open && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-zinc-950 rounded-2xl w-full max-w-sm shadow-2xl border border-zinc-100 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-8 text-center">
-              <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={24} />
-              </div>
-              <h4 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">Delete Schedule?</h4>
-              <p className="text-zinc-500 text-sm leading-relaxed mb-6">
-                Are you sure you want to remove the schedule for Class {confirmDelete.className} on {confirmDelete.day}?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  className="flex-1 px-4 py-2 text-sm font-bold text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-all"
-                  onClick={() => setConfirmDelete(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="flex-1 px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all disabled:opacity-60"
-                  disabled={deletingDay}
-                  onClick={async () => {
-                    if (!confirmDelete) return
-                    const { className, day } = confirmDelete
-                    try {
-                      setDeletingDay(true)
-                      await deleteScheduleDay(className, day)
-                    } finally {
-                      setDeletingDay(false)
-                      setConfirmDelete(null)
-                    }
-                  }}
-                >
-                  {deletingDay ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Delete'}
-                </button>
-              </div>
+      <AlertDialog
+        open={confirmDelete?.open}
+        onOpenChange={(open) => !open && setConfirmDelete(null)}
+      >
+        <AlertDialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl rounded-md">
+          <AlertDialogHeader className="p-8 pb-0 text-center">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <AlertTriangle size={32} />
             </div>
-          </div>
-        </div>
-      )}
+            <AlertDialogTitle className="text-2xl font-black text-zinc-900 dark:text-white mb-2">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-500 text-base leading-relaxed px-4">
+              This will permanently delete the schedule for <span className="font-bold text-zinc-900 dark:text-zinc-100">Class {confirmDelete?.className}</span> on <span className="font-bold text-zinc-900 dark:text-zinc-100">{confirmDelete?.day}</span>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="p-8 pt-6 flex flex-col sm:flex-row gap-4">
+            <AlertDialogCancel className="flex-1 h-12 rounded-md font-bold text-zinc-600 hover:bg-zinc-100 border-none transition-all active:scale-95">
+              Keep Schedule
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="flex-1 h-12 rounded-md font-bold bg-red-600 hover:bg-red-700 text-white border-none transition-all active:scale-95 shadow-lg shadow-red-600/20 flex items-center justify-center gap-2"
+              disabled={deletingDay}
+              onClick={async (e) => {
+                e.preventDefault()
+                if (!confirmDelete) return
+                const { className, day } = confirmDelete
+                try {
+                  setDeletingDay(true)
+                  await deleteScheduleDay(className, day)
+                } finally {
+                  setDeletingDay(false)
+                  setConfirmDelete(null)
+                }
+              }}
+            >
+              {deletingDay ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+              {deletingDay ? 'Deleting...' : 'Delete Permanently'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   )

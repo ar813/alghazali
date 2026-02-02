@@ -100,6 +100,15 @@
     @apply bg-background text-foreground tracking-tight scroll-smooth;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-outfit), sans-serif;
+  }
 }
 
 @layer utilities {

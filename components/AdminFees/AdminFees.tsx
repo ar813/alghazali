@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { client } from '@/sanity/lib/client'
 import { getAllStudentsQuery } from '@/sanity/lib/queries'
 import type { Student } from '@/types/student'
@@ -10,8 +10,11 @@ import FeeToolbar from './FeeToolbar';
 import FeeTable from './FeeTable';
 import FeeModal from './FeeModal';
 import FeeDetails from './FeeDetails';
+import { useAuth } from '@/hooks/use-auth';
 
 const MONTHS = ['Month', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'admission'] as const
+
+import { useSession } from '@/context/SessionContext';
 
 const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
   const [students, setStudents] = useState<Student[]>([])
@@ -25,6 +28,9 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [search, setSearch] = useState('')
 
+  const { selectedSession } = useSession();
+  const { user } = useAuth();
+
   // Modal & Selection state
   const [showModal, setShowModal] = useState(false)
   const [editingFee, setEditingFee] = useState<any | null>(null)
@@ -35,10 +41,11 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
 
   // Load students
   useEffect(() => {
+    if (!selectedSession) return;
     const load = async () => {
       setLoading(true); onLoadingChange?.(true)
       try {
-        const s: Student[] = await client.fetch(getAllStudentsQuery)
+        const s: Student[] = await client.fetch(getAllStudentsQuery, { session: selectedSession })
         setStudents(s)
       } finally {
         setLoading(false); onLoadingChange?.(false)
@@ -46,26 +53,33 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
     }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [selectedSession])
 
   // Actions
-  const loadFees = async () => {
+  const loadFees = useCallback(async () => {
+    if (!selectedSession || !user) return;
     setLoading(true); onLoadingChange?.(true)
     try {
+      const token = await user.getIdToken();
       const params = new URLSearchParams()
       if (filterClass) params.set('className', filterClass)
       if (filterMonth && filterMonth !== 'Month') params.set('month', filterMonth)
       if (filterYear) params.set('year', String(filterYear))
       if (filterStatus) params.set('status', filterStatus)
       if (search.trim()) params.set('q', search.trim())
-      const res = await fetch(`/api/fees?${params.toString()}`, { cache: 'no-store' })
+      params.set('session', selectedSession)
+
+      const res = await fetch(`/api/fees?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+      })
       const json = await res.json()
       if (json?.ok) setFees(json.data)
     } catch (e) {
       console.error('Failed to load fees', e)
       toast.error('Failed to load fees')
     } finally { setLoading(false); onLoadingChange?.(false) }
-  }
+  }, [selectedSession, user, filterClass, filterMonth, filterYear, filterStatus, search, onLoadingChange])
 
   const handleExportFees = async () => {
     try {
@@ -124,6 +138,7 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
     if (!file) return
     try {
       setImportLoading(true)
+      const token = await user?.getIdToken();
       const ExcelJS = await import('exceljs').then(m => m.default || m)
       const wb = new (ExcelJS as any).Workbook()
       const buf = await file.arrayBuffer()
@@ -154,7 +169,11 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
       }
 
       for (const doc of toCreate) {
-        await fetch('/api/fees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc) })
+        await fetch('/api/fees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(doc)
+        })
       }
       await loadFees()
       toast.success(`Import complete`)
@@ -170,7 +189,11 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const deleteFee = async (id: string) => {
     setDeletingId(id)
     try {
-      const res = await fetch(`/api/fees?id=${id}`, { method: 'DELETE' })
+      const token = await user?.getIdToken();
+      const res = await fetch(`/api/fees?id=${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       const json = await res.json()
       if (json?.ok) { await loadFees(); toast.success('Deleted') }
     } finally { setDeletingId(null) }
@@ -178,7 +201,12 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
 
   const markStatus = async (id: string, status: FeeStatus) => {
     try {
-      const res = await fetch('/api/fees', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, patch: { status } }) })
+      const token = await user?.getIdToken();
+      const res = await fetch('/api/fees', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ id, patch: { status } })
+      })
       const json = await res.json()
       if (json?.ok) { await loadFees(); toast.success('Status Updated') }
     } catch { toast.error('Update failed') }
@@ -187,20 +215,30 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const handleSubmitFee = async (formData: any) => {
     setSubmitting(true)
     try {
+      const token = await user?.getIdToken();
       const method = editingFee ? 'PATCH' : 'POST'
       const payload = editingFee ? { id: editingFee._id, patch: formData } : formData
-      const res = await fetch('/api/fees', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const res = await fetch('/api/fees', {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      })
       const json = await res.json()
       if (json?.ok) { setShowModal(false); await loadFees(); toast.success('Saved') }
     } finally { setSubmitting(false) }
   }
 
-  // Reload on filter change
-  useEffect(() => { loadFees() }, [filterClass, filterMonth, filterYear, filterStatus])
+  // Reload on filter change or initial session load
   useEffect(() => {
-    const t = setTimeout(() => loadFees(), 400)
+    if (selectedSession && user) loadFees()
+  }, [selectedSession, user, filterClass, filterMonth, filterYear, filterStatus, loadFees]) // Added deps
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (selectedSession && user) loadFees()
+    }, 400)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, selectedSession, user, loadFees])
 
   const uniqueClasses = useMemo(() => Array.from(new Set(students.map(s => s.admissionFor).filter(Boolean))).sort(), [students])
 

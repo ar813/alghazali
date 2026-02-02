@@ -20,6 +20,7 @@ import Sidebar from '@/components/Sidebar/Sidebar';
 
 import AuthLayout from '@/components/Auth/AuthLayout';
 import StudentLoginForm from '@/components/Auth/StudentLoginForm';
+import { useMobileNav } from '@/contexts/MobileNavContext';
 
 export default function StylishStudentPortal() {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -131,6 +132,27 @@ export default function StylishStudentPortal() {
     { id: 'Quiz', label: 'Quiz', icon: GraduationCap },
     { id: 'Quiz Result', label: 'Quiz Result', icon: GraduationCap },
   ], []);
+
+  // Get mobile nav context for unified navigation
+  const { setPortalNavConfig, clearPortalNav } = useMobileNav();
+
+  // Register sidebar items with mobile nav context for unified navigation
+  useEffect(() => {
+    setPortalNavConfig({
+      title: 'Student Portal',
+      items: sidebarItems,
+      activeId: activeTab,
+      onItemClick: (id: string) => {
+        setActiveTab(id);
+        if (typeof window !== 'undefined') window.location.hash = id;
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      clearPortalNav();
+    };
+  }, [sidebarItems, activeTab, setPortalNavConfig, clearPortalNav]);
 
   // Loading State
   if (isLoading || (sessionData && students.length === 0)) {

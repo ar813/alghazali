@@ -1,12 +1,13 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { IconMenu2, IconX } from "@tabler/icons-react";
+import { IconMenu2, IconX, IconUser, IconLogout } from "@tabler/icons-react";
 import {
     motion,
     AnimatePresence,
 } from "framer-motion";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from 'next/image';
 
 
@@ -25,6 +26,7 @@ interface NavItemsProps {
     items: {
         name: string;
         link: string;
+        icon?: React.ReactNode;
     }[];
     className?: string;
     onItemClick?: () => void;
@@ -45,14 +47,33 @@ interface MobileNavMenuProps {
     children: React.ReactNode;
     className?: string;
     isOpen: boolean;
+    onClose: () => void;
+    portalItems?: {
+        title: string;
+        items: {
+            id: string;
+            label: string;
+            icon?: React.ReactNode;
+            isActive?: boolean;
+            onClick: () => void;
+        }[];
+    };
+    userInfo?: {
+        name: string | null;
+        email: string | null;
+        image?: string | null;
+        role?: string;
+        onLogout: () => void;
+        onUpdateName: () => void;
+    };
 }
+
 
 export const Navbar = ({ children, className }: NavbarProps) => {
     const [visible, setVisible] = useState<boolean>(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
         const handleScroll = () => {
-            // Lower threshold for quicker response
             if (window.scrollY > 50) {
                 setVisible(true);
             } else {
@@ -66,7 +87,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
 
     return (
         <motion.header
-            className={cn("fixed inset-x-0 top-0 z-[10] w-full pointer-events-none", className)}
+            className={cn("fixed inset-x-0 top-0 z-[100] w-full pointer-events-none", className)}
         >
             <div className="pointer-events-auto w-full">
                 {React.Children.map(children, (child) =>
@@ -88,10 +109,10 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
             animate={{
                 backdropFilter: visible ? "blur(12px)" : "none",
                 boxShadow: visible
-                    ? "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
+                    ? "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)"
                     : "none",
-                width: visible ? "70%" : "100%",
-                y: visible ? 20 : 0,
+                width: "100%",
+                y: 0,
             }}
             transition={{
                 type: "spring",
@@ -99,8 +120,8 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
                 damping: 50,
             }}
             className={cn(
-                "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-transparent px-4 py-2 lg:flex border border-transparent transition-colors duration-200",
-                visible && "bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-neutral-200/50 dark:border-neutral-700/50",
+                "relative z-[60] mx-auto hidden w-full max-w-none flex-row items-center justify-between px-8 py-2 lg:flex border-b border-transparent transition-all duration-500 ease-in-out",
+                visible && "bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-neutral-200/50 dark:border-neutral-800/50",
                 className,
             )}
         >
@@ -147,24 +168,22 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
     return (
         <motion.div
             animate={{
-                backdropFilter: visible ? "blur(10px)" : "none",
+                backdropFilter: visible ? "blur(12px)" : "none",
                 boxShadow: visible
-                    ? "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
+                    ? "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)"
                     : "none",
-                width: visible ? "90%" : "100%",
-                paddingRight: visible ? "12px" : "0px",
-                paddingLeft: visible ? "12px" : "0px",
-                borderRadius: visible ? "4px" : "2rem",
-                y: visible ? 20 : 0,
+                width: "100%",
+                borderRadius: "0px",
+                y: 0,
             }}
             transition={{
                 type: "spring",
-                stiffness: 200,
-                damping: 50,
+                stiffness: 260,
+                damping: 30,
             }}
             className={cn(
-                "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden",
-                visible && "bg-background/80 backdrop-blur-md border border-border shadow-sm",
+                "relative z-[100] mx-auto flex w-full flex-col items-center justify-between px-4 py-2 lg:hidden border-b border-transparent transition-all duration-300",
+                visible && "bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl border-neutral-200/50 dark:border-neutral-800/50",
                 className,
             )}
         >
@@ -193,24 +212,183 @@ export const MobileNavMenu = ({
     children,
     className,
     isOpen,
+    onClose,
+    portalItems,
+    userInfo,
 }: MobileNavMenuProps) => {
-    return (
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Body scroll lock
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
+
+    if (!mounted) return null;
+
+    const menuContent = (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className={cn(
-                        "absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-lg bg-popover border border-border px-4 py-8 shadow-md",
-                        className,
-                    )}
-                >
-                    {children}
-                </motion.div>
+                <>
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={onClose}
+                        className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm lg:hidden"
+                    />
+
+                    {/* Drawer */}
+                    <motion.div
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 30,
+                        }}
+                        className={cn(
+                            "fixed right-0 top-0 z-[9999] flex h-full w-[320px] max-w-[85vw] flex-col bg-white dark:bg-neutral-950 shadow-2xl lg:hidden",
+                            className,
+                        )}
+                    >
+                        {/* Drawer Header */}
+                        <div className="flex h-16 items-center justify-between border-b border-neutral-100 dark:border-neutral-800 px-4 xs:px-6">
+                            <div className="flex-1 min-w-0 mr-2">
+                                <NavbarLogo />
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className="flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                aria-label="Close menu"
+                            >
+                                <IconX size={18} strokeWidth={2} />
+                            </button>
+                        </div>
+
+                        {/* Drawer Content */}
+                        <div className="flex-1 overflow-y-auto px-4 py-6">
+                            {/* Main Navigation Section */}
+                            <div className="mb-6">
+                                <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                                    Navigation
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {React.Children.map(children, (child, idx) => (
+                                        <motion.div
+                                            key={`nav-child-${idx}`}
+                                            className={cn(
+                                                (child as any)?.props?.className?.includes("col-span-2") ? "col-span-2" : ""
+                                            )}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                        >
+                                            {child}
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Portal Items Section (when available) */}
+                            {portalItems && portalItems.items.length > 0 && (
+                                <div className="border-t border-neutral-100 dark:border-neutral-800 pt-6">
+                                    <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                                        {portalItems.title}
+                                    </p>
+                                    <div className="space-y-1">
+                                        {portalItems.items.map((item, idx) => (
+                                            <motion.button
+                                                key={`portal-${idx}`}
+                                                onClick={item.onClick}
+                                                initial={{ opacity: 0, x: 20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: 0.1 + idx * 0.05 }}
+                                                className={cn(
+                                                    "flex h-12 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors text-left",
+                                                    item.isActive
+                                                        ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900"
+                                                        : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100"
+                                                )}
+                                            >
+                                                {item.icon && (
+                                                    <span className={cn(
+                                                        "flex h-8 w-8 items-center justify-center rounded-lg",
+                                                        item.isActive
+                                                            ? "bg-white/20 dark:bg-neutral-900/20"
+                                                            : "bg-neutral-100 dark:bg-neutral-800"
+                                                    )}>
+                                                        {item.icon}
+                                                    </span>
+                                                )}
+                                                <span>{item.label}</span>
+                                            </motion.button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* User Section (at bottom of scroll area) */}
+                            {userInfo && (
+                                <div className="mt-6 border-t border-neutral-100 dark:border-neutral-800 pt-6">
+                                    <div className="flex items-center gap-3 px-3 mb-4">
+                                        <div
+                                            onClick={userInfo.onUpdateName}
+                                            className="relative h-10 w-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700 cursor-pointer group"
+                                        >
+                                            {userInfo.image ? (
+                                                <img src={userInfo.image} alt={userInfo.name || ''} className="h-full w-full object-cover rounded-full" />
+                                            ) : (
+                                                <IconUser size={20} className="text-neutral-500" />
+                                            )}
+                                            {/* Edit Badge Overlay */}
+                                            <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-blue-600 border-2 border-white dark:border-neutral-950 flex items-center justify-center text-white shadow-sm">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-w-0" onClick={userInfo.onUpdateName}>
+                                            <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">
+                                                {userInfo.name || 'User'}
+                                            </p>
+                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                                                {userInfo.email}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <button
+                                            onClick={userInfo.onLogout}
+                                            className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
+                                        >
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/20">
+                                                <IconLogout size={18} />
+                                            </div>
+                                            <span>Log out</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                </>
             )}
         </AnimatePresence>
     );
+
+    return createPortal(menuContent, document.body);
 };
 
 export const MobileNavToggle = ({
@@ -220,10 +398,18 @@ export const MobileNavToggle = ({
     isOpen: boolean;
     onClick: () => void;
 }) => {
-    return isOpen ? (
-        <IconX className="text-foreground" onClick={onClick} />
-    ) : (
-        <IconMenu2 className="text-foreground" onClick={onClick} />
+    return (
+        <button
+            onClick={onClick}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            aria-label={isOpen ? "Close menu" : "Open menu"}
+        >
+            {isOpen ? (
+                <IconX size={20} strokeWidth={2} />
+            ) : (
+                <IconMenu2 size={20} strokeWidth={2} />
+            )}
+        </button>
     );
 };
 
@@ -231,15 +417,20 @@ export const NavbarLogo = () => {
     return (
         <a
             href="/"
-            className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black select-none"
+            className="relative z-20 flex items-center space-x-2 py-1 select-none"
         >
-            <Image
-                src="/logo.png"
-                alt="Al Ghazali Logo"
-                width={30}
-                height={30}
-            />
-            <span className="font-medium text-foreground select-none">Al Ghazali High School</span>
+            <div className="flex-shrink-0">
+                <Image
+                    src="/logo.png"
+                    alt="Al Ghazali Logo"
+                    width={28}
+                    height={28}
+                    className="rounded-lg shadow-sm"
+                />
+            </div>
+            <span className="font-bold text-foreground select-none text-[13px] xs:text-[14px] sm:text-[15px] tracking-[0.05em] xs:tracking-[0.1em] uppercase leading-tight block truncate xs:whitespace-normal">
+                Al Ghazali High School
+            </span>
         </a>
     );
 };
@@ -262,12 +453,12 @@ export const NavbarButton = ({
         | React.ComponentPropsWithoutRef<"button">
     )) => {
     const baseStyles =
-        "px-4 py-2 rounded-md font-medium text-sm relative cursor-pointer transition duration-200 inline-block text-center";
+        "px-4 py-1.5 rounded-xl font-medium text-sm relative cursor-pointer transition duration-200 inline-flex items-center justify-center";
 
     const variantStyles = {
         primary:
-            "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
-        secondary: "bg-background text-foreground border border-input shadow-sm hover:bg-accent hover:text-accent-foreground",
+            "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-sm hover:bg-neutral-800 dark:hover:bg-neutral-100",
+        secondary: "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700",
         dark: "bg-foreground text-background shadow-sm hover:bg-foreground/90",
         gradient:
             "bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
@@ -281,5 +472,40 @@ export const NavbarButton = ({
         >
             {children}
         </Tag>
+    );
+};
+
+// New component for mobile nav links with icon support
+export const MobileNavLink = ({
+    href,
+    icon,
+    children,
+    onClick,
+    className,
+}: {
+    href: string;
+    icon?: React.ReactNode;
+    children: React.ReactNode;
+    onClick?: () => void;
+    className?: string;
+}) => {
+    return (
+        <a
+            href={href}
+            onClick={onClick}
+            className={cn(
+                "flex h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 p-2 text-center transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95",
+                className,
+            )}
+        >
+            {icon && (
+                <span className="text-neutral-500 dark:text-neutral-400">
+                    {icon}
+                </span>
+            )}
+            <span className="text-[11px] font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-center line-clamp-1">
+                {children}
+            </span>
+        </a>
     );
 };

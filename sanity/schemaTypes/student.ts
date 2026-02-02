@@ -13,6 +13,12 @@ export default defineType({
       validation: Rule => Rule.required()
     }),
     defineField({
+      name: 'session',
+      title: 'Academic Session',
+      type: 'string',
+      initialValue: '2024-2025',
+    }),
+    defineField({
       name: 'fatherName',
       title: "Father's Name",
       type: 'string',

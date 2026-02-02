@@ -11,6 +11,7 @@ interface AuthContextType {
     loading: boolean;
     isSuperAdmin: boolean;
     logout: () => Promise<void>;
+    updateName: (newName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
     isSuperAdmin: false,
     logout: async () => { },
+    updateName: async () => { },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -45,7 +47,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         const userData = userDoc.data();
                         setRole(userData.role || "admin");
                     } else {
-                        setRole("admin");
+                        // Security: If user exists in Auth but not in Firestore (deleted by Super Admin), force logout
+                        console.warn("User account deleted. Logging out.");
+                        signOut(auth).then(() => {
+                            setRole(null);
+                            localStorage.removeItem("adminSession");
+                            // Optional: Redirect or refresh could happen here, but state change usually triggers re-render
+                        });
+                        return;
                     }
                     setLoading(false);
                 }, (error) => {
@@ -75,12 +84,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const updateName = async (newName: string) => {
+        try {
+            const { updateProfile } = await import("firebase/auth");
+            const { doc, setDoc } = await import("firebase/firestore");
+
+            if (auth.currentUser) {
+                await updateProfile(auth.currentUser, {
+                    displayName: newName.trim()
+                });
+
+                await setDoc(doc(db, "users", auth.currentUser.uid), {
+                    displayName: newName.trim(),
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                // Force state update to reflect name change
+                setUser({ ...auth.currentUser } as User);
+            }
+        } catch (error) {
+            console.error("Error updating name:", error);
+            throw error;
+        }
+    };
+
     const value = {
         user,
         role,
         loading,
         isSuperAdmin: role === "super_admin",
         logout,
+        updateName,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,4 +1,4 @@
-import {defineType, defineField, defineArrayMember} from 'sanity'
+import { defineType, defineField, defineArrayMember } from 'sanity'
 
 export default defineType({
   name: 'schedule',
@@ -26,6 +26,12 @@ export default defineType({
       validation: Rule => Rule.required(),
     }),
     defineField({
+      name: 'session',
+      title: 'Academic Session',
+      type: 'string',
+      initialValue: '2024-2025',
+    }),
+    defineField({
       name: 'days',
       title: 'Days',
       type: 'array',
@@ -51,57 +57,57 @@ export default defineType({
               },
               validation: Rule => Rule.required(),
             }),
+            defineField({
+              name: 'periods',
+              title: 'Periods',
+              type: 'array',
+              of: [
+                defineArrayMember({
+                  type: 'object',
+                  name: 'period',
+                  fields: [
                     defineField({
-                      name: 'periods',
-                      title: 'Periods',
-                      type: 'array',
-                      of: [
-                        defineArrayMember({
-                          type: 'object',
-                          name: 'period',
-                          fields: [
-                            defineField({
-                              name: 'subject',
-                              title: 'Subject',
-                              type: 'string',
-                              options: {
-                                list: [
-                                  { title: 'English', value: 'English' },
-                                  { title: 'Urdu', value: 'Urdu' },
-                                  { title: 'Math', value: 'Math' },
-                                  { title: 'Science', value: 'Science' },
-                                  { title: 'Islamiat', value: 'Islamiat' },
-                                  { title: 'Computer', value: 'Computer' },
-                                  { title: 'History', value: 'History' },
-                                  { title: 'Art', value: 'Art' },
-                                ],
-                              },
-                              validation: Rule => Rule.required(),
-                            }),
-                            defineField({
-                              name: 'time',
-                              title: 'Time',
-                              type: 'string',
-                              options: {
-                                list: [
-                                  '08:00 - 08:35',
-                                  '08:35 - 09:10',
-                                  '09:10 - 09:45',
-                                  '09:45 - 10:20',
-                                  '10:20 - 10:55',
-                                  '10:55 - 11:30',
-                                  '11:30 - 12:05',
-                                  '12:05 - 12:40',
-                                  '12:40 - 13:15',
-                                  '13:15 - 13:50',
-                                ],
-                              },
-                              validation: Rule => Rule.required(),
-                            }),
-                          ],
-                        }),
-                      ],
+                      name: 'subject',
+                      title: 'Subject',
+                      type: 'string',
+                      options: {
+                        list: [
+                          { title: 'English', value: 'English' },
+                          { title: 'Urdu', value: 'Urdu' },
+                          { title: 'Math', value: 'Math' },
+                          { title: 'Science', value: 'Science' },
+                          { title: 'Islamiat', value: 'Islamiat' },
+                          { title: 'Computer', value: 'Computer' },
+                          { title: 'History', value: 'History' },
+                          { title: 'Art', value: 'Art' },
+                        ],
+                      },
+                      validation: Rule => Rule.required(),
                     }),
+                    defineField({
+                      name: 'time',
+                      title: 'Time',
+                      type: 'string',
+                      options: {
+                        list: [
+                          '08:00 - 08:35',
+                          '08:35 - 09:10',
+                          '09:10 - 09:45',
+                          '09:45 - 10:20',
+                          '10:20 - 10:55',
+                          '10:55 - 11:30',
+                          '11:30 - 12:05',
+                          '12:05 - 12:40',
+                          '12:40 - 13:15',
+                          '13:15 - 13:50',
+                        ],
+                      },
+                      validation: Rule => Rule.required(),
+                    }),
+                  ],
+                }),
+              ],
+            }),
           ],
         }),
       ],

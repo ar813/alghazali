@@ -37,10 +37,14 @@ export async function GET(req: NextRequest) {
     const className = searchParams.get('className') || undefined
     const id = searchParams.get('id') || undefined
     const limit = searchParams.get('limit') ? Math.min(100, Number(searchParams.get('limit'))) : 50
+    const session = searchParams.get('session')
+
+    // Session Logic
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
 
     if (id) {
       const data = await serverClient.fetch(`*[_type=="quiz" && _id == $id][0]{
-        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
+        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit, session,
         student->{_id, fullName},
         questions[]{ question, options, correctIndex, difficulty },
         createdAt, _createdAt
@@ -48,23 +52,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, data })
     }
 
-    const params: Record<string, any> = { limit }
+    const params: Record<string, any> = { limit, session }
     let query: string
     if (!className && !studentId) {
-      query = `*[_type == "quiz"] | order(coalesce(createdAt, _createdAt) desc) [0...$limit]{
-        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
+      query = `*[_type == "quiz" && ${sessionFilter}] | order(coalesce(createdAt, _createdAt) desc) [0...$limit]{
+        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit, session,
         student->{_id, fullName},
         questions[]{ question, options, correctIndex, difficulty },
         createdAt, _createdAt
       }`
     } else {
-      const whereParts: string[] = ['_type == "quiz"']
+      const whereParts: string[] = ['_type == "quiz"', sessionFilter]
       const conditions: string[] = [`targetType == 'all'`]
       if (className) { conditions.push(`(targetType == 'class' && className == $className)`); params.className = className }
       if (studentId) { conditions.push(`(targetType == 'student' && defined(student) && student._ref == $studentId)`); params.studentId = studentId }
       whereParts.push(`(${conditions.join(' || ')})`)
       query = `*[$where] | order(coalesce(createdAt, _createdAt) desc) [0...$limit]{
-        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit,
+        _id, title, subject, examKey, targetType, className, resultsAnnounced, durationMinutes, questionLimit, session,
         student->{_id, fullName},
         questions[]{ question, options, correctIndex, difficulty },
         createdAt, _createdAt
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { title, subject, examKey, targetType, className, studentId, questions, durationMinutes, questionLimit } = body || {}
+    const { title, subject, examKey, targetType, className, studentId, questions, durationMinutes, questionLimit, session } = body || {}
     if (!title || !subject || !examKey || !targetType || !Array.isArray(questions) || questions.length === 0) {
       return NextResponse.json({ ok: false, error: 'title, subject, examKey, targetType and at least one question are required' }, { status: 400 })
     }
@@ -117,6 +121,7 @@ export async function POST(req: NextRequest) {
       questions: questions.map((q: any) => ({ question: q.question, options: q.options, correctIndex: q.correctIndex, difficulty: q.difficulty || 'easy' })),
       durationMinutes: typeof durationMinutes === 'number' ? durationMinutes : undefined,
       questionLimit,
+      session: session || '2024-2025' // Default to current session if not provided
     }
     if (targetType === 'student') doc.student = { _type: 'reference', _ref: studentId }
 

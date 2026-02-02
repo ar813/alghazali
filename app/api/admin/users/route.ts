@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authAdmin, dbAdmin } from "@/lib/firebase-admin";
+import { syncAdminToSanity, deleteAdminFromSanity, patchAdminInSanity } from "@/lib/sanity-sync";
 
 async function isSuperAdmin(req: NextRequest) {
     const authHeader = req.headers.get("Authorization");
@@ -44,6 +45,14 @@ export async function POST(req: NextRequest) {
             createdAt: new Date().toISOString(),
         });
 
+        // 3. Sync to Sanity (Backup)
+        await syncAdminToSanity({
+            uid: userRecord.uid,
+            email,
+            displayName: displayName || "Admin",
+            role: role || "admin",
+        });
+
         return NextResponse.json({
             success: true,
             uid: userRecord.uid,
@@ -83,6 +92,9 @@ export async function DELETE(req: NextRequest) {
 
         // 2. Delete from Firestore
         await dbAdmin.collection("users").doc(uid).delete();
+
+        // 3. Delete from Sanity (Backup)
+        await deleteAdminFromSanity(uid);
 
         return NextResponse.json({ success: true, message: "User deleted successfully." });
     } catch (error: any) {
@@ -131,6 +143,16 @@ export async function PUT(req: NextRequest) {
 
         if (Object.keys(firestoreUpdate).length > 0) {
             await dbAdmin.collection("users").doc(uid).update(firestoreUpdate);
+        }
+
+        // 3. Sync Updates to Sanity (Backup)
+        const sanityUpdates: any = {};
+        if (email) sanityUpdates.email = email;
+        if (displayName) sanityUpdates.displayName = displayName;
+        if (role) sanityUpdates.role = role;
+
+        if (Object.keys(sanityUpdates).length > 0) {
+            await patchAdminInSanity(uid, sanityUpdates);
         }
 
         return NextResponse.json({

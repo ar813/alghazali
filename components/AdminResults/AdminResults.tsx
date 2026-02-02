@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import ResultsHeader from './ResultsHeader';
 import ResultsTable from './ResultsTable';
 import ResultDetailDrawer from './ResultDetailDrawer';
+import { useSession } from '@/context/SessionContext';
 
 type Quiz = {
   _id: string;
@@ -37,6 +38,7 @@ type Result = {
 };
 
 const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+  const { selectedSession } = useSession();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuizId, setSelectedQuizId] = useState<string>('');
   const [results, setResults] = useState<Result[]>([]);
@@ -52,9 +54,10 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
   // --- Data Loading ---
 
   const loadQuizzes = useCallback(async () => {
+    if (!selectedSession) return;
     setLoading(true); onLoadingChange?.(true); setError(null);
     try {
-      const res = await fetch('/api/quizzes?limit=200', { cache: 'no-store' });
+      const res = await fetch(`/api/quizzes?limit=200&session=${encodeURIComponent(selectedSession)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json?.ok) setQuizzes(json.data);
@@ -63,13 +66,13 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       console.error('Error loading quizzes:', err);
       setError(err?.message || 'Failed to fetch quizzes');
     } finally { setLoading(false); onLoadingChange?.(false); }
-  }, [onLoadingChange]);
+  }, [onLoadingChange, selectedSession]);
 
   const loadResults = useCallback(async (quizId: string) => {
-    if (!quizId) { setResults([]); return; }
+    if (!quizId || !selectedSession) { setResults([]); return; }
     setLoading(true); onLoadingChange?.(true); setError(null);
     try {
-      const res = await fetch(`/api/quiz-results?quizId=${encodeURIComponent(quizId)}&limit=500`, { cache: 'no-store' });
+      const res = await fetch(`/api/quiz-results?quizId=${encodeURIComponent(quizId)}&limit=500&session=${encodeURIComponent(selectedSession)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
 
@@ -94,10 +97,10 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
       console.error('Error loading results:', err);
       setError(err?.message || 'Failed to fetch results');
     } finally { setLoading(false); onLoadingChange?.(false); }
-  }, [onLoadingChange]);
+  }, [onLoadingChange, selectedSession]);
 
-  useEffect(() => { loadQuizzes(); }, [loadQuizzes]);
-  useEffect(() => { loadResults(selectedQuizId); }, [selectedQuizId, loadResults]);
+  useEffect(() => { loadQuizzes(); }, [loadQuizzes, selectedSession]);
+  useEffect(() => { loadResults(selectedQuizId); }, [selectedQuizId, loadResults, selectedSession]);
 
   // Fetch full quiz detail when a result is opened (for question text)
   useEffect(() => {
@@ -285,7 +288,7 @@ const AdminResults = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean
         onClose={() => setSelectedResult(null)}
       />
 
-    </div>
+    </div >
   );
 };
 

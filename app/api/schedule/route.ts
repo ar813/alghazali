@@ -11,9 +11,18 @@ if (!token) {
 
 const client = createClient({ projectId, dataset, apiVersion, token, useCdn: false })
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const data = await client.fetch(`*[_type == "schedule"]{ _id, className, days[]{ day, periods[]{ subject, time } } } | order(className asc)`)
+    const { searchParams } = new URL(req.url)
+    const session = searchParams.get('session')
+
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+
+    // Fetch schedules for filtered session
+    const data = await client.fetch(
+      `*[_type == "schedule" && ${sessionFilter}]{ _id, className, days[]{ day, periods[]{ subject, time } } } | order(className asc)`,
+      { session }
+    )
     return NextResponse.json({ ok: true, data })
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || 'Failed to fetch schedules' }, { status: 500 })
@@ -27,19 +36,25 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    
+    // Session should be passed in body for POST
+    const session = body.session
+    // We'll treat null session as '2024-2025' for backward compat in logic if needed, but optimally we force it?
+    // Let's use same filter logic for lookup
+
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+
     // Handle delete action via POST (fallback)
     if (body.action === 'delete') {
-      const { className, day } = body as { action: string; className?: string; day?: string }
-      
+      const { className, day } = body as { action: string; className?: string; day?: string, session?: string }
+
       if (!className || !day) {
         return NextResponse.json({ ok: false, error: 'className and day are required for delete' }, { status: 400 })
       }
 
-      // Find existing schedule for class
+      // Find existing schedule for class AND session
       const existing = await client.fetch(
-        `*[_type=="schedule" && className == $className][0]{ _id, days }`,
-        { className }
+        `*[_type=="schedule" && className == $className && ${sessionFilter}][0]{ _id, days }`,
+        { className, session }
       ) as { _id: string; days?: { day: string; periods?: { subject: string; time: string }[] }[] } | null
 
       if (!existing) {
@@ -55,7 +70,7 @@ export async function POST(req: NextRequest) {
 
       // Remove the day from the schedule
       const updatedDays = (existing.days || []).filter(d => d.day !== day)
-      
+
       if (updatedDays.length === 0) {
         // If no days left, delete the entire schedule document
         await client.delete(scheduleId)
@@ -67,16 +82,31 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { className, day, periods } = body as { className?: string; day?: string; periods?: { subject: string; time: string }[] }
+    if (body.action === 'deleteFullClass') {
+      const { className } = body as { action: string; className?: string, session?: string }
+      if (!className) return NextResponse.json({ ok: false, error: 'className required' }, { status: 400 })
+
+      const existing = await client.fetch(
+        `*[_type=="schedule" && className == $className && ${sessionFilter}][0]{ _id }`,
+        { className, session }
+      )
+      if (existing) {
+        await client.delete(existing._id)
+        return NextResponse.json({ ok: true, action: 'deleted_full_class' })
+      }
+      return NextResponse.json({ ok: false, error: 'Schedule not found' }, { status: 404 })
+    }
+
+    const { className, day, periods } = body as { className?: string; day?: string; periods?: { subject: string; time: string }[], session?: string }
 
     if (!className || !day || !Array.isArray(periods) || periods.length === 0) {
       return NextResponse.json({ ok: false, error: 'className, day and at least one period are required' }, { status: 400 })
     }
 
-    // Find existing schedule for class
+    // Find existing schedule for class AND session
     const existing = await client.fetch(
-      `*[_type=="schedule" && className == $className][0]{ _id, days }`,
-      { className }
+      `*[_type=="schedule" && className == $className && ${sessionFilter}][0]{ _id, days }`,
+      { className, session }
     ) as { _id: string; days?: { day: string; periods?: { subject: string; time: string }[] }[] } | null
 
     if (!existing) {
@@ -84,6 +114,7 @@ export async function POST(req: NextRequest) {
       const doc = {
         _type: 'schedule',
         className,
+        session: session || '2024-2025',
         days: [
           {
             day,
@@ -126,15 +157,18 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const className = searchParams.get('className')
     const day = searchParams.get('day')
+    const session = searchParams.get('session')
 
     if (!className || !day) {
       return NextResponse.json({ ok: false, error: 'className and day are required' }, { status: 400 })
     }
 
-    // Find existing schedule for class
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+
+    // Find existing schedule for class AND session
     const existing = await client.fetch(
-      `*[_type=="schedule" && className == $className][0]{ _id, days }`,
-      { className }
+      `*[_type=="schedule" && className == $className && ${sessionFilter}][0]{ _id, days }`,
+      { className, session }
     ) as { _id: string; days?: { day: string; periods?: { subject: string; time: string }[] }[] } | null
 
     if (!existing) {
@@ -150,7 +184,7 @@ export async function DELETE(req: NextRequest) {
 
     // Remove the day from the schedule
     const updatedDays = (existing.days || []).filter(d => d.day !== day)
-    
+
     if (updatedDays.length === 0) {
       // If no days left, delete the entire schedule document
       await client.delete(scheduleId)

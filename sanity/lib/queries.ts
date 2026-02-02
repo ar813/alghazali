@@ -27,23 +27,28 @@ const studentFields = `
   "photoUrl": photo.asset->url
 `
 
-export const getAllStudentsQuery = `*[_type == "student"]{${studentFields}}`
+// Session logic: Check session match OR if searching for default session (2024-2025), include docs with no session.
+const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+
+export const getAllStudentsQuery = `*[_type == "student" && ${sessionFilter}]{${studentFields}}`
 
 export const getPaginatedStudentsQuery = `*[_type == "student" 
+  && ${sessionFilter}
   && ($classFilter == "All" || admissionFor == $classFilter)
   && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*" || grNumber match $search + "*")
 ] | order(admissionFor asc, rollNumber asc) [$start...$end] {${studentFields}}`
 
 export const getStudentsCountQuery = `count(*[_type == "student" 
+  && ${sessionFilter}
   && ($classFilter == "All" || admissionFor == $classFilter)
   && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*" || grNumber match $search + "*")
 ])`
 
 export const getStudentStatsQuery = `{
-  "total": count(*[_type == "student" && ($classFilter == "All" || admissionFor == $classFilter) && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*")]),
-  "boys": count(*[_type == "student" && gender == "male" && ($classFilter == "All" || admissionFor == $classFilter) && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*")]),
-  "girls": count(*[_type == "student" && gender == "female" && ($classFilter == "All" || admissionFor == $classFilter) && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*")]),
-  "kg": count(*[_type == "student" && admissionFor == "KG" && ($classFilter == "All" || admissionFor == $classFilter) && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*")])
+  "total": count(*[_type == "student" && ${sessionFilter} && ($classFilter == "All" || admissionFor == $classFilter) && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*")]),
+  "boys": count(*[_type == "student" && gender == "male" && ${sessionFilter} && ($classFilter == "All" || admissionFor == $classFilter) && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*")]),
+  "girls": count(*[_type == "student" && gender == "female" && ${sessionFilter} && ($classFilter == "All" || admissionFor == $classFilter) && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*")]),
+  "kg": count(*[_type == "student" && admissionFor == "KG" && ${sessionFilter} && ($classFilter == "All" || admissionFor == $classFilter) && ($search == "" || fullName match $search + "*" || fatherName match $search + "*" || rollNumber match $search + "*")])
 }`
 
 export const getAllClassesQuery = `*[_type == "student"]{admissionFor}` // Lightweight fetch for filter options

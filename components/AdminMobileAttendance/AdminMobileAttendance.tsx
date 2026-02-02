@@ -13,6 +13,7 @@ import AttendanceStats from './subcomponents/AttendanceStats';
 import AttendanceFilters from './subcomponents/AttendanceFilters';
 import AttendanceTable from './subcomponents/AttendanceTable';
 import AttendanceCardList from './subcomponents/AttendanceCardList';
+import { useSession } from '@/context/SessionContext';
 
 interface AttendanceRecord {
     id: string;
@@ -28,6 +29,7 @@ interface AttendanceRecord {
 }
 
 const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+    const { selectedSession } = useSession();
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -44,14 +46,15 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
     useEffect(() => {
         const fetchAllStudents = async () => {
             try {
-                const students = await client.fetch<Student[]>(getAllStudentsQuery);
+                if (!selectedSession) return;
+                const students = await client.fetch<Student[]>(getAllStudentsQuery, { session: selectedSession });
                 setAllStudents(students);
             } catch (error) {
                 console.error("❌ Error fetching all students from Sanity:", error);
             }
         };
         fetchAllStudents();
-    }, []);
+    }, [selectedSession]);
 
     // Fetch Holidays
     useEffect(() => {
@@ -170,7 +173,6 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
                                 timestamp: 0,
                                 status: 'leave', // Dummy
                                 reason: 'Absent',
-                                // @ts-ignore
                                 isAbsent: true
                             } as any);
                         }

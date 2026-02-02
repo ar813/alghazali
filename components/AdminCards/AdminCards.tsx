@@ -8,6 +8,7 @@ import type { Student } from "@/types/student";
 import { auth } from '@/lib/firebase';
 import { toast } from "sonner";
 import CardToolbar from "./CardToolbar";
+import { useSession } from '@/context/SessionContext';
 import StudentList from "./StudentList";
 import IDCard from "./IDCard";
 
@@ -87,6 +88,7 @@ const toTransparentPng = (img: HTMLImageElement) => {
 };
 
 const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+  const { selectedSession } = useSession();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -107,9 +109,10 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
   // Load Data
   const loadStudents = React.useCallback(async () => {
     try {
+      if (!selectedSession) return;
       setLoading(true);
       onLoadingChange?.(true);
-      const data: Student[] = await client.fetch(getAllStudentsQuery);
+      const data: Student[] = await client.fetch(getAllStudentsQuery, { session: selectedSession });
       setStudents(data);
     } catch (error) {
       toast.error("Failed to load students");
@@ -118,7 +121,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
       setLoading(false);
       onLoadingChange?.(false);
     }
-  }, [onLoadingChange]);
+  }, [onLoadingChange, selectedSession]);
 
   useEffect(() => {
     loadStudents();
@@ -352,8 +355,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
 
   return (
     <div className="max-w-[1400px] mx-auto pb-20 px-4 sm:px-6">
-      <h1 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">ID Cards</h1>
-      <p className="text-zinc-500 mb-8 max-w-2xl">Generate and download official student identity cards. Use filters to select specific batches.</p>
+
 
       <CardToolbar
         searchTerm={search}
