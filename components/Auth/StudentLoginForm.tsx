@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { User, FileText, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import type { Student } from '@/types/student';
 import { client } from "@/sanity/lib/client";
-import { getAllStudentsQuery } from "@/sanity/lib/queries";
 
 // Helpers
 const onlyDigits = (s: string) => (s || '').replace(/\D+/g, '').slice(0, 13);
@@ -26,19 +25,6 @@ const StudentLoginForm = ({ onLoginSuccess }: StudentLoginFormProps) => {
     const [grNumber, setGrNumber] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [students, setStudents] = useState<Student[]>([]);
-
-    useEffect(() => {
-        const fetchStudents = async () => {
-            try {
-                const data = await client.fetch(getAllStudentsQuery);
-                setStudents(data);
-            } catch {
-                setError("Database connection error. Please refresh.");
-            }
-        };
-        fetchStudents();
-    }, []);
 
     const handleVerify = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -55,18 +41,24 @@ const StudentLoginForm = ({ onLoginSuccess }: StudentLoginFormProps) => {
         }
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // TARGETED FETCH: Only fetch the specific student
+            const query = `*[_type == "student" && (cnicOrBform == $identity || fatherCnic == $identity || guardianCnic == $identity) && grNumber == $grNumber][0]{
+                _id,
+                fullName,
+                admissionFor,
+                grNumber,
+                cnicOrBform,
+                fatherCnic,
+                guardianCnic,
+                "photoUrl": photo.asset->url
+            }`;
 
-            const result = students.filter((s: Student) => {
-                const docId = onlyDigits(String((s as any).cnicOrBform ?? ''));
-                const guardian = onlyDigits(String((s as any).guardianCnic ?? ''));
-                const father = onlyDigits(String((s as any).fatherCnic ?? ''));
-                const gr = String((s as any).grNumber ?? '').trim();
-                return (docId === cleanBForm || guardian === cleanBForm || father === cleanBForm) && gr === cleanGr;
+            const student = await client.fetch(query, {
+                identity: cleanBForm,
+                grNumber: cleanGr
             });
 
-            if (result.length > 0) {
-                const student = result[0];
+            if (student) {
                 const payload = { timestamp: Date.now(), bFormOrCnic: cleanBForm, grNumber: cleanGr };
                 localStorage.setItem('studentSession', JSON.stringify(payload));
                 if (student._id) {
@@ -74,10 +66,11 @@ const StudentLoginForm = ({ onLoginSuccess }: StudentLoginFormProps) => {
                 }
                 onLoginSuccess(student);
             } else {
-                setError('No record found with provided details.');
+                setError('No record found with provided details. Please check your CNIC/B-Form and GR Number.');
             }
-        } catch {
-            setError('Verification service unavailable.');
+        } catch (err: any) {
+            console.error('Portal Login Error:', err);
+            setError('Database connection error. Please check your internet and try again.');
         } finally {
             setIsLoading(false);
         }
@@ -129,7 +122,7 @@ const StudentLoginForm = ({ onLoginSuccess }: StudentLoginFormProps) => {
 
             <button
                 type="submit"
-                disabled={isLoading || students.length === 0}
+                disabled={isLoading}
                 className="w-full py-4 rounded-xl bg-neutral-900 dark:bg-emerald-600 hover:bg-neutral-800 dark:hover:bg-emerald-700 text-white font-bold text-sm shadow-xl shadow-emerald-500/10 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed group flex items-center justify-center gap-3"
             >
                 {isLoading ? (

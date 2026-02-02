@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { CalendarCheck, GraduationCap, LayoutDashboard, Megaphone, User, LogOut, QrCode } from 'lucide-react';
 import { client } from "@/sanity/lib/client";
-import { getAllStudentsQuery, getScheduleByClassQuery } from "@/sanity/lib/queries";
+import { getScheduleByClassQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
 // import { useRouter } from 'next/navigation';
 
@@ -24,7 +24,6 @@ import { useMobileNav } from '@/contexts/MobileNavContext';
 
 export default function StylishStudentPortal() {
   const [activeTab, setActiveTab] = useState('Dashboard');
-  const [students, setStudents] = useState<Student[]>([]);
   const [sessionData, setSessionData] = useState<{ bFormOrCnic: string; grNumber: string } | null>(null)
 
   // ***************************************************************************************
@@ -32,76 +31,75 @@ export default function StylishStudentPortal() {
   const [filtered, setFiltered] = useState<Student[]>([])
   const [matchedSchedule, setMatchedSchedule] = useState<ScheduleDay[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  // removed unused states
   const sessionDuration = 30 * 60 * 1000; // 30 minutes
 
+  // Handle Session and Data Fetching
   useEffect(() => {
-    const fetchStudents = async () => {
+    const initializePortal = async () => {
       try {
-        const data = await client.fetch(getAllStudentsQuery);
-        setStudents(data);
-      } catch {
-        // handle error
+        const session = localStorage.getItem('studentSession');
+        if (!session) {
+          setIsLoading(false);
+          return;
+        }
+
+        const { timestamp, bFormOrCnic, grNumber } = JSON.parse(session);
+        const now = Date.now();
+
+        if (now - timestamp < sessionDuration) {
+          setSessionData({ bFormOrCnic, grNumber });
+
+          // Fetch only this specific student
+          const target = (bFormOrCnic || '').replace(/\D+/g, '').slice(0, 13);
+          const query = `*[_type == "student" && (cnicOrBform == $identity || fatherCnic == $identity || guardianCnic == $identity) && grNumber == $grNumber][0]{
+            _id,
+            fullName,
+            admissionFor,
+            grNumber,
+            gender,
+            cnicOrBform,
+            fatherCnic,
+            guardianCnic,
+            fatherName,
+            dob,
+            rollNumber,
+            nationality,
+            address,
+            phoneNumber,
+            whatsappNumber,
+            guardianName,
+            guardianRelation,
+            guardianContact,
+            issueDate,
+            expiryDate,
+            "photoUrl": photo.asset->url
+          }`;
+
+          const student = await client.fetch(query, {
+            identity: target,
+            grNumber: grNumber
+          });
+
+          if (student) {
+            setFiltered([student]);
+            try { localStorage.setItem('studentId', String(student._id)) } catch { }
+          } else {
+            // Invalid session data
+            localStorage.removeItem('studentSession');
+            setSessionData(null);
+          }
+        } else {
+          localStorage.removeItem('studentSession');
+        }
+      } catch (error) {
+        console.error("Portal initialization error:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchStudents();
+    initializePortal();
   }, []);
-
-  // Check existing session immediately on mount
-  useEffect(() => {
-    try {
-      const session = localStorage.getItem('studentSession')
-      if (!session) {
-        setIsLoading(false)
-        return
-      }
-      const { timestamp, bFormOrCnic, grNumber } = JSON.parse(session)
-      const now = Date.now()
-      if (now - timestamp < sessionDuration) {
-        setSessionData({ bFormOrCnic, grNumber })
-        // If session is valid, we keep loading true until students are loaded and matched
-      } else {
-        localStorage.removeItem('studentSession')
-        setIsLoading(false)
-      }
-    } catch {
-      setIsLoading(false)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Match student once data and session are available
-  useEffect(() => {
-    if (!sessionData) {
-      if (!isLoading) return // if not loading and no session, we stay unauthenticated
-      // if loading but no session (handled above)
-      return
-    }
-    if (students.length === 0) return
-
-    const { bFormOrCnic, grNumber } = sessionData
-    const target = (bFormOrCnic || '').replace(/\D+/g, '').slice(0, 13)
-
-    const result = students.filter((s: Student) => {
-      const docId = (String((s as any).cnicOrBform ?? '')).replace(/\D+/g, '').slice(0, 13)
-      const guardian = (String((s as any).guardianCnic ?? '')).replace(/\D+/g, '').slice(0, 13)
-      const father = (String((s as any).fatherCnic ?? '')).replace(/\D+/g, '').slice(0, 13)
-      const gr = String((s as any).grNumber ?? '').trim()
-      return (docId === target || guardian === target || father === target) && gr === grNumber
-    })
-
-    if (result.length > 0) {
-      setFiltered(result)
-      setIsLoading(false)
-      try { localStorage.setItem('studentId', String(result[0]!._id)) } catch { }
-    } else {
-      // Session invalid against current data
-      try { localStorage.removeItem('studentSession') } catch { }
-      setSessionData(null)
-      setFiltered([])
-      setIsLoading(false)
-    }
-  }, [students, sessionData, isLoading])
 
   // When filtered student changes, fetch the schedule for their class
   useEffect(() => {
@@ -152,7 +150,7 @@ export default function StylishStudentPortal() {
   }, [sidebarItems, activeTab, setPortalNavConfig, clearPortalNav]);
 
   // Loading State
-  if (isLoading || (sessionData && students.length === 0)) {
+  if (isLoading || (sessionData && filtered.length === 0)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
