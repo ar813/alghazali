@@ -120,7 +120,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <GoogleAnalytics ga_id="G-75E96W9EMG" />
       <LordIconInitializer />
       <body
@@ -131,7 +131,7 @@ export default function RootLayout({
             <MobileNavProvider>
               {children}
               <AppDownloadPromo />
-              <Toaster position="top-right" richColors closeButton />
+              <Toaster position="bottom-right" richColors closeButton />
             </MobileNavProvider>
           </AuthProvider>
         </Provider>

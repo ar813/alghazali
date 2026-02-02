@@ -15,27 +15,36 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: false, error: 'Session is required' }, { status: 400 });
         }
 
-        console.log(`[Session Delete] Starting deletion for session: ${session}`);
-
-        // Define types to delete
-        const typesToDelete = ['student', 'fee', 'notice', 'examResultSet'];
-
-        // Fetch all IDs to delete
-        const query = `*[_type in $types && session == $session]._id`;
-        const ids = await serverClient.fetch(query, { types: typesToDelete, session });
-
-        console.log(`[Session Delete] Found ${ids.length} documents to delete.`);
-
-        if (ids.length === 0) {
-            return NextResponse.json({ ok: true, message: 'Session empty, nothing to delete.', count: 0 });
+        // PROTECT MASTER SESSION
+        if (session === "2024-2025") {
+            return NextResponse.json({ ok: false, error: 'Master session "2024-2025" cannot be deleted.' }, { status: 403 });
         }
 
-        // Batch delete (Sanity transaction limit is usually around 1000 ops, safest to batch ~100)
+        console.log(`[Session Delete] Starting deletion for session: ${session}`);
+
+        // 1. Delete all related records
+        const typesToDelete = ['student', 'fee', 'notice', 'examResultSet', 'schedule', 'attendance', 'quizResult'];
+        const dataQuery = `*[_type in $types && session == $session]._id`;
+        const dataIds = await serverClient.fetch(dataQuery, { types: typesToDelete, session });
+
+        console.log(`[Session Delete] Found ${dataIds.length} related documents to delete.`);
+
+        // 2. Delete the sessionMeta document itself
+        const metaQuery = `*[_type == "sessionMeta" && sessionName == $session]._id`;
+        const metaIds = await serverClient.fetch(metaQuery, { session });
+
+        const allIds = [...dataIds, ...metaIds];
+
+        if (allIds.length === 0) {
+            return NextResponse.json({ ok: true, message: 'Nothing found to delete.', count: 0 });
+        }
+
+        // Batch delete
         let totalDeleted = 0;
         const batchSize = 100;
 
-        for (let i = 0; i < ids.length; i += batchSize) {
-            const batch = ids.slice(i, i + batchSize);
+        for (let i = 0; i < allIds.length; i += batchSize) {
+            const batch = allIds.slice(i, i + batchSize);
             const transaction = serverClient.transaction();
 
             batch.forEach((id: string) => {
@@ -49,7 +58,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
             ok: true,
-            message: `Successfully deleted session ${session} and ${totalDeleted} related records.`,
+            message: `Successfully deleted session "${session}" and ${totalDeleted} related records.`,
             count: totalDeleted
         });
 

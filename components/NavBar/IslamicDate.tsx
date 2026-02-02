@@ -54,7 +54,6 @@ export default function IslamicDate({ className = "", variant = 'nav' }: Islamic
                         year: json.data.hijri.year
                     };
                     setHijri(data);
-                    setHijri(data);
                     localStorage.setItem('hijri_date_cache', JSON.stringify({
                         timestamp: Date.now(),
                         data: data
@@ -73,8 +72,8 @@ export default function IslamicDate({ className = "", variant = 'nav' }: Islamic
     if (loading || !hijri) {
         return (
             <div className={`flex items-center gap-2 px-3 py-1 ${className}`}>
-                <div className="w-4 h-4 rounded-full bg-neutral-200/20 dark:bg-neutral-800/20 animate-pulse" />
-                <div className="h-2 w-20 bg-neutral-200/20 dark:bg-neutral-800/20 rounded animate-pulse" />
+                <div className="w-4 h-4 rounded-full bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
+                <div className="h-2 w-20 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
             </div>
         );
     }
