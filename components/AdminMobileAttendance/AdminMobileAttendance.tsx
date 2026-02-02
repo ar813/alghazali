@@ -1,29 +1,35 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import PremiumLoader from '@/components/ui/PremiumLoader';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { Calendar, Search, Smartphone, Clock, User, Hash, AlertCircle, UserCheck, UserX, UserMinus } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { toast } from "sonner";
 import { client } from '@/sanity/lib/client';
 import { getAllStudentsQuery } from '@/sanity/lib/queries';
 import type { Student } from '@/types/student';
+import AttendanceStats from './subcomponents/AttendanceStats';
+import AttendanceFilters from './subcomponents/AttendanceFilters';
+import AttendanceTable from './subcomponents/AttendanceTable';
+import AttendanceCardList from './subcomponents/AttendanceCardList';
+import { useSession } from '@/context/SessionContext';
 
-// Define the exact structure as provided
 interface AttendanceRecord {
-    id: string; // Document ID
-    date: string; // YYYY-MM-DD
+    id: string;
+    date: string;
     studentName: string;
     class: string;
     rollNumber: string;
     grNumber: string;
     photoUrl: string | null;
-    timestamp: number; // Epoch time
-    status: 'present' | 'leave'; // Status from mobile app
-    reason?: string; // Optional leave reason (only for status: 'leave')
+    timestamp: number;
+    status: 'present' | 'leave';
+    reason?: string;
 }
 
 const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+    const { selectedSession } = useSession();
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -31,6 +37,7 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
     const [selectedDate, setSelectedDate] = useState<string>('');
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [statusFilter, setStatusFilter] = useState<'all' | 'present' | 'leave' | 'absent'>('all');
+    const [holidays, setHolidays] = useState<Record<string, string>>({});
 
     // Dummy classes for filter - can be dynamic if needed
     const classOptions = ['All', 'KG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'SSCI', 'SSCII'];
@@ -39,93 +46,104 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
     useEffect(() => {
         const fetchAllStudents = async () => {
             try {
-                console.log("🔄 Fetching all students from Sanity...");
-                const students = await client.fetch<Student[]>(getAllStudentsQuery);
-                console.log("✅ Sanity students fetched:", students.length);
-                console.log("📋 Sample student:", students[0]);
+                if (!selectedSession) return;
+                const students = await client.fetch<Student[]>(getAllStudentsQuery, { session: selectedSession });
                 setAllStudents(students);
             } catch (error) {
                 console.error("❌ Error fetching all students from Sanity:", error);
             }
         };
         fetchAllStudents();
+    }, [selectedSession]);
+
+    // Fetch Holidays
+    useEffect(() => {
+        const fetchHolidays = () => {
+            try {
+                const q = query(collection(db, 'holidays'));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const h: Record<string, string> = {};
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        let dateKey = '';
+                        if (data.date) {
+                            if (typeof data.date === 'string') {
+                                dateKey = data.date;
+                            } else if (data.date?.toDate) {
+                                // Handle Firestore Timestamp
+                                const d = data.date.toDate();
+                                const yyyy = d.getFullYear();
+                                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                                const dd = String(d.getDate()).padStart(2, '0');
+                                dateKey = `${yyyy}-${mm}-${dd}`;
+                            }
+                        }
+                        if (dateKey && data.title) {
+                            h[dateKey] = data.title;
+                        }
+                    });
+                    setHolidays(h);
+                });
+                return unsubscribe;
+            } catch (e) {
+                console.error("Error fetching holidays:", e);
+            }
+        };
+        const unsub = fetchHolidays();
+        return () => { if (unsub) unsub(); };
     }, []);
 
-    useEffect(() => {
-        // Set default date to today in YYYY-MM-DD format (local Pakistan time)
-        const today = new Date();
+    const [viewMode, setViewMode] = useState<'daily' | 'monthly' | 'custom'>('daily');
+    const [selectedMonth, setSelectedMonth] = useState<string>('');
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
-        // Get local date components (this already accounts for timezone)
+    useEffect(() => {
+        const today = new Date();
         const yyyy = today.getFullYear();
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const dd = String(today.getDate()).padStart(2, '0');
-        const formattedDate = `${yyyy}-${mm}-${dd}`;
 
-        console.log("📅 Today's date (formatted):", formattedDate);
-        console.log("🕐 Full date object:", today.toString());
-        console.log("🌍 Timezone offset:", today.getTimezoneOffset());
-
-        setSelectedDate(formattedDate);
+        setSelectedDate(`${yyyy}-${mm}-${dd}`);
+        setSelectedMonth(`${yyyy}-${mm}`);
+        setDateRange({
+            start: `${yyyy}-${mm}-01`,
+            end: `${yyyy}-${mm}-${dd}`
+        });
     }, []);
 
     useEffect(() => {
-        if (!selectedDate) {
-            console.log("⚠️ No date selected");
+        if ((viewMode === 'daily' && !selectedDate) ||
+            (viewMode === 'monthly' && !selectedMonth) ||
+            (viewMode === 'custom' && (!dateRange.start || !dateRange.end))) {
             return;
         }
 
-        console.log("📅 Selected Date:", selectedDate);
         if (onLoadingChange) onLoadingChange(true);
         setLoading(true);
 
-        // ========== TEST QUERY: Fetch ALL documents (no filter) ==========
-        console.log("🧪 TEST: Fetching ALL documents from daily_attendance...");
-        const testQuery = query(collection(db, 'daily_attendance'));
-
-        onSnapshot(testQuery, (testSnapshot: any) => {
-            console.log("🧪 TEST: Total documents in collection:", testSnapshot.size);
-            testSnapshot.forEach((doc: any) => {
-                const data = doc.data();
-                console.log("🧪 TEST Doc:", {
-                    id: doc.id,
-                    date: data.date,
-                    status: data.status,
-                    grNumber: data.grNumber,
-                    studentName: data.studentName
-                });
-            });
-        }, { onlyOnce: true } as any);
-        // ================================================================
-
-        // ========== TEMPORARY: Fetch ALL (no date filter) ==========
-        console.log("🔍 TEMP: Fetching ALL documents (no date filter for testing)");
-        // const q = query(collection(db, 'daily_attendance'));
-        // Original query with date filter:
-        const q = query(
-            collection(db, 'daily_attendance'),
-            where("date", "==", selectedDate)
-        );
-        // ============================================================
-
-        console.log("🔍 Querying Firestore with date:", selectedDate);
+        let q;
+        if (viewMode === 'daily') {
+            q = query(collection(db, 'daily_attendance'), where("date", "==", selectedDate));
+        } else if (viewMode === 'monthly') {
+            const startStr = `${selectedMonth}-01`;
+            const endStr = `${selectedMonth}-31`;
+            q = query(collection(db, 'daily_attendance'), where("date", ">=", startStr), where("date", "<=", endStr));
+        } else {
+            q = query(collection(db, 'daily_attendance'), where("date", ">=", dateRange.start), where("date", "<=", dateRange.end));
+        }
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            console.log("📦 Firestore snapshot received. Total docs:", snapshot.size);
-
             const data: AttendanceRecord[] = [];
+            const attendedDates = new Set<string>();
+
             snapshot.forEach((doc) => {
                 const docData = doc.data();
-                // FIX: If status is undefined, default to 'present'
-                // FIX: Ensure all fields are strings to prevent UI errors
                 const status = docData.status || 'present';
-
-                console.log(`📄 Doc ${doc.id}: Status=${status} (Raw=${docData.status})`);
-
+                if (docData.date) attendedDates.add(docData.date);
                 data.push({
                     id: doc.id,
                     ...docData,
                     status: status,
-                    // Ensure robust fallbacks
                     studentName: docData.studentName || 'Unknown Student',
                     class: docData.class || '-',
                     rollNumber: docData.rollNumber || '-',
@@ -134,25 +152,51 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
                 } as AttendanceRecord);
             });
 
-            console.log("✅ Total records fetched:", data.length);
-            console.log("Present:", data.filter(r => r.status === 'present').length);
-            console.log("Leave:", data.filter(r => r.status === 'leave').length);
+            // Calculate 'Absent' records for every student on every active day in the range
+            const activeDays = Array.from(attendedDates);
+            const attendanceMap = new Set(data.map(r => `${r.grNumber}-${r.date}`));
+            const generatedAbsents: AttendanceRecord[] = [];
 
-            // Client-side sort by timestamp desc (latest first)
-            data.sort((a, b) => b.timestamp - a.timestamp);
+            if (activeDays.length > 0 && allStudents.length > 0) {
+                activeDays.forEach(day => {
+                    allStudents.forEach(student => {
+                        const key = `${student.grNumber || 'none'}-${day}`;
+                        if (!attendanceMap.has(key)) {
+                            generatedAbsents.push({
+                                id: `absent-${student.grNumber || student._id}-${day}`,
+                                date: day,
+                                studentName: student.fullName,
+                                class: student.admissionFor,
+                                rollNumber: student.rollNumber,
+                                grNumber: student.grNumber || 'N/A',
+                                photoUrl: student.photoUrl || null,
+                                timestamp: 0,
+                                status: 'leave', // Dummy
+                                reason: 'Absent',
+                                isAbsent: true
+                            } as any);
+                        }
+                    });
+                });
+            }
 
-            setRecords(data);
+            const combinedData = [...data, ...generatedAbsents];
+            combinedData.sort((a, b) => {
+                if (a.date !== b.date) return b.date.localeCompare(a.date);
+                return a.studentName.localeCompare(b.studentName);
+            });
+
+            setRecords(combinedData);
             setLoading(false);
             if (onLoadingChange) onLoadingChange(false);
         }, (error) => {
-            console.error("❌ Error fetching attendance:", error);
+            console.error(error);
             setLoading(false);
             if (onLoadingChange) onLoadingChange(false);
         });
 
-        // Cleanup listener on unmount or date change
         return () => unsubscribe();
-    }, [selectedDate, onLoadingChange]);
+    }, [selectedDate, selectedMonth, dateRange, viewMode, onLoadingChange, allStudents]);
 
     const formatTime = (epoch: number) => {
         if (!epoch) return '-';
@@ -160,322 +204,379 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
     };
 
     // Calculate absent students and apply filters
-    const getFilteredData = () => {
-        // Get present and leave students (from Firestore)
-        const presentRecords = records.filter(r => r.status === 'present');
-        const leaveRecords = records.filter(r => r.status === 'leave');
+    const filteredRecords = records.filter(r => {
+        const term = search.toLowerCase();
+        const matchesSearch =
+            (r.studentName?.toLowerCase().includes(term) || '') ||
+            (r.rollNumber?.toLowerCase().includes(term) || '') ||
+            (r.grNumber?.toLowerCase().includes(term) || '');
 
-        // Get GR numbers of present and leave students
-        const attendedGrNumbers = new Set(records.map(r => r.grNumber));
+        const matchesClass = filterClass === 'All' || r.class === filterClass || r.class === `Class ${filterClass}`;
 
-        console.log("🔢 Attended GR Numbers:", Array.from(attendedGrNumbers));
-        console.log("👥 Total students in Sanity:", allStudents.length);
-        console.log("📊 Present records:", presentRecords.length);
-        console.log("📊 Leave records:", leaveRecords.length);
+        let matchesStatus = true;
+        if (statusFilter === 'present') matchesStatus = r.status === 'present' && !(r as any).isAbsent;
+        if (statusFilter === 'leave') matchesStatus = r.status === 'leave' && !(r as any).isAbsent;
+        if (statusFilter === 'absent') matchesStatus = (r as any).isAbsent;
 
-        // Calculate absent students (in Sanity but not in Firestore)
-        const absentStudents = allStudents.filter(s => !attendedGrNumbers.has(s.grNumber));
+        return matchesSearch && matchesClass && matchesStatus;
+    });
 
-        console.log("❌ Absent students count:", absentStudents.length);
-        if (absentStudents.length > 0) {
-            console.log("📋 First absent student:", absentStudents[0]);
+    const handleExport = async () => {
+        if (filteredRecords.length === 0 && allStudents.length === 0) {
+            toast.error("No data available to export.");
+            return;
         }
 
-        // Create absent "records" for display
-        interface DisplayRecord extends AttendanceRecord {
-            isAbsent?: boolean;
+        const toastId = toast.loading("Generating Enterprise Register Report...");
+
+        try {
+            const ExcelJS = (await import('exceljs')).default || await import('exceljs');
+            const { saveAs } = (await import('file-saver')).default || await import('file-saver');
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'Al-Ghazali Admin';
+            workbook.created = new Date();
+
+            // Function to generate all dates in a month
+            const getDaysInMonth = (year: number, month: number) => {
+                const date = new Date(year, month - 1, 1);
+                const days: string[] = [];
+                while (date.getMonth() === month - 1) {
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const d = String(date.getDate()).padStart(2, '0');
+                    days.push(`${y}-${m}-${d}`);
+                    date.setDate(date.getDate() + 1);
+                }
+                return days;
+            };
+
+            // Register Style Logic
+            if (viewMode === 'monthly' || viewMode === 'custom') {
+                let targetMonths: string[] = [];
+
+                if (viewMode === 'monthly' && selectedMonth) {
+                    targetMonths = [selectedMonth];
+                } else if (viewMode === 'custom' && dateRange.start && dateRange.end) {
+                    // Logic to find all months between start and end
+                    const start = new Date(dateRange.start);
+                    const end = new Date(dateRange.end);
+                    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+                    while (current <= end) {
+                        const mStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+                        if (!targetMonths.includes(mStr)) targetMonths.push(mStr);
+                        current.setMonth(current.getMonth() + 1);
+                    }
+                }
+
+                if (targetMonths.length === 0) {
+                    toast.error("Please select a valid date range.", { id: toastId });
+                    return;
+                }
+
+                for (const monthKey of targetMonths) {
+                    const [yearStr, monthStr] = monthKey.split('-');
+                    const fullMonthDates = getDaysInMonth(parseInt(yearStr), parseInt(monthStr));
+
+                    const sheetName = new Date(parseInt(yearStr), parseInt(monthStr) - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+                    const worksheet = workbook.addWorksheet(sheetName);
+
+                    // --- HEADERS ---
+                    const topHeaders = ['SR', 'GR No', 'Roll No', 'Student Name'];
+                    const dayHeaders = fullMonthDates.map(d => parseInt(d.split('-')[2])); // 1, 2, 3...
+                    const summaryHeaders = ['Total P', 'Total A', 'Total L', '%'];
+                    const allHeaders = [...topHeaders, ...dayHeaders, ...summaryHeaders];
+
+                    const headerRow = worksheet.addRow(allHeaders);
+
+                    // Style Header
+                    headerRow.eachCell((cell, colNumber) => {
+                        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                    });
+                    headerRow.height = 30;
+
+                    // Column Widths
+                    worksheet.getColumn(1).width = 5;  // SR
+                    worksheet.getColumn(2).width = 10; // GR
+                    worksheet.getColumn(3).width = 8;  // Roll
+                    worksheet.getColumn(4).width = 25; // Name
+                    // Day columns
+                    for (let i = 5; i <= 4 + dayHeaders.length; i++) {
+                        worksheet.getColumn(i).width = 4.5;
+                    }
+                    // Summary columns
+                    const sumStart = 5 + dayHeaders.length;
+                    for (let i = sumStart; i < sumStart + 4; i++) {
+                        worksheet.getColumn(i).width = 9;
+                    }
+
+                    // Freeze Panes (First 4 columns and Top 1 row)
+                    worksheet.views = [
+                        { state: 'frozen', xSplit: 4, ySplit: 1 }
+                    ];
+
+                    // --- DATA ROWS ---
+                    // Filter students for this class
+                    const classStudents = allStudents
+                        .filter(s => filterClass === 'All' || s.admissionFor === filterClass || s.admissionFor === `Class ${filterClass}`)
+                        .sort((a, b) => {
+                            const rollA = a.rollNumber?.toString() || '';
+                            const rollB = b.rollNumber?.toString() || '';
+                            return rollA.localeCompare(rollB, undefined, { numeric: true, sensitivity: 'base' });
+                        });
+
+                    classStudents.forEach((student, idx) => {
+                        const rowData: any[] = [
+                            idx + 1,
+                            student.grNumber || '-',
+                            student.rollNumber || '-',
+                            student.fullName
+                        ];
+
+                        let pCount = 0;
+                        let aCount = 0;
+                        let lCount = 0;
+                        // Count active days (excluding fully empty columns if needed, but for register we count all school days)
+                        // For now we assume Sunday is holiday (automatically marked 'H' or empty but not counted in denominator?)
+                        // Let's stick to total days in month for standard reg or active days. 
+                        // User wants "poore month k days", so denominator is total days usually, or total working days.
+                        let totalWorkingDays = 0;
+
+                        fullMonthDates.forEach(date => {
+                            const dayOfWeek = new Date(date).getDay();
+                            const isFriday = dayOfWeek === 5; // Friday is holiday
+
+                            if (isFriday) {
+                                rowData.push(''); // Empty for Friday
+                                // Optionally mark 'F' or gray out
+                                return;
+                            }
+                            totalWorkingDays++;
+
+                            const record = records.find(r => r.grNumber === student.grNumber && r.date === date);
+
+                            if (!record) {
+                                // Logic: If no record exists for a working day
+                                // Option A: Mark as Absent? 
+                                // Option B: Leave empty?
+                                // "Generated absents" in useEffect handles this, but only if *someone* took attendance that day.
+                                // If NOBODY took attendance (holiday), it's empty.
+
+                                // Let's check if ANYONE has attendance for this date.
+                                const anyAttendance = records.some(r => r.date === date);
+                                if (anyAttendance) {
+                                    // If others have attendance, but this student doesn't -> Absent
+                                    rowData.push('A');
+                                    aCount++;
+                                } else {
+                                    // No dataset for this day -> Holiday or no school
+                                    rowData.push('-');
+                                    // Don't increment working days? Revert above
+                                    totalWorkingDays--;
+                                }
+                            } else if ((record as any).isAbsent) {
+                                rowData.push('A');
+                                aCount++;
+                            } else if (record.status === 'present') {
+                                rowData.push('P');
+                                pCount++;
+                            } else {
+                                rowData.push('L');
+                                lCount++;
+                            }
+                        });
+
+
+                        const percentage = totalWorkingDays > 0
+                            ? ((pCount / totalWorkingDays) * 100).toFixed(0) + '%'
+                            : '0%';
+
+                        rowData.push(pCount, aCount, lCount, percentage);
+
+                        const row = worksheet.addRow(rowData);
+
+                        // Row Styling
+                        row.eachCell((cell, colNumber) => {
+                            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
+                            cell.font = { size: 9 };
+                            cell.border = {
+                                top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+                                left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+                                bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+                                right: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+                            };
+
+                            // Student Name Align Left
+                            if (colNumber === 4) {
+                                cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+                                cell.font = { bold: true, size: 9 };
+                            }
+
+                            // Conditional Formatting
+                            const val = cell.value?.toString();
+                            if (colNumber > 4 && colNumber <= 4 + fullMonthDates.length) {
+                                // Date columns
+                                const dateIdx = colNumber - 5;
+                                const currentDate = fullMonthDates[dateIdx];
+                                const isFri = new Date(currentDate).getDay() === 5;
+
+                                if (isFri) {
+                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; // Gray for Friday
+                                }
+
+                                if (val === 'P') {
+                                    cell.font = { color: { argb: 'FF059669' }, bold: true }; // Green
+                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'ECFDF5' } };
+                                }
+                                if (val === 'A') {
+                                    cell.font = { color: { argb: 'FFDC2626' }, bold: true }; // Red
+                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEF2F2' } };
+                                }
+                                if (val === 'L') {
+                                    cell.font = { color: { argb: 'FFD97706' }, bold: true }; // Orange
+                                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBEB' } };
+                                }
+                            }
+                        });
+                    });
+
+                    // FOOTER TOTALS
+                    const footerRow = worksheet.addRow([]);
+                    footerRow.getCell(4).value = 'DAILY ATTENDANCE';
+                    footerRow.getCell(4).font = { bold: true, size: 9 };
+                    footerRow.getCell(4).alignment = { horizontal: 'right' };
+
+                    fullMonthDates.forEach((date, i) => {
+                        const colIdx = 5 + i;
+                        const isFri = new Date(date).getDay() === 5;
+                        if (!isFri) {
+                            // Calculate column sum P
+                            // ExcelJS doesn't support easy formulas for dynamic ranges in JS cleanly without refs, manual calc is safer here
+                            // Or leave empty for cleaner look.
+                            // Let's put P count
+                            const colValues = worksheet.getColumn(colIdx).values.slice(2) as any[]; // skip header + 1 empty
+                            const pToday = colValues.filter(v => v === 'P').length;
+                            if (pToday > 0) {
+                                footerRow.getCell(colIdx).value = pToday;
+                                footerRow.getCell(colIdx).font = { bold: true, size: 8, color: { argb: 'FF6B7280' } };
+                                footerRow.getCell(colIdx).alignment = { horizontal: 'center' };
+                            }
+                        }
+                    });
+                }
+
+            } else {
+                // DAILY EXPORT (Legacy/Standard)
+                const worksheet = workbook.addWorksheet('Daily Report');
+                // ... (Keep existing Standard Daily Export Logic if preferred, or refactor too)
+                // For brevity, using the previous standard logic here but ensuring it works:
+                worksheet.columns = [
+                    { header: 'Date', key: 'date', width: 15 },
+                    { header: 'Student Name', key: 'name', width: 25 },
+                    { header: 'Class', key: 'class', width: 10 },
+                    { header: 'Roll No', key: 'roll', width: 10 },
+                    { header: 'Status', key: 'status', width: 12 },
+                    { header: 'Time', key: 'time', width: 12 },
+                    { header: 'Reason', key: 'reason', width: 25 },
+                ];
+                // basic styling...
+                const headerRow = worksheet.getRow(1);
+                headerRow.font = { bold: true };
+                filteredRecords.forEach(r => {
+                    worksheet.addRow({
+                        date: r.date,
+                        name: r.studentName,
+                        class: r.class,
+                        roll: r.rollNumber,
+                        status: (r as any).isAbsent ? 'Absent' : r.status,
+                        time: r.timestamp ? formatTime(r.timestamp) : '-',
+                        reason: r.reason || '-'
+                    });
+                });
+            }
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+            let fileName = `Attendance_`;
+            if (viewMode === 'monthly') fileName += `${selectedMonth}_`;
+            else if (viewMode === 'custom') fileName += `${dateRange.start}_to_${dateRange.end}_`;
+            else fileName += `${selectedDate}_`;
+
+            fileName += `${filterClass === 'All' ? 'Whole_School' : `Class_${filterClass.replace(/\s+/g, '_')}`}.xlsx`;
+            saveAs(blob, fileName);
+            toast.success("Enterprise Register Generated!", { id: toastId });
+
+        } catch (error) {
+            console.error("Export Error:", error);
+            toast.error("Failed to generate report.", { id: toastId });
         }
-
-        const absentRecords: DisplayRecord[] = absentStudents.map(s => ({
-            // FIX: Use _id as fallback if grNumber is missing to prevent duplicate keys
-            id: `absent-${s.grNumber || s._id}`,
-            date: selectedDate,
-            studentName: s.fullName,
-            class: s.admissionFor,
-            rollNumber: s.rollNumber,
-            grNumber: s.grNumber || 'N/A',
-            photoUrl: s.photoUrl || null,
-            timestamp: 0,
-            status: 'leave' as const, // Placeholder type, but treated as absent in UI
-            isAbsent: true
-        }));
-
-        // Combine all records based on status filter
-        let allRecords: DisplayRecord[] = [];
-        if (statusFilter === 'all') {
-            allRecords = [...presentRecords, ...leaveRecords, ...absentRecords];
-        } else if (statusFilter === 'present') {
-            allRecords = presentRecords;
-        } else if (statusFilter === 'leave') {
-            allRecords = leaveRecords;
-        } else if (statusFilter === 'absent') {
-            allRecords = absentRecords;
-        }
-
-        // Apply search and class filters
-        return allRecords.filter(r => {
-            const term = search.toLowerCase();
-            const matchesSearch =
-                (r.studentName?.toLowerCase().includes(term) || '') ||
-                (r.rollNumber?.toLowerCase().includes(term) || '') ||
-                (r.grNumber?.toLowerCase().includes(term) || '');
-
-            const matchesClass = filterClass === 'All' || r.class === filterClass || r.class === `Class ${filterClass}`;
-            return matchesSearch && matchesClass;
-        });
     };
 
-    const filteredRecords = getFilteredData();
+    const presentCount = records.filter(r => r.status === 'present' && !(r as any).isAbsent).length;
+    const leaveCount = records.filter(r => r.status === 'leave' && !(r as any).isAbsent).length;
+    const absentCount = records.filter(r => (r as any).isAbsent).length;
 
-    // Calculate stats
-    const presentCount = records.filter(r => r.status === 'present').length;
-    const leaveCount = records.filter(r => r.status === 'leave').length;
-    const absentCount = allStudents.length - records.length;
+    if (loading) {
+        return <PremiumLoader text="Loading Attendance Register..." />;
+    }
 
     return (
         <div className="space-y-6">
-            {/* Header / Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-2xl text-white shadow-lg shadow-blue-500/20">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                            <Smartphone size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-3xl font-bold tracking-tight">{allStudents.length}</h3>
-                            <p className="text-blue-100 text-xs font-medium tracking-wide">Total Students</p>
-                        </div>
-                    </div>
-                </div>
+            <AttendanceStats
+                allStudentsCount={allStudents.length}
+                presentCount={presentCount}
+                leaveCount={leaveCount}
+                absentCount={absentCount}
+            />
 
-                <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-6 rounded-2xl text-white shadow-lg shadow-green-500/20">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                            <UserCheck size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-3xl font-bold tracking-tight">{presentCount}</h3>
-                            <p className="text-green-100 text-xs font-medium tracking-wide">Present</p>
-                        </div>
-                    </div>
-                </div>
+            <AttendanceFilters
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                search={search}
+                setSearch={setSearch}
+                filterClass={filterClass}
+                setFilterClass={setFilterClass}
+                classOptions={classOptions}
+                handleExport={handleExport}
+                loading={loading}
+                presentCount={presentCount}
+                leaveCount={leaveCount}
+                absentCount={absentCount}
+                filteredCount={filteredRecords.length}
+            />
 
-                <div className="bg-gradient-to-r from-yellow-500 to-amber-500 p-6 rounded-2xl text-white shadow-lg shadow-yellow-500/20">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                            <UserMinus size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-3xl font-bold tracking-tight">{leaveCount}</h3>
-                            <p className="text-yellow-100 text-xs font-medium tracking-wide">On Leave</p>
-                        </div>
+            {filteredRecords.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
+                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-gray-100">
+                        <Search size={32} className="text-gray-300" />
                     </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2 tracking-tight">No Records Found</h3>
+                    <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                        We couldn't find any attendance records matching your current filters.
+                    </p>
                 </div>
-
-                <div className="bg-gradient-to-r from-gray-500 to-slate-500 p-6 rounded-2xl text-white shadow-lg shadow-gray-500/20">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                            <UserX size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-3xl font-bold tracking-tight">{absentCount}</h3>
-                            <p className="text-gray-100 text-xs font-medium tracking-wide">Absent</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Date Selector */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Calendar size={20} className="text-blue-600" />
-                    <span className="text-sm font-semibold text-gray-600">Viewing Date:</span>
-                </div>
-                <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
-                />
-            </div>
-
-            {/* Controls */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                {/* Status Filter Tabs */}
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={() => setStatusFilter('all')}
-                        className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${statusFilter === 'all'
-                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                    >
-                        All ({filteredRecords.length})
-                    </button>
-                    <button
-                        onClick={() => setStatusFilter('present')}
-                        className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${statusFilter === 'present'
-                            ? 'bg-green-600 text-white shadow-md shadow-green-500/30'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                    >
-                        Present ({presentCount})
-                    </button>
-                    <button
-                        onClick={() => setStatusFilter('leave')}
-                        className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${statusFilter === 'leave'
-                            ? 'bg-yellow-600 text-white shadow-md shadow-yellow-500/30'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                    >
-                        On Leave ({leaveCount})
-                    </button>
-                    <button
-                        onClick={() => setStatusFilter('absent')}
-                        className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${statusFilter === 'absent'
-                            ? 'bg-gray-600 text-white shadow-md shadow-gray-500/30'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                    >
-                        Absent ({absentCount})
-                    </button>
-                </div>
-
-                {/* Search and Class Filter */}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto flex-1">
-                        <div className="relative w-full sm:w-80 group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Search by Name, Roll No..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3 bg-gray-50/50 hover:bg-gray-100/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium"
-                            />
-                        </div>
-                        <select
-                            value={filterClass}
-                            onChange={(e) => setFilterClass(e.target.value)}
-                            className="px-4 py-3 bg-gray-50/50 hover:bg-gray-100/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-gray-600 text-sm cursor-pointer"
-                        >
-                            {classOptions.map(c => <option key={c} value={c}>{c === 'All' ? 'All Classes' : `${c}`}</option>)}
-                        </select>
-                    </div>
-                    <div className="px-4 py-2 text-xs font-medium text-gray-500 flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-100">
-                        <div className={`w-2 h-2 rounded-full shadow-sm ${loading ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`}></div>
-                        {loading ? 'Syncing...' : 'Real-time'}
-                    </div>
-                </div>
-            </div>
-
-            {/* Table */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-                {filteredRecords.length === 0 ? (
-                    <div className="p-16 text-center">
-                        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <AlertCircle size={40} className="text-gray-300" />
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">No Records Found</h3>
-                        <p className="text-gray-500 max-w-sm mx-auto">
-                            No attendance data available for <span className="font-semibold text-gray-700">{selectedDate}</span>.
-                            Ensure the mobile app has synced data for this date.
-                        </p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50/50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider font-semibold">
-                                    <th className="px-6 py-4">Student</th>
-                                    <th className="px-6 py-4 text-center">Class</th>
-                                    <th className="px-6 py-4">Identifiers</th>
-                                    <th className="px-6 py-4">Time</th>
-                                    <th className="px-6 py-4 text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {filteredRecords.map((record) => (
-                                    <tr key={record.id} className="hover:bg-blue-50/30 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative shrink-0">
-                                                    {record.photoUrl ? (
-                                                        <Image
-                                                            src={record.photoUrl}
-                                                            alt={record.studentName}
-                                                            width={48}
-                                                            height={48}
-                                                            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 transition-transform"
-                                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
-                                                        />
-                                                    ) : null}
-                                                    {/* Fallback avatar */}
-                                                    <div className={`${record.photoUrl ? 'hidden' : 'flex'} w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 rounded-full items-center justify-center font-bold text-lg border-2 border-white shadow-md group-hover:scale-105 transition-transform`}>
-                                                        {record.studentName?.charAt(0).toUpperCase() || 'S'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold text-gray-900 text-base">{record.studentName}</div>
-                                                    <div className="text-xs text-gray-500 font-medium mt-0.5">ID: {record.id.slice(0, 8)}...</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                                                {record.class}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <Hash size={14} className="text-gray-400" />
-                                                    <span className="font-mono">{record.rollNumber || 'N/A'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                    <User size={13} className="text-gray-400" />
-                                                    <span className="font-mono">GR: {record.grNumber || 'N/A'}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-gray-600 font-medium bg-gray-50 px-3 py-1.5 rounded-lg w-fit border border-gray-100">
-                                                <Clock size={16} className="text-blue-500" />
-                                                <span>{formatTime(record.timestamp)}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            {(record as any).isAbsent ? (
-                                                <span className="inline-flex gap-1.5 items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gray-50 text-gray-700 border border-gray-200 shadow-sm">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-                                                    Absent
-                                                </span>
-                                            ) : record.status === 'present' ? (
-                                                <span className="inline-flex gap-1.5 items-center px-3 py-1.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200 shadow-sm">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                                    Present
-                                                </span>
-                                            ) : (
-                                                <div className="flex flex-col items-center gap-1.5">
-                                                    <span className="inline-flex gap-1.5 items-center px-3 py-1.5 rounded-full text-xs font-bold bg-yellow-50 text-yellow-700 border border-yellow-200 shadow-sm">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
-                                                        On Leave
-                                                    </span>
-                                                    {record.reason && (
-                                                        <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-200 max-w-[200px] truncate" title={record.reason}>
-                                                            {record.reason}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
+            ) : (
+                <>
+                    <AttendanceTable records={filteredRecords} formatTime={formatTime} />
+                    <AttendanceCardList records={filteredRecords} formatTime={formatTime} />
+                </>
+            )}
         </div>
     );
 };

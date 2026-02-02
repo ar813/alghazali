@@ -177,36 +177,36 @@ const Contact = () => {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
-                                <h3 className="text-lg sm:text-xl font-bold mb-6 text-foreground tracking-tight">Office Hours</h3>
-                                <div className="space-y-3">
-                                    {(settings?.officeHours || [
-                                        { day: 'Saturday - Thursday', open: '8:00 AM', close: '2:10 PM' },
-                                        { day: 'Friday', open: 'Closed', close: '' }
-                                    ]).map((row: any, idx: number) => (
-                                        <div key={idx} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
-                                            <span className="text-muted-foreground text-sm">{row.day}</span>
-                                            <span className="font-semibold text-sm text-foreground">{row.close ? `${row.open} - ${row.close}` : row.open}</span>
-                                        </div>
-                                    ))}
+                                <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
+                                    <h3 className="text-lg sm:text-xl font-bold mb-6 text-foreground tracking-tight">Office Hours</h3>
+                                    <div className="space-y-3">
+                                        {(settings?.officeHours || [
+                                            { day: 'Saturday - Thursday', open: '8:00 AM', close: '2:10 PM' },
+                                            { day: 'Friday', open: 'Closed', close: '' }
+                                        ]).map((row: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
+                                                <span className="text-muted-foreground text-sm">{row.day}</span>
+                                                <span className="font-semibold text-sm text-foreground">{row.close ? `${row.open} - ${row.close}` : row.open}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
-                                <h3 className="text-lg sm:text-xl font-bold mb-6 text-foreground tracking-tight">Follow Us</h3>
-                                <div className="flex space-x-4">
-                                    <div className="flex space-x-3">
-                                        <a href="https://www.facebook.com/p/Al-Ghazali-High-School-36B-Landhi-Karachi-100071529611065/" target='_blank' className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
-                                            <Facebook className="w-5 h-5" />
-                                        </a>
-                                        <a href="#" className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
-                                            <Twitter className="w-5 h-5" />
-                                        </a>
-                                        <a href="#" className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
-                                            <Instagram className="w-5 h-5" />
-                                        </a>
+                                <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
+                                    <h3 className="text-lg sm:text-xl font-bold mb-6 text-foreground tracking-tight">Follow Us</h3>
+                                    <div className="flex space-x-4">
+                                        <div className="flex space-x-3">
+                                            <a href="https://www.facebook.com/p/Al-Ghazali-High-School-36B-Landhi-Karachi-100071529611065/" target='_blank' className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
+                                                <Facebook className="w-5 h-5" />
+                                            </a>
+                                            <a href="#" className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
+                                                <Twitter className="w-5 h-5" />
+                                            </a>
+                                            <a href="#" className="w-11 h-11 border border-border rounded-lg flex items-center justify-center text-foreground hover:bg-accent transition-all duration-200">
+                                                <Instagram className="w-5 h-5" />
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

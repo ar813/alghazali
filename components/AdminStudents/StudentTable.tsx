@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import Image from 'next/image';
-import { Edit, Trash2, Phone } from 'lucide-react';
+import { Edit, Trash2, Phone, Lock } from 'lucide-react';
 
 import type { Student } from '@/types/student';
 
@@ -12,9 +12,10 @@ interface StudentTableProps {
     onEdit: (student: Student) => void;
     onDelete: (id: string) => void;
     deleteLoadingId: string | null;
+    isSuperAdmin?: boolean;
 }
 
-const StudentTable: React.FC<StudentTableProps> = ({ students, loading, onView, onEdit, onDelete, deleteLoadingId }) => {
+const StudentTable: React.FC<StudentTableProps> = ({ students, loading, onView, onEdit, onDelete, deleteLoadingId, isSuperAdmin = false }) => {
 
     const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
 
@@ -93,10 +94,10 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, loading, onView, 
                                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                         <button
                                             onClick={(e) => { e.stopPropagation(); onEdit(student); }}
-                                            className="p-2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-all"
+                                            className="p-2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-all relative group/btn"
                                             title="Edit"
                                         >
-                                            <Edit size={16} />
+                                            {isSuperAdmin ? <Edit size={16} /> : <Lock size={16} />}
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); if (student._id) onDelete(student._id); }}
@@ -106,7 +107,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, loading, onView, 
                                             {deleteLoadingId === student._id ? (
                                                 <div className="w-4 h-4 rounded-full border-2 border-rose-200 border-t-rose-600 animate-spin" />
                                             ) : (
-                                                <Trash2 size={16} />
+                                                isSuperAdmin ? <Trash2 size={16} /> : <Lock size={16} />
                                             )}
                                         </button>
                                     </div>

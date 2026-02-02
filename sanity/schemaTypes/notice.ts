@@ -6,17 +6,20 @@ export default defineType({
   type: 'document',
   fields: [
     defineField({ name: 'title', title: 'Title', type: 'string', validation: (r) => r.required() }),
+    defineField({ name: 'session', title: 'Academic Session', type: 'string', initialValue: '2024-2025' }),
     defineField({ name: 'content', title: 'Content', type: 'text', validation: (r) => r.required() }),
     defineField({ name: 'createdAt', title: 'Created At', type: 'datetime', initialValue: () => new Date().toISOString() }),
     defineField({
       name: 'targetType',
       title: 'Target Type',
       type: 'string',
-      options: { list: [
-        { title: 'All School', value: 'all' },
-        { title: 'Class', value: 'class' },
-        { title: 'Student', value: 'student' },
-      ]},
+      options: {
+        list: [
+          { title: 'All School', value: 'all' },
+          { title: 'Class', value: 'class' },
+          { title: 'Student', value: 'student' },
+        ]
+      },
       validation: (r) => r.required()
     }),
     defineField({ name: 'className', title: 'Class Name', type: 'string' }),

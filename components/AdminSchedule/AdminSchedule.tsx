@@ -1,14 +1,32 @@
 "use client"
 
-import React, { useCallback, useEffect, useState } from 'react'
-import { Calendar, Plus, Save, Trash2, Upload, Download, X, Edit2, Loader2, Search, Info, FileSpreadsheet, Copy } from 'lucide-react'
+import React, { useCallback, useEffect, useState, useMemo } from 'react'
+import { Calendar, Plus, Save, Trash2, Upload, Download, Search, Info, FileSpreadsheet, Loader2, X, AlertTriangle, ListFilter } from 'lucide-react'
 import { toast } from "sonner";
-
-// Types
-type ScheduleDay = { day: string; periods: { subject: string; time: string }[] }
-type ScheduleDoc = { _id: string; className: string; days: ScheduleDay[] }
+import ScheduleCard from './ScheduleCard';
+import { useSession } from '@/context/SessionContext';
+import { ScheduleDoc } from './types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+  const { selectedSession } = useSession();
   const [schedules, setSchedules] = useState<ScheduleDoc[]>([])
   const [loadingSchedules, setLoadingSchedules] = useState<boolean>(false)
 
@@ -22,12 +40,14 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [formDay, setFormDay] = useState<string>('')
   const [formPeriods, setFormPeriods] = useState<{ subject: string; time: string }[]>([{ subject: '', time: '' }])
   const [formSubmitting, setFormSubmitting] = useState<boolean>(false)
+
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState<boolean>(false)
   const [editClass, setEditClass] = useState<string>('')
   const [editDay, setEditDay] = useState<string>('')
   const [editPeriods, setEditPeriods] = useState<{ subject: string; time: string }[]>([{ subject: '', time: '' }])
   const [editSubmitting, setEditSubmitting] = useState<boolean>(false)
+
   // Delete confirm state
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; className: string; day: string } | null>(null)
   const [deletingDay, setDeletingDay] = useState<boolean>(false)
@@ -102,17 +122,6 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     }
   }
 
-  const getSubjectColor = (subject: string) => {
-    const s = subject.toLowerCase()
-    if (s.includes('math')) return 'bg-blue-50 text-blue-600 border-blue-100'
-    if (s.includes('eng')) return 'bg-purple-50 text-purple-600 border-purple-100'
-    if (s.includes('sci')) return 'bg-emerald-50 text-emerald-600 border-emerald-100'
-    if (s.includes('isl')) return 'bg-green-50 text-green-600 border-green-100'
-    if (s.includes('urd')) return 'bg-orange-50 text-orange-600 border-orange-100'
-    if (s.includes('his') || s.includes('geo')) return 'bg-amber-50 text-amber-600 border-amber-100'
-    if (s.includes('phy') || s.includes('spo')) return 'bg-rose-50 text-rose-600 border-rose-100'
-    return 'bg-gray-50 text-gray-600 border-gray-100'
-  }
   const onClickImport = () => {
     const el = document.getElementById(fileInputId) as HTMLInputElement | null
     el?.click()
@@ -152,7 +161,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       for (const k of Object.keys(byKey)) {
         const rec = byKey[k]
         const res = await fetch('/api/schedule', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ className: rec.className, day: rec.day, periods: rec.periods })
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ className: rec.className, day: rec.day, periods: rec.periods, session: selectedSession })
         })
         const j = await res.json()
         if (j?.ok) saved++
@@ -170,16 +179,17 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   const loadSchedules = React.useCallback(async () => {
     try {
+      if (!selectedSession) return;
       setLoadingSchedules(true)
       onLoadingChange?.(true)
-      const res = await fetch('/api/schedule', { cache: 'no-store' })
+      const res = await fetch(`/api/schedule?session=${selectedSession}`, { cache: 'no-store' })
       const json = await res.json()
       if (json?.ok) setSchedules(json.data as ScheduleDoc[])
     } catch {
       toast.error('Failed to load schedules')
     }
     finally { setLoadingSchedules(false); onLoadingChange?.(false) }
-  }, [onLoadingChange])
+  }, [onLoadingChange, selectedSession])
 
   useEffect(() => {
     loadSchedules()
@@ -212,7 +222,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ className: editClass, day: editDay, periods: editPeriods })
+        body: JSON.stringify({ className: editClass, day: editDay, periods: editPeriods, session: selectedSession })
       })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to save schedule')
@@ -241,10 +251,12 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ className: formClass, day: formDay, periods: formPeriods })
+        body: JSON.stringify({ className: formClass, day: formDay, periods: formPeriods, session: selectedSession })
       })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to save schedule')
+
+      // Reset form but keeping class might be useful, but let's reset to be clean
       setFormClass('')
       setFormDay('')
       setFormPeriods([{ subject: '', time: '' }])
@@ -261,14 +273,14 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const deleteScheduleDay = async (className: string, day: string) => {
     try {
       // Many runtimes don't accept a body on DELETE; prefer query params
-      const url = `/api/schedule?className=${encodeURIComponent(className)}&day=${encodeURIComponent(day)}`
+      const url = `/api/schedule?className=${encodeURIComponent(className)}&day=${encodeURIComponent(day)}&session=${encodeURIComponent(selectedSession || '')}`
       let res = await fetch(url, { method: 'DELETE' })
       // Fallback: if server doesn't support DELETE, try POST with action
       if (!res.ok) {
         res = await fetch('/api/schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete', className, day })
+          body: JSON.stringify({ action: 'delete', className, day, session: selectedSession })
         })
       }
       const json = await res.json().catch(() => ({ ok: res.ok }))
@@ -287,7 +299,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'deleteFullClass', className })
+        body: JSON.stringify({ action: 'deleteFullClass', className, session: selectedSession })
       })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.error || 'Failed to delete class schedule')
@@ -310,7 +322,8 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         body: JSON.stringify({
           className: targetClass,
           day: targetDay,
-          periods: copyingSchedule.periods
+          periods: copyingSchedule.periods,
+          session: selectedSession
         })
       })
       const json = await res.json()
@@ -325,131 +338,132 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     }
   }
 
+  // Memoized derived state
+  const filteredSchedules = useMemo(() =>
+    schedules.filter(sc => sc.className.toLowerCase().includes(searchTerm.toLowerCase())),
+    [schedules, searchTerm]);
+
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto pb-20">
       <input id={fileInputId} type="file" accept=".xlsx" className="hidden" onChange={handleImport} />
 
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Class Schedule</h1>
-          <p className="text-gray-500 text-sm mt-1 flex items-center gap-2">
-            <Info size={14} className="text-blue-500" />
-            Manage and organize class timings and weekly timetables efficiently.
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 relative z-10">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tighter">Class Schedule</h1>
+          <p className="text-zinc-500 text-sm flex items-center gap-2 font-medium max-w-lg">
+            Manage academic calendars and weekly timetables. Import from Excel or configure manually.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full lg:w-auto">
           <div className="relative group w-full sm:min-w-[240px] sm:w-auto">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 dark:group-focus-within:text-white transition-colors" />
             <input
               type="text"
-              placeholder="Search classes..."
+              placeholder="Filter classes..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none shadow-sm"
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white focus:border-transparent transition-all outline-none font-medium placeholder:text-zinc-400"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <button onClick={handleDownloadTemplate} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl hover:bg-blue-100 transition-all shadow-sm">
-              <FileSpreadsheet size={16} /> <span className="hidden xs:inline">Template</span><span className="xs:hidden">Template</span>
+            <button onClick={handleDownloadTemplate} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
+              <FileSpreadsheet size={16} /> <span>Template</span>
             </button>
-            <button onClick={handleExport} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all shadow-sm">
-              <Upload size={16} /> <span className="hidden xs:inline">Export</span><span className="xs:hidden">Export</span>
+            <button onClick={handleExport} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
+              <Upload size={16} /> <span>Export</span>
             </button>
-            <button onClick={onClickImport} disabled={importLoading} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50">
-              <Download size={16} /> {importLoading ? '...' : <><span className="hidden xs:inline">Import</span><span className="xs:hidden">Import</span></>}
+            <button onClick={onClickImport} disabled={importLoading} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-all disabled:opacity-50">
+              <Download size={16} /> {importLoading ? '...' : <span>Import</span>}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Manage Schedule Section */}
-      <div id="manage-schedule" className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+      {/* Editor Section */}
+      <div id="manage-schedule" className="bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl overflow-hidden mb-12">
+        <div className="px-6 py-5 border-b border-zinc-100/50 dark:border-zinc-800/50 flex items-center justify-between bg-white/40 dark:bg-zinc-900/40">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center text-white shrink-0">
-              <Plus size={20} />
+            <div className="w-9 h-9 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-zinc-900 shrink-0 shadow-lg shadow-zinc-900/10 dark:shadow-white/5">
+              <Plus size={18} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 leading-tight">Add or Update Day</h3>
-              <p className="text-xs text-gray-500">Specify class, day, and periods to update.</p>
+              <h3 className="text-lg font-black text-zinc-900 dark:text-white leading-tight uppercase tracking-tight">Schedule Editor</h3>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">Configure Academic Timetable</p>
             </div>
           </div>
           <button
             onClick={submitSchedule}
             disabled={formSubmitting}
-            className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-md shadow-blue-100 disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-zinc-900 dark:bg-white dark:text-zinc-900 rounded-lg hover:opacity-90 transition-all disabled:opacity-60"
           >
             {formSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {formSubmitting ? 'Saving...' : 'Save Schedule'}
+            {formSubmitting ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-zinc-100 dark:border-zinc-800">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700 px-1">Class</label>
-              <select value={formClass} onChange={e => setFormClass(e.target.value)} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1">Class</label>
+              <select value={formClass} onChange={e => setFormClass(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all outline-none">
                 <option value="">Select Class</option>
                 {classOptions.map(c => <option key={c} value={c}>Class {c}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700 px-1">Day</label>
-              <select value={formDay} onChange={e => setFormDay(e.target.value)} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-1">Day</label>
+              <select value={formDay} onChange={e => setFormDay(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all outline-none">
                 <option value="">Select Day</option>
                 {dayOptions.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
           </div>
 
-          <div className="mt-8 space-y-4">
+          <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Schedule Periods</h4>
-              <button onClick={addPeriodRow} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-all">
-                <Plus size={14} /> Add Period
+              <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Periods</h4>
+              <button onClick={addPeriodRow} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-900 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all">
+                <Plus size={14} /> Add Slot
               </button>
             </div>
 
             <div className="space-y-3">
-              {formPeriods.map((p, idx) => {
-                const colorClasses = getSubjectColor(p.subject)
-                return (
-                  <div key={idx} className="group relative flex flex-col sm:grid sm:grid-cols-12 gap-3 items-stretch sm:items-end bg-gray-50/50 p-4 rounded-2xl border border-transparent hover:border-blue-200 hover:bg-white transition-all shadow-sm hover:shadow-md">
-                    <div className="hidden sm:flex sm:col-span-1 items-center justify-center font-black text-gray-300 group-hover:text-gray-400">
-                      {idx + 1}
-                    </div>
-                    <div className="sm:col-span-5 space-y-1.5">
-                      <div className="flex items-center justify-between sm:block">
-                        <label className="text-[10px] uppercase font-bold text-gray-400 tracking-widest px-1">Subject</label>
-                        <span className="sm:hidden text-[10px] font-black text-gray-300">#{idx + 1}</span>
-                      </div>
-                      <select value={p.subject} onChange={e => updatePeriod(idx, 'subject', e.target.value)} className={`w-full bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-black ${colorClasses}`}>
-                        <option value="">Select Subject</option>
-                        {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
-                    <div className="sm:col-span-5 space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-gray-400 tracking-widest px-1">Time Slot</label>
-                      <select value={p.time} onChange={e => updatePeriod(idx, 'time', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold">
-                        <option value="">Select Time</option>
-                        {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    <div className="sm:col-span-1 flex justify-end">
-                      <button onClick={() => removePeriodRow(idx)} className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all w-full sm:w-auto flex items-center justify-center gap-2 sm:block border sm:border-0 border-gray-100" title="Remove">
-                        <Trash2 size={18} />
-                        <span className="sm:hidden text-xs font-bold">Remove Period</span>
-                      </button>
-                    </div>
+              {formPeriods.map((p, idx) => (
+                <div key={idx} className="group relative flex flex-col sm:grid sm:grid-cols-12 gap-3 items-stretch sm:items-end bg-zinc-50/50 dark:bg-zinc-900/10 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800 hover:bg-white dark:hover:bg-zinc-900 transition-all">
+                  <div className="hidden sm:flex sm:col-span-1 items-center justify-center font-mono text-zinc-300 dark:text-zinc-700 text-sm">
+                    {(idx + 1).toString().padStart(2, '0')}
                   </div>
-                )
-              })}
+                  <div className="sm:col-span-6 space-y-1.5">
+                    <div className="flex items-center justify-between sm:block">
+                      <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider px-1">Subject</label>
+                      <span className="sm:hidden text-[10px] font-mono text-zinc-300">#{idx + 1}</span>
+                    </div>
+                    <select value={p.subject} onChange={e => updatePeriod(idx, 'subject', e.target.value)} className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all font-medium">
+                      <option value="">Select Subject</option>
+                      {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-4 space-y-1.5">
+                    <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider px-1">Time</label>
+                    <select value={p.time} onChange={e => updatePeriod(idx, 'time', e.target.value)} className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all font-mono">
+                      <option value="">Select Time</option>
+                      {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-1 flex justify-end">
+                    <button onClick={() => removePeriodRow(idx)} className="p-2.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all w-full sm:w-auto flex items-center justify-center gap-2 sm:block" title="Remove">
+                      <Trash2 size={16} />
+                      <span className="sm:hidden text-xs font-bold">Remove</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {formPeriods.length === 0 && (
-              <div className="text-center py-10 border-2 border-dashed border-gray-100 rounded-3xl">
-                <p className="text-gray-400 text-sm">No periods added. Click 'Add Period' to start.</p>
+              <div className="text-center py-12 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                <p className="text-zinc-400 text-sm">No periods added yet.</p>
               </div>
             )}
           </div>
@@ -459,324 +473,211 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       {/* Overview Section */}
       <div className="space-y-6">
         <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-              <Calendar size={18} />
-            </span>
-            <h2 className="text-xl font-bold text-gray-900">Current Timetables</h2>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 bg-white border border-gray-100 px-3 py-1.5 rounded-xl shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            {schedules.length} Classes Active
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Active Timetables</h2>
+          <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 px-3 py-1 bg-zinc-100 dark:bg-zinc-900 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            {schedules.length} CLASSES
           </div>
         </div>
 
         {loadingSchedules ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-[400px] rounded-3xl border border-gray-100 bg-white p-6 animate-pulse space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gray-100 rounded-2xl" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-24 bg-gray-100 rounded" />
-                    <div className="h-3 w-16 bg-gray-50 rounded" />
-                  </div>
-                </div>
-                <div className="space-y-3 pt-4">
-                  {[...Array(4)].map((__, j) => <div key={j} className="h-20 bg-gray-50/50 rounded-2xl border border-gray-50" />)}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : schedules.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 border-dashed">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-              <Calendar size={32} className="text-gray-300" />
+          <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
+            <div className="relative mb-4">
+              <div className="w-10 h-10 border-4 border-indigo-50 dark:border-indigo-900/30 rounded-full"></div>
+              <div className="absolute inset-0 w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
-            <h3 className="text-lg font-bold text-gray-900">No schedules found</h3>
-            <p className="text-gray-500 mb-6">Start by adding a class schedule using the form above.</p>
-            <button
-              onClick={() => document.getElementById('manage-schedule')?.scrollIntoView({ behavior: 'smooth' })}
-              className="px-6 py-2.5 bg-zinc-900 text-white font-semibold rounded-xl hover:bg-zinc-800 transition-all shadow-sm"
-            >
-              Add Your First Schedule
-            </button>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-widest animate-pulse">Loading Schedules...</h3>
+          </div>
+        ) : filteredSchedules.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center">
+            <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-center mb-4">
+              <Calendar size={24} className="text-zinc-400" />
+            </div>
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-white">No schedules found</h3>
+            <p className="text-zinc-500 mb-6 max-w-xs mx-auto">Either import schedules from Excel or add them manually using the form above.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {schedules
-              .filter(sc => sc.className.toLowerCase().includes(searchTerm.toLowerCase()))
-              .map(sc => (
-                <div key={sc._id} className="group flex flex-col bg-white rounded-3xl border border-gray-200 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 overflow-hidden">
-                  <div className="p-6 pb-4 border-b border-gray-100 bg-gray-50/30">
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col xs:flex-row items-start xs:items-center gap-3">
-                        <div className="w-10 h-10 xs:w-12 xs:h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white font-black text-base xs:text-lg shadow-lg shadow-zinc-200 shrink-0">
-                          {sc.className}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-black text-gray-900 text-base xs:text-lg truncate">Class {sc.className}</h4>
-                          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest leading-none mt-1">
-                            {sc.days?.length || 0} Scheduled Days
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => deleteFullClassSchedule(sc.className)}
-                          className="p-2.5 rounded-xl bg-white border border-red-50 text-red-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all"
-                          title="Delete Entire Class"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => openEditModalForClass(sc.className)}
-                          className="p-2.5 rounded-xl bg-white border border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-sm transition-all"
-                          title="Add Day"
-                        >
-                          <Plus size={20} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-5 space-y-5 flex-1 max-h-[500px] overflow-y-auto custom-scrollbar bg-white">
-                    {sc.days?.map(day => (
-                      <div key={day.day} className="relative bg-gray-50/50 rounded-2xl border border-gray-100 p-4 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all group/day">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-200"></div>
-                            <span className="font-black text-gray-900 text-sm tracking-tight">{day.day}</span>
-                          </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover/day:opacity-100 transition-opacity">
-                            {copyingSchedule && copyingSchedule.fromClass === sc.className && copyingSchedule.fromDay === day.day ? (
-                              <button
-                                className="p-1.5 text-blue-600 bg-blue-50 rounded-lg transition-all border border-blue-200 animate-pulse"
-                                onClick={() => setCopyingSchedule(null)}
-                                title="Cancel Copy"
-                              >
-                                <X size={14} />
-                              </button>
-                            ) : copyingSchedule ? (
-                              <button
-                                className="p-1.5 text-blue-600 bg-blue-50 rounded-lg transition-all border border-blue-200 animate-pulse"
-                                onClick={() => handlePasteSchedule(sc.className, day.day)}
-                                title="Paste Here"
-                              >
-                                <Save size={14} />
-                              </button>
-                            ) : (
-                              <button
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                onClick={() => setCopyingSchedule({ fromClass: sc.className, fromDay: day.day, periods: day.periods })}
-                                title="Copy Schedule"
-                              >
-                                <Copy size={14} />
-                              </button>
-                            )}
-                            <button
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                              onClick={() => openEditModalForDay(sc.className, day.day, day.periods)}
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                              onClick={() => setConfirmDelete({ open: true, className: sc.className, day: day.day })}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-2">
-                          {day.periods?.map((p, idx) => {
-                            const colorClasses = getSubjectColor(p.subject)
-                            return (
-                              <div key={idx} className={`flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm hover:border-blue-200 transition-colors group/period`}>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-[10px] font-black text-gray-300 w-4">{idx + 1}</span>
-                                  <span className={`px-2 py-1 rounded-lg text-[11px] font-black border ${colorClasses}`}>
-                                    {p.subject}
-                                  </span>
-                                </div>
-                                <span className="px-2 py-1 bg-zinc-50 border border-zinc-100 text-zinc-500 font-bold text-[10px] rounded-lg tracking-tight">
-                                  {p.time}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))}
-
-                    {(!sc.days || sc.days.length === 0) && (
-                      <div className="flex flex-col items-center justify-center py-10 opacity-40">
-                        <Calendar size={32} />
-                        <p className="text-xs font-bold mt-2 uppercase tracking-widest">No Days Set</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            {filteredSchedules.map(sc => (
+              <ScheduleCard
+                key={sc._id}
+                schedule={sc}
+                copyingSchedule={copyingSchedule}
+                onDeleteClass={deleteFullClassSchedule}
+                onAddDay={openEditModalForClass}
+                onEditDay={openEditModalForDay}
+                onDeleteDay={deleteScheduleDay}
+                onCopySchedule={(cls, day, periods) => setCopyingSchedule({ fromClass: cls, fromDay: day, periods })}
+                onPasteSchedule={handlePasteSchedule}
+                onCancelCopy={() => setCopyingSchedule(null)}
+              />
+            ))}
           </div>
         )}
       </div>
 
       {/* Edit Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
-                  <Edit2 size={20} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">Edit Schedule</h3>
-                  <p className="text-xs text-gray-500">Updating Class {editClass} • {editDay || 'New Day'}</p>
-                </div>
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl rounded-md flex flex-col max-h-[95vh] sm:max-h-[85vh]">
+          <DialogHeader className="px-4 py-3 sm:px-6 sm:py-5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/60 shrink-0">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 dark:bg-white rounded-lg sm:rounded-xl flex items-center justify-center text-white dark:text-zinc-900 shadow-sm shrink-0">
+                <Calendar size={16} className="sm:w-5 sm:h-5" />
               </div>
-              <button
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                onClick={() => setShowEditModal(false)}
-              >
-                <X size={20} />
-              </button>
+              <div className="text-left">
+                <DialogTitle className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white leading-tight">Edit Schedule</DialogTitle>
+                <DialogDescription className="text-[10px] sm:text-sm text-zinc-500 font-medium leading-none mt-0.5 sm:mt-1">
+                  Class {editClass} • {editDay || 'New Day'}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 mb-5 sm:mb-8">
+              <div className="space-y-1">
+                <label className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Class</label>
+                <select
+                  value={editClass}
+                  onChange={e => setEditClass(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 sm:p-3 text-xs sm:text-sm font-medium outline-none focus:ring-1 focus:ring-zinc-900 transition-all cursor-pointer"
+                >
+                  <option value="">Select Class</option>
+                  {classOptions.map(c => <option key={c} value={c}>Class {c}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Day</label>
+                <select
+                  value={editDay}
+                  onChange={e => setEditDay(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 sm:p-3 text-xs sm:text-sm font-medium outline-none focus:ring-1 focus:ring-zinc-900 transition-all cursor-pointer"
+                >
+                  <option value="">Select Day</option>
+                  {dayOptions.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
             </div>
 
-            <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700 px-1">Class</label>
-                  <select value={editClass} onChange={e => setEditClass(e.target.value)} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-                    <option value="">Select Class</option>
-                    {classOptions.map(c => <option key={c} value={c}>Class {c}</option>)}
-                  </select>
+            <div className="space-y-4 sm:space-y-5">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <ListFilter size={12} className="text-zinc-400 sm:w-[14px] sm:h-[14px]" />
+                  <h4 className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Periods Configuration</h4>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700 px-1">Day</label>
-                  <select value={editDay} onChange={e => setEditDay(e.target.value)} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-                    <option value="">Select Day</option>
-                    {dayOptions.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
+                <button
+                  onClick={addEditPeriodRow}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-bold text-zinc-700 bg-zinc-100 rounded-md hover:bg-zinc-200 transition-all active:scale-95 shadow-sm"
+                >
+                  <Plus size={12} className="sm:w-[14px] sm:h-[14px]" /> Add Slot
+                </button>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-1">
-                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Schedule Periods</h4>
-                  <button onClick={addEditPeriodRow} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-all">
-                    <Plus size={14} /> Add Period
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {editPeriods.map((p, idx) => {
-                    const colorClasses = getSubjectColor(p.subject)
-                    return (
-                      <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-3 items-stretch sm:items-end bg-gray-50/50 p-4 rounded-2xl border border-gray-100 transition-all hover:bg-white hover:border-blue-200 shadow-sm">
-                        <div className="hidden sm:flex sm:col-span-1 items-center justify-center font-black text-gray-200">
-                          {idx + 1}
-                        </div>
-                        <div className="sm:col-span-10 flex flex-col sm:grid sm:grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between sm:block">
-                              <label className="text-[10px] uppercase font-bold text-gray-400 tracking-widest px-1">Subject</label>
-                              <span className="sm:hidden text-[10px] font-black text-gray-300">#{idx + 1}</span>
-                            </div>
-                            <select
-                              value={p.subject}
-                              onChange={e => updateEditPeriod(idx, 'subject', e.target.value)}
-                              className={`w-full bg-white border border-gray-100 rounded-xl p-2.5 text-xs font-black outline-none focus:ring-2 focus:ring-blue-500 transition-all ${colorClasses}`}
-                            >
-                              <option value="">Select Subject</option>
-                              {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] uppercase font-bold text-gray-400 tracking-widest px-1">Time Slot</label>
-                            <select value={p.time} onChange={e => updateEditPeriod(idx, 'time', e.target.value)} className="w-full bg-white border border-gray-100 rounded-xl p-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                              <option value="">Select Time</option>
-                              {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="sm:col-span-1 flex justify-end">
-                          <button onClick={() => removeEditPeriodRow(idx)} className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all w-full sm:w-auto flex items-center justify-center gap-2 border sm:border-0 border-gray-100">
-                            <Trash2 size={18} />
-                            <span className="sm:hidden text-xs font-bold">Remove</span>
-                          </button>
-                        </div>
+              <div className="space-y-2 sm:space-y-3">
+                {editPeriods.map((p, idx) => (
+                  <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-3 items-stretch sm:items-center bg-zinc-50 dark:bg-zinc-900/30 p-2.5 sm:p-4 rounded-md border border-zinc-100 dark:border-zinc-800 transition-all hover:bg-white dark:hover:bg-zinc-900 shadow-sm sm:shadow-none">
+                    <div className="hidden sm:flex sm:col-span-1 items-center justify-center font-mono text-zinc-300 dark:text-zinc-700 text-[10px]">
+                      {(idx + 1).toString().padStart(2, '0')}
+                    </div>
+                    <div className="sm:col-span-10 grid grid-cols-2 gap-2 sm:gap-3">
+                      <div className="space-y-0.5">
+                        <label className="sm:hidden text-[8px] font-bold text-zinc-400 uppercase px-1 leading-none mb-1 inline-block">Subject</label>
+                        <select
+                          value={p.subject}
+                          onChange={e => updateEditPeriod(idx, 'subject', e.target.value)}
+                          className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-1.5 sm:p-2.5 text-[10px] sm:text-xs font-medium outline-none focus:ring-1 focus:ring-zinc-900 h-8 sm:h-auto"
+                        >
+                          <option value="">Subject</option>
+                          {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
                       </div>
-                    )
-                  })}
-                </div>
+                      <div className="space-y-0.5">
+                        <label className="sm:hidden text-[8px] font-bold text-zinc-400 uppercase px-1 leading-none mb-1 inline-block">Time</label>
+                        <select
+                          value={p.time}
+                          onChange={e => updateEditPeriod(idx, 'time', e.target.value)}
+                          className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-1.5 sm:p-2.5 text-[10px] sm:text-xs font-mono outline-none focus:ring-1 focus:ring-zinc-900 h-8 sm:h-auto"
+                        >
+                          <option value="">Time</option>
+                          {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="sm:col-span-1 flex justify-end">
+                      <button
+                        onClick={() => removeEditPeriodRow(idx)}
+                        className="p-1.5 sm:p-2.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all sm:w-auto h-8 sm:h-auto flex items-center justify-center gap-2"
+                      >
+                        <Trash2 size={14} className="sm:w-4 sm:h-4" />
+                        <span className="sm:hidden text-[10px] font-bold">Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-
-            <div className="p-8 border-t border-gray-50 bg-gray-50/30 flex flex-col sm:flex-row justify-end gap-3">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-6 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitEditSchedule}
-                disabled={editSubmitting}
-                className="px-8 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-60"
-              >
-                {editSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                {editSubmitting ? 'Saving...' : 'Save Changes'}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter className="p-4 sm:p-6 border-t border-zinc-50 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/40 flex flex-row items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowEditModal(false)}
+              className="flex-1 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-all active:scale-95"
+            >
+              Discard
+            </button>
+            <button
+              onClick={submitEditSchedule}
+              disabled={editSubmitting}
+              className="flex-[2] sm:flex-none px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-zinc-900 dark:bg-white dark:text-zinc-900 rounded-md hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+            >
+              {editSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {editSubmitting ? 'Saving' : 'Save Changes'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation */}
-      {confirmDelete?.open && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-[32px] w-full max-w-sm shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-                <Trash2 size={32} />
-              </div>
-              <h4 className="text-xl font-bold text-gray-900 mb-2">Delete Schedule?</h4>
-              <p className="text-gray-500 text-sm leading-relaxed">
-                Are you sure you want to remove the schedule for
-                <span className="block font-bold text-gray-900 mt-1 whitespace-nowrap">Class {confirmDelete.className} • {confirmDelete.day}</span>
-              </p>
+      <AlertDialog
+        open={confirmDelete?.open}
+        onOpenChange={(open) => !open && setConfirmDelete(null)}
+      >
+        <AlertDialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl rounded-md">
+          <AlertDialogHeader className="p-8 pb-0 text-center">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <AlertTriangle size={32} />
             </div>
-            <div className="p-6 bg-gray-50/50 border-t border-gray-50 flex gap-3">
-              <button
-                className="flex-1 px-4 py-3 text-sm font-bold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all"
-                onClick={() => setConfirmDelete(null)}
-              >
-                Keep it
-              </button>
-              <button
-                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-red-600 rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-100 disabled:opacity-60"
-                disabled={deletingDay}
-                onClick={async () => {
-                  if (!confirmDelete) return
-                  const { className, day } = confirmDelete
-                  try {
-                    setDeletingDay(true)
-                    await deleteScheduleDay(className, day)
-                  } finally {
-                    setDeletingDay(false)
-                    setConfirmDelete(null)
-                  }
-                }}
-              >
-                {deletingDay ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'Delete Now'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <AlertDialogTitle className="text-2xl font-black text-zinc-900 dark:text-white mb-2">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-500 text-base leading-relaxed px-4">
+              This will permanently delete the schedule for <span className="font-bold text-zinc-900 dark:text-zinc-100">Class {confirmDelete?.className}</span> on <span className="font-bold text-zinc-900 dark:text-zinc-100">{confirmDelete?.day}</span>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="p-8 pt-6 flex flex-col sm:flex-row gap-4">
+            <AlertDialogCancel className="flex-1 h-12 rounded-md font-bold text-zinc-600 hover:bg-zinc-100 border-none transition-all active:scale-95">
+              Keep Schedule
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="flex-1 h-12 rounded-md font-bold bg-red-600 hover:bg-red-700 text-white border-none transition-all active:scale-95 shadow-lg shadow-red-600/20 flex items-center justify-center gap-2"
+              disabled={deletingDay}
+              onClick={async (e) => {
+                e.preventDefault()
+                if (!confirmDelete) return
+                const { className, day } = confirmDelete
+                try {
+                  setDeletingDay(true)
+                  await deleteScheduleDay(className, day)
+                } finally {
+                  setDeletingDay(false)
+                  setConfirmDelete(null)
+                }
+              }}
+            >
+              {deletingDay ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+              {deletingDay ? 'Deleting...' : 'Delete Permanently'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   )

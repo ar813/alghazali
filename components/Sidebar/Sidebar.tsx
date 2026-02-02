@@ -5,8 +5,10 @@ import { Sidebar as AceternitySidebar, SidebarBody, SidebarLink } from "@/compon
 import { IconLogout } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-import { LucideIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LucideIcon, PanelLeftClose, PanelLeftOpen, Loader2 } from "lucide-react";
 import Image from 'next/image';
+import { useAuth } from "@/hooks/use-auth";
+import LogoutConfirmationDialog from "../Auth/LogoutConfirmationDialog";
 
 interface SidebarItem {
   id: string;
@@ -18,47 +20,19 @@ interface SidebarProps {
   items: SidebarItem[];
   activeTab: string;
   onTabChange: (id: string) => void;
+  loading?: boolean;
 }
 
-const Sidebar = ({ items, activeTab, onTabChange }: SidebarProps) => {
+const Sidebar = ({ items, activeTab, onTabChange, loading }: SidebarProps) => {
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<{ email: string | null; displayName: string | null; photoURL: string | null } | null>(null);
+  // const [user, setUser] = useState<{ email: string | null; displayName: string | null; photoURL: string | null } | null>(null);
+  const { user, logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      try {
-        const { auth } = await import('@/lib/firebase');
-        const { onAuthStateChanged } = await import('firebase/auth');
+  // useEffect removed as we use global auth context
 
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-          if (currentUser) {
-            setUser({
-              email: currentUser.email,
-              displayName: currentUser.displayName,
-              photoURL: currentUser.photoURL
-            });
-          } else {
-            setUser(null);
-          }
-        });
-
-        return unsubscribe;
-      } catch (error) {
-        console.error('Error getting user:', error);
-      }
-    };
-
-    const unsubscribePromise = getCurrentUser();
-
-    return () => {
-      unsubscribePromise?.then(unsub => unsub?.());
-    };
-  }, []);
-
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem('adminSession');
-    } catch { }
+  const handleLogout = async () => {
+    await logout();
     window.location.href = '/admin';
   };
 
@@ -66,14 +40,18 @@ const Sidebar = ({ items, activeTab, onTabChange }: SidebarProps) => {
     label: item.label,
     href: `#${item.id}`,
     icon: (
-      <item.icon
-        className={cn(
-          "h-4 w-4 shrink-0 transition-colors duration-200",
-          activeTab === item.id
-            ? "text-neutral-900 dark:text-white"
-            : "text-neutral-500 dark:text-neutral-400 group-hover/item:text-neutral-700 dark:group-hover/item:text-neutral-200"
-        )}
-      />
+      activeTab === item.id && loading ? (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-blue-600 dark:text-blue-400" />
+      ) : (
+        <item.icon
+          className={cn(
+            "h-4 w-4 shrink-0 transition-colors duration-200",
+            activeTab === item.id
+              ? "text-neutral-900 dark:text-white"
+              : "text-neutral-500 dark:text-neutral-400 group-hover/item:text-neutral-700 dark:group-hover/item:text-neutral-200"
+          )}
+        />
+      )
     ),
   }));
 
@@ -195,7 +173,7 @@ const Sidebar = ({ items, activeTab, onTabChange }: SidebarProps) => {
 
           {/* Logout Button */}
           <div
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="cursor-pointer rounded-lg group/logout hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
           >
             <SidebarLink
@@ -213,7 +191,12 @@ const Sidebar = ({ items, activeTab, onTabChange }: SidebarProps) => {
           </div>
         </div>
       </SidebarBody>
-    </AceternitySidebar>
+      <LogoutConfirmationDialog
+        open={showLogoutConfirm}
+        onOpenChange={setShowLogoutConfirm}
+        onConfirm={handleLogout}
+      />
+    </AceternitySidebar >
   );
 };
 

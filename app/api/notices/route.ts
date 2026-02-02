@@ -10,12 +10,16 @@ export async function GET(req: NextRequest) {
     const limit = searchParams.get('limit') ? Math.min(1000, Number(searchParams.get('limit'))) : 50
     const eventsOnly = searchParams.get('events') === '1' || searchParams.get('events') === 'true'
     const headlineOnly = searchParams.get('headline') === '1' || searchParams.get('headline') === 'true'
+    const session = searchParams.get('session')
+
+    // Session Logic
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
 
     // If no filters are provided, return ALL notices for admin/overview screens
-    const params: Record<string, any> = { limit }
+    const params: Record<string, any> = { limit, session }
     let query: string
     if (!className && !studentId) {
-      let baseWhere = "_type == \"notice\""
+      let baseWhere = `_type == "notice" && ${sessionFilter}`
       if (eventsOnly) baseWhere += " && isEvent == true"
       if (headlineOnly) baseWhere += " && isHeadline == true"
       query = `*[${baseWhere}] | order(coalesce(createdAt, _createdAt) desc) [0...$limit]{
@@ -24,6 +28,7 @@ export async function GET(req: NextRequest) {
         content,
         targetType,
         className,
+        session,
         student->{ _id, fullName, grNumber, rollNumber, email, admissionFor },
         isEvent,
         isHeadline,
@@ -33,7 +38,7 @@ export async function GET(req: NextRequest) {
         _createdAt
       }`
     } else {
-      const whereParts: string[] = ['_type == "notice"']
+      const whereParts: string[] = ['_type == "notice"', sessionFilter]
       const conditions: string[] = [`targetType == 'all'`]
       if (className) { conditions.push(`(targetType == 'class' && className == $className)`); params.className = className }
       if (studentId) { conditions.push(`(targetType == 'student' && defined(student) && student._ref == $studentId)`); params.studentId = studentId }
@@ -46,6 +51,7 @@ export async function GET(req: NextRequest) {
         content,
         targetType,
         className,
+        session,
         student->{ _id, fullName, grNumber, rollNumber, email, admissionFor },
         isEvent,
         isHeadline,
@@ -69,7 +75,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
     const body = await req.json()
-    const { title, content, targetType, className, studentId, sendEmail, isEvent, eventDate, eventType, isHeadline } = body || {}
+    const { title, content, targetType, className, studentId, sendEmail, isEvent, eventDate, eventType, isHeadline, session } = body || {}
     if (!title || !content || !targetType) {
       return NextResponse.json({ ok: false, error: 'title, content and targetType are required' }, { status: 400 })
     }
@@ -87,6 +93,7 @@ export async function POST(req: NextRequest) {
       targetType,
       className: className || undefined,
       createdAt: new Date().toISOString(),
+      session: session || '2024-2025'
     }
     if (typeof isEvent === 'boolean') doc.isEvent = isEvent
     if (typeof isHeadline === 'boolean') doc.isHeadline = isHeadline
@@ -102,14 +109,19 @@ export async function POST(req: NextRequest) {
     if (sendEmail) {
       // Collect recipients based on target
       let recipients: string[] = []
+      // Use sessionFilter for finding recipients too!
+      const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+      const params = { className, id: studentId, session: session || '2024-2025' }
+
       if (targetType === 'all') {
-        const emails = await serverClient.fetch(`*[_type == "student" && defined(email)]{ email }`)
+        const emails = await serverClient.fetch(`*[_type == "student" && defined(email) && ${sessionFilter}]{ email }`, params)
         recipients = emails.map((e: any) => e.email).filter(Boolean)
       } else if (targetType === 'class' && className) {
-        const emails = await serverClient.fetch(`*[_type == "student" && admissionFor == $className && defined(email)]{ email }`, { className })
+        const emails = await serverClient.fetch(`*[_type == "student" && admissionFor == $className && defined(email) && ${sessionFilter}]{ email }`, params)
         recipients = emails.map((e: any) => e.email).filter(Boolean)
       } else if (targetType === 'student' && studentId) {
         const email = await serverClient.fetch(`*[_type == "student" && _id == $id][0]{ email }`, { id: studentId })
+        // fetching by ID doesn't need session filter usually, but technically student belongs to a session
         recipients = email?.email ? [email.email] : []
         if (recipients.length === 0) {
           return NextResponse.json({ ok: false, error: 'Student has no email.' }, { status: 400 })
@@ -178,6 +190,7 @@ export async function PUT(req: NextRequest) {
     if (typeof eventDate !== 'undefined') patch.eventDate = eventDate || undefined
     if (typeof eventType !== 'undefined') patch.eventType = eventType || undefined
     if (typeof isHeadline !== 'undefined') patch.isHeadline = !!isHeadline
+    // Not updating session on PUT as it shouldn't change typically, but could add if requested
 
     await serverClient.patch(id).set(patch).commit()
     return NextResponse.json({ ok: true })
@@ -194,11 +207,17 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     const deleteAll = searchParams.get('all') === 'true'
+    const session = searchParams.get('session')
+
     if (!id && !deleteAll) return NextResponse.json({ ok: false, error: 'id is required' }, { status: 400 })
 
     if (deleteAll) {
-      // Bulk delete all notices
-      await serverClient.delete({ query: '*[_type == "notice"]' } as any)
+      // Bulk delete all notices for the session
+      if (!session) {
+        return NextResponse.json({ ok: false, error: 'Session is required for bulk delete' }, { status: 400 })
+      }
+      const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+      await serverClient.delete({ query: `*[_type == "notice" && ${sessionFilter}]`, params: { session } } as any)
       return NextResponse.json({ ok: true, deleted: 'all' })
     } else if (id) {
       await serverClient.delete(id)

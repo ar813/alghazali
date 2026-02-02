@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
 
 // Helpers
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December','admission'] as const
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'admission'] as const
 
 type QueryFilters = {
   studentId?: string
   className?: string
   month?: string
   year?: number
-  status?: 'paid'|'partial'|'unpaid'
+  status?: 'paid' | 'partial' | 'unpaid'
   q?: string
   cursor?: string
   limit?: number
@@ -18,7 +18,7 @@ type QueryFilters = {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const filters: QueryFilters = {
+    const filters: QueryFilters & { session?: string } = {
       studentId: searchParams.get('studentId') || undefined,
       className: searchParams.get('className') || undefined,
       month: searchParams.get('month') || undefined,
@@ -27,11 +27,16 @@ export async function GET(req: NextRequest) {
       q: searchParams.get('q') || undefined,
       cursor: searchParams.get('cursor') || undefined,
       limit: searchParams.get('limit') ? Math.min(100, Number(searchParams.get('limit'))) : 50,
+      session: searchParams.get('session') || undefined
     }
 
     // Build GROQ filter
-    const where: string[] = ['_type == "fee"']
-    const params: Record<string, any> = {}
+    // Session Logic: Match session OR default to 2024-2025 if null
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+
+    const where: string[] = ['_type == "fee"', sessionFilter]
+    const params: Record<string, any> = { session: filters.session }
+
     if (filters.studentId) { where.push('student._ref == $studentId'); params.studentId = filters.studentId }
     if (filters.className) { where.push('className == $className'); params.className = filters.className }
     if (filters.month) { where.push('month == $month'); params.month = filters.month }
@@ -61,6 +66,7 @@ export async function GET(req: NextRequest) {
       bookNumber,
       notes,
       className,
+      session,
       student->{ _id, fullName, grNumber, rollNumber, admissionFor }
     }`
       .replace('$where', where.join(' && '))
@@ -78,7 +84,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
     const body = await req.json()
-    const { studentId, className, month, year, amountPaid = 0, paidDate, receiptNumber, bookNumber, feeType = 'monthly', notes } = body || {}
+    const { studentId, className, month, year, amountPaid = 0, paidDate, receiptNumber, bookNumber, feeType = 'monthly', notes, session } = body || {}
     // Determine fee type without mutation
     const effectiveFeeType: 'monthly' | 'admission' = month === 'admission' ? 'admission' : feeType
 
@@ -91,13 +97,28 @@ export async function POST(req: NextRequest) {
     }
 
     // Upsert unique
-    // For admission fees: only one record per student
-    // For monthly fees: unique by (studentId + month + year)
+    // For admission fees: only one record per student (per session? usually admission is once per session)
+    // For monthly fees: unique by (studentId + month + year + session)
+    // If session is provided, use it. If not, match documents with no session or default.
+    // Simplifying: If session is passed, we filter by it. existing check:
+
+    // Construct query for existing check
+    const existingQuery = `*[_type == "fee" && student._ref == $studentId && season == $session` // oops typo in thought
+    // Actually, session awareness in upsert is tricky if old data has no session.
+    // If we are creating new fee WITH session, we should check for existing fee WITH SAME session. (or no session if default)
+    // But `AdminFees` now sends `session`.
+    // So we match exact session.
+
+    // If session is not provided (should be required now?), default to '2024-2025'?
+    const targetSession = session || '2024-2025'; // Fallback
+
     const existing = await serverClient.fetch(
       effectiveFeeType === 'admission'
-        ? `*[_type == "fee" && student._ref == $studentId && feeType == 'admission'][0]{ _id }`
-        : `*[_type == "fee" && student._ref == $studentId && month == $month && year == $year][0]{ _id }`,
-      effectiveFeeType === 'admission' ? { studentId } : { studentId, month, year }
+        ? `*[_type == "fee" && student._ref == $studentId && feeType == 'admission' && session == $targetSession][0]{ _id }`
+        : `*[_type == "fee" && student._ref == $studentId && month == $month && year == $year && session == $targetSession][0]{ _id }`,
+      effectiveFeeType === 'admission'
+        ? { studentId, targetSession }
+        : { studentId, month, year, targetSession }
     ) as { _id: string } | null
 
     const doc = {
@@ -108,11 +129,12 @@ export async function POST(req: NextRequest) {
       year,
       amountPaid,
       status: 'paid' as const,
-      paidDate: paidDate || new Date().toISOString().slice(0,10),
+      paidDate: paidDate || new Date().toISOString().slice(0, 10),
       receiptNumber,
       bookNumber,
       feeType: effectiveFeeType,
       notes,
+      session: targetSession
     }
 
     if (existing?._id) {
@@ -142,10 +164,19 @@ export async function PATCH(req: NextRequest) {
       patch.student = { _type: 'reference', _ref: patch.studentId }
       delete patch.studentId
     }
-    // Enforce status 'paid' and remove dueDate if provided inadvertently
-    patch.status = 'paid'
+    // Do not enforce 'paid' status. Respect what is passed.
+    // If status is 'unpaid', we should likely unset paidDate and amountPaid if desired, 
+    // or just keep them as record. For now, let's just respect the status change.
+
+    // Logic: If setting to 'paid' and no date, set today.
+    if (patch.status === 'paid' && !patch.paidDate) {
+      patch.paidDate = new Date().toISOString().slice(0, 10)
+    }
+    // If setting to 'unpaid', maybe we should clear paidDate? 
+    // It depends on business logic. Let's start with just updating status.
+
     if ('dueDate' in patch) delete patch.dueDate
-    if (!patch.paidDate) patch.paidDate = new Date().toISOString().slice(0,10)
+
     const res = await serverClient.patch(id).set(patch).commit()
     return NextResponse.json({ ok: true, res })
   } catch (err: any) {

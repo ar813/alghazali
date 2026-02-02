@@ -6,7 +6,10 @@ interface Message {
     content: string;
 }
 
+import { useSession } from '@/context/SessionContext';
+
 export default function AdminChatBot() {
+    const { selectedSession } = useSession();
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +39,7 @@ export default function AdminChatBot() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: userMessage }),
+                body: JSON.stringify({ message: userMessage, session: selectedSession }),
             });
 
             console.log('=== FRONTEND: Response received ===');

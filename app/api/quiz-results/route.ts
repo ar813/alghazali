@@ -1,25 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
 import serverClient from '@/sanity/lib/serverClient'
 
+import { headers } from 'next/headers'
+import { dbAdmin, authAdmin } from '@/lib/firebase-admin'
+
+// Helper to verify Super Admin
+async function isSuperAdmin() {
+  try {
+    const headersList = headers();
+    const token = headersList.get('Authorization')?.replace('Bearer ', '');
+
+    if (!token) return false;
+
+    // Verify token using Firebase Admin SDK
+    const decodedToken = await authAdmin.verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    // Check role in Firestore (Server-side check)
+    const userDoc = await dbAdmin.collection('users').doc(uid).get();
+    const userData = userDoc.data();
+
+    return userData?.role === 'super_admin';
+  } catch (error) {
+    console.error("Auth Verification Error:", error);
+    return false;
+  }
+}
+
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const quizId = searchParams.get('quizId') || undefined
     const studentId = searchParams.get('studentId') || undefined
     const limit = searchParams.get('limit') ? Math.min(200, Number(searchParams.get('limit'))) : 100
+    const session = searchParams.get('session')
 
-    const params: Record<string, any> = { limit }
-    let query = `*[_type == "quizResult"] | order(coalesce(submittedAt, _createdAt) desc) [0...$limit]{
-      _id, quiz->{_id, title, subject, resultsAnnounced, 'totalQuestions': coalesce(questionLimit, count(questions))}, student->{_id, fullName, grNumber, admissionFor}, answers, score, submittedAt, _createdAt,
+    // Session Logic for Quiz Results: Filter by the SESSION OF THE QUIZ
+    const quizSessionFilter = `($session == null || quiz->session == $session || (!defined(quiz->session) && $session == "2024-2025"))`
+
+    const params: Record<string, any> = { limit, session }
+    let query = `*[_type == "quizResult" && ${quizSessionFilter}] | order(coalesce(submittedAt, _createdAt) desc) [0...$limit]{
+      _id, quiz->{_id, title, subject, resultsAnnounced, session, 'totalQuestions': coalesce(questionLimit, count(questions))}, student->{_id, fullName, grNumber, admissionFor}, answers, score, submittedAt, _createdAt,
       studentName, studentGrNumber, studentRollNumber, className, studentEmail, questionOrder
     }`
 
     if (quizId || studentId) {
-      const whereParts: string[] = ['_type == "quizResult"']
+      const whereParts: string[] = ['_type == "quizResult"', quizSessionFilter]
       if (quizId) { whereParts.push('quiz._ref == $quizId'); params.quizId = quizId }
       if (studentId) { whereParts.push('student._ref == $studentId'); params.studentId = studentId }
       query = `*[$where] | order(coalesce(submittedAt, _createdAt) desc) [0...$limit]{
-        _id, quiz->{_id, title, subject, resultsAnnounced, 'totalQuestions': coalesce(questionLimit, count(questions))}, student->{_id, fullName, grNumber, admissionFor}, answers, score, submittedAt, _createdAt,
+        _id, quiz->{_id, title, subject, resultsAnnounced, session, 'totalQuestions': coalesce(questionLimit, count(questions))}, student->{_id, fullName, grNumber, admissionFor}, answers, score, submittedAt, _createdAt,
         studentName, studentGrNumber, studentRollNumber, className, studentEmail, questionOrder
       }`.replace('$where', whereParts.join(' && '))
     }
@@ -95,6 +127,13 @@ export async function DELETE(req: NextRequest) {
     if (!process.env.SANITY_API_WRITE_TOKEN) {
       return NextResponse.json({ ok: false, error: 'Server is missing SANITY_API_WRITE_TOKEN' }, { status: 500 })
     }
+
+    // Security Check
+    const allowed = await isSuperAdmin();
+    if (!allowed) {
+      return NextResponse.json({ ok: false, error: 'Access Denied: Super Admin privileges required.' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     const quizId = searchParams.get('quizId')

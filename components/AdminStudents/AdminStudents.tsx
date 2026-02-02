@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { RotateCw, Upload, Download, Search, Plus, ChevronRight } from 'lucide-react'
+import { RotateCw, Upload, Download, Search, Plus, ChevronRight, Lock, GraduationCap } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 import { client } from "@/sanity/lib/client";
 import { getPaginatedStudentsQuery, getStudentsCountQuery, getAllClassesQuery, getStudentStatsQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
 import { auth } from '@/lib/firebase';
+import { useAuth } from '@/hooks/use-auth';
 import { toast } from "sonner";
 
 // New Components
@@ -18,14 +19,19 @@ import StudentGrid from './StudentGrid';
 import StudentFormContent from './StudentFormContent';
 import StudentDetailModal from './StudentDetailModal';
 import SecurityConfirmationModal from './SecurityConfirmationModal';
+import StudentPromotion from './StudentPromotion';
+import AccessDeniedDialog from '@/components/Auth/AccessDeniedDialog';
 import {
   Drawer,
   DrawerOverlay,
   DrawerContent
 } from "@chakra-ui/react"
+import { useSession } from '@/context/SessionContext';
 
 
 const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) => {
+  const { isSuperAdmin } = useAuth();
+
   // Search/Filter state
   const [search, setSearch] = useState("")
   const [klass, setKlass] = useState<string>('All')
@@ -37,6 +43,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   // Modal States
   const [clickedStudent, setClickedStudent] = useState<Student | null>(null); // For Details View
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showPromotionModal, setShowPromotionModal] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null) // For Edit Modal
 
   // Loading States
@@ -53,6 +60,9 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const [showDeleteByClassConfirm, setShowDeleteByClassConfirm] = useState(false)
   const [deleteClassSelected, setDeleteClassSelected] = useState('1')
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+
+  // Access Control Dialog State
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
 
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -114,14 +124,20 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     }
   }
 
+  // useSession hook
+  const { selectedSession } = useSession();
+
   useEffect(() => {
+    // Wait for session to be ready
+    if (!selectedSession) return;
+
     const fetchStudents = async () => {
       setLoading(true);
       onLoadingChange?.(true)
       try {
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
-        const params = { classFilter: klass, search: search, start, end };
+        const params = { classFilter: klass, search: search, start, end, session: selectedSession };
 
         const [data, count, statsData] = await Promise.all([
           client.fetch(getPaginatedStudentsQuery, params),
@@ -147,18 +163,15 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onLoadingChange, currentPage, pageSize, klass, search]); // Added deps
+  }, [onLoadingChange, currentPage, pageSize, klass, search, selectedSession]); // Added selectedSession
 
   const refreshStudents = async () => {
-    // Trigger re-fetch by toggling a dummy state or just calling fetch (but effect handles it)
-    // We can force re-run by setting loading to true, but effects depend on state.
-    // Simplest: just reload window or use a toggle. 
-    // Actually, let's just re-run the fetch logic directly here for manual refresh.
+    if (!selectedSession) return;
     setLoading(true)
     onLoadingChange?.(true)
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
-    const params = { classFilter: klass, search: search, start, end };
+    const params = { classFilter: klass, search: search, start, end, session: selectedSession };
 
     const [data, count] = await Promise.all([
       client.fetch(getPaginatedStudentsQuery, params),
@@ -184,9 +197,13 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   // Handle Create (Called from StudentFormModal)
   const handleCreateStudent = async (data: any, photoFile: File | null) => {
+    if (!isSuperAdmin) {
+      setShowAccessDenied(true);
+      return;
+    }
     setCreateLoading(true)
     try {
-      const body: any = { ...data }
+      const body: any = { ...data, session: selectedSession } // Inject Session
       if (photoFile) {
         const imageRef = await uploadPhotoAndGetRef(photoFile)
         body.photo = imageRef
@@ -210,6 +227,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   // Handle Update (Called from StudentFormModal)
   const handleUpdateStudent = async (data: any, photoFile: File | null) => {
     if (!editingStudent) return
+    if (!isSuperAdmin) {
+      setShowAccessDenied(true);
+      return;
+    }
     setEditLoading(true)
     try {
       const body: any = { ...data }
@@ -251,6 +272,10 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   }
 
   const handleDeleteStudent = async (id: string) => {
+    if (!isSuperAdmin) {
+      setShowAccessDenied(true);
+      return;
+    }
     setDeleteLoadingId(id)
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -277,12 +302,13 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   // Handle Delete All
   const handleDeleteAll = async () => {
+    if (!isSuperAdmin) {
+      setShowDeleteAllConfirm(false); // Close confirmation if open
+      setShowAccessDenied(true);
+      return;
+    }
     setBulkActionLoading(true)
     try {
-      // Assuming endpoint exists or handling logic on server
-      // If no specific "Delete All" endpoint, we might need to iterate or add a query param
-      // For now, let's assume we send a special DELETE request or multiple
-      // Ideally: DELETE /api/students?action=deleteAll
       const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/students?action=deleteAll', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
       const json = await res.json()
@@ -302,6 +328,11 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
   // Handle Delete By Class
   const handleDeleteClass = async () => {
+    if (!isSuperAdmin) {
+      setShowDeleteByClassConfirm(false);
+      setShowAccessDenied(true);
+      return;
+    }
     setBulkActionLoading(true)
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -339,12 +370,14 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         toast.error('No students to export')
         return
       }
+      const toastId = toast.loading('Exporting data with images...')
       const ExcelJS: any = await loadExcel()
       const wb = new ExcelJS.Workbook()
       const ws = wb.addWorksheet('Students')
 
-      // Setup columns (Same as before)
+      // Setup columns
       ws.columns = [
+        { header: 'Picture', key: 'picture', width: 12 },
         { header: 'Full Name', key: 'fullName', width: 25 },
         { header: "Father's Name", key: 'fatherName', width: 25 },
         { header: "Father CNIC", key: 'fatherCnic', width: 18 },
@@ -367,11 +400,22 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         { header: 'Guardian Contact', key: 'guardianContact', width: 18 },
         { header: 'Guardian CNIC', key: 'guardianCnic', width: 18 },
         { header: 'Relation', key: 'guardianRelation', width: 12 },
+        { header: 'Picture URL', key: 'photoUrl', width: 50 },
       ]
 
+      const fetchImageBlob = async (url: string) => {
+        try {
+          const res = await fetch(url + '?w=200&h=200&fit=crop', { cache: 'no-store' });
+          if (!res.ok) return null;
+          return await res.arrayBuffer();
+        } catch { return null; }
+      }
+
       // Add rows
-      students.forEach((student) => {
-        ws.addRow({
+      for (let i = 0; i < students.length; i++) {
+        const student = students[i];
+        const row = ws.addRow({
+          picture: '',
           fullName: student.fullName,
           fatherName: student.fatherName,
           fatherCnic: (student as any).fatherCnic,
@@ -393,21 +437,43 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
           guardianName: student.guardianName,
           guardianContact: student.guardianContact,
           guardianCnic: student.guardianCnic,
-          guardianRelation: student.guardianRelation
+          guardianRelation: student.guardianRelation,
+          photoUrl: student.photoUrl || ''
         })
-      })
+
+        row.height = 60;
+        const url = student.photoUrl;
+        if (url) {
+          const buffer = await fetchImageBlob(url);
+          if (buffer) {
+            const ext = url.toLowerCase().includes('png') ? 'png' : 'jpeg';
+            const imageId = wb.addImage({ buffer, extension: ext });
+            ws.addImage(imageId, {
+              tl: { col: 0, row: i + 1 },
+              br: { col: 1, row: i + 2 },
+              editAs: 'oneCell'
+            });
+          }
+        }
+      }
 
       const buffer = await wb.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-      const link = document.createElement('a')
-      link.href = window.URL.createObjectURL(blob)
-      link.download = `students_export_${new Date().toISOString().split('T')[0]}.xlsx`
-      link.click()
+      const fileSaver = await import('file-saver')
+      const saveAs = (fileSaver as any).default?.saveAs || (fileSaver as any).saveAs
+
+      toast.dismiss(toastId)
       toast.success('Excel exported successfully!')
 
+      if (saveAs && typeof saveAs === 'function') saveAs(blob, `students_export_${new Date().toISOString().split('T')[0]}.xlsx`)
+      else {
+        const link = document.createElement('a')
+        link.href = window.URL.createObjectURL(blob)
+        link.download = `students_export_${new Date().toISOString().split('T')[0]}.xlsx`
+        link.click()
+      }
     } catch (_error: any) {
-      console.error(_error)
-
+      toast.dismiss()
       toast.error('Export failed')
     }
   }
@@ -415,11 +481,15 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   const fileInputRefId = 'students-import-input'
   const handleImportExcelClick = () => { document.getElementById(fileInputRefId)?.click() }
   const handleImportExcelFile = async (e: ChangeEvent<HTMLInputElement>) => {
-    // ... Import logic kept roughly the same but simplified for brevity in this replace
-    // Assuming user wants functionality preserved, so I will restore the logic
-    // to allow import. 
+    if (!isSuperAdmin) {
+      setShowAccessDenied(true);
+      e.target.value = ''; // Reset input
+      return;
+    }
     const file = e.target.files?.[0]
     if (!file) return
+
+    const toastId = toast.loading('Reading Excel file...');
 
     try {
       setImportLoading(true)
@@ -428,68 +498,117 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const buf = await file.arrayBuffer()
       await wb.xlsx.load(buf)
       const ws = wb.worksheets[0]
-      const rows = ws.getSheetValues()
+      const rows: any[] = ws.getSheetValues() as any[]
+
+      // Map images to rows (tl.row is 0-indexed)
+      const imageMap: Record<number, any> = {};
+      ws.getImages().forEach((img: any) => {
+        const rowNum = Math.floor(img.range.tl.row) + 1; // Convert 0-indexed row to 1-indexed
+        imageMap[rowNum] = wb.getImage(img.imageId);
+      });
 
       const toCreate: any[] = []
       for (let i = 2; i < rows.length; i++) {
         const r: any = rows[i]
-        if (!r || !r[1]) continue
+        if (!r) continue
 
-        // Helper to get string
+        // Detect if first column is "Picture" placeholder or data
+        // If Col 1 is empty or very short, and Col 2 has the name, we shift.
+        // For our export: Col 1 = Picture, Col 2 = Full Name
+        // In getSheetValues, r[1] is Col A, r[2] is Col B.
+        const isNewFormat = r[1] === '' || r[1] === undefined || (typeof r[1] === 'string' && r[1].length < 2);
+        const offset = isNewFormat ? 1 : 0;
+
+        if (!r[1 + offset]) continue; // Skip if identity (name) is missing
+
         const s = (idx: number) => {
-          const val = r[idx];
+          const val = r[idx + offset];
+          if (val === undefined || val === null) return '';
           if (typeof val === 'object') return val.text || JSON.stringify(val);
           return String(val || '');
         }
 
         toCreate.push({
-          fullName: s(1),
-          fatherName: s(2),
-          fatherCnic: s(3),
-          dob: s(4), // Assume valid or improve parsing if needed
-          rollNumber: s(5),
-          grNumber: s(6),
-          gender: s(7) || 'male',
-          admissionFor: s(8) || '1',
-          nationality: s(9) || 'pakistani',
-          medicalCondition: s(10) || 'no',
-          cnicOrBform: s(11),
-          email: s(12),
-          phoneNumber: s(13),
-          whatsappNumber: s(14),
-          address: s(15),
-          formerEducation: s(16),
-          previousInstitute: s(17),
-          lastExamPercentage: s(18),
-          guardianName: s(19),
-          guardianContact: s(20),
-          guardianCnic: s(21),
-          guardianRelation: s(22),
+          rowNumber: i,
+          data: {
+            fullName: s(1),
+            fatherName: s(2),
+            fatherCnic: s(3),
+            dob: s(4),
+            rollNumber: s(5),
+            grNumber: s(6),
+            gender: s(7) || 'male',
+            admissionFor: s(8) || '1',
+            nationality: s(9) || 'pakistani',
+            medicalCondition: s(10) || 'no',
+            cnicOrBform: s(11),
+            email: s(12),
+            phoneNumber: s(13),
+            whatsappNumber: s(14),
+            address: s(15),
+            formerEducation: s(16),
+            previousInstitute: s(17),
+            lastExamPercentage: s(18),
+            guardianName: s(19),
+            guardianContact: s(20),
+            guardianCnic: s(21),
+            guardianRelation: s(22),
+            session: selectedSession // Ensure session is injected
+          }
         })
+      }
+
+      if (toCreate.length === 0) {
+        toast.dismiss(toastId);
+        toast.error('No valid student data found in Excel.');
+        return;
       }
 
       let successCount = 0
       const token = await auth.currentUser?.getIdToken();
-      for (const doc of toCreate) {
+
+      for (let idx = 0; idx < toCreate.length; idx++) {
+        const item = toCreate[idx];
+        toast.loading(`Importing student ${idx + 1} of ${toCreate.length}...`, { id: toastId });
+
         try {
+          const doc = item.data;
+
+          // Check for image in this row
+          const imgData = imageMap[item.rowNumber];
+          if (imgData) {
+            try {
+              const blob = new Blob([imgData.buffer], { type: `image/${imgData.extension}` });
+              const fileObj = new File([blob], `photo.${imgData.extension}`, { type: `image/${imgData.extension}` });
+              const photoRef = await uploadPhotoAndGetRef(fileObj);
+              doc.photo = photoRef;
+            } catch (imgErr) {
+              console.warn(`Failed to upload image for row ${item.rowNumber}`, imgErr);
+            }
+          }
+
           const res = await fetch('/api/students', {
             method: 'POST',
             body: JSON.stringify(doc),
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
           })
-          if ((await res.json()).ok) successCount++
-        } catch {
-
+          const resJson = await res.json();
+          if (resJson.ok) successCount++
+        } catch (err) {
+          console.error(`Error importing student at row ${item.rowNumber}`, err);
         }
       }
 
+      toast.dismiss(toastId);
       await refreshStudents()
-      toast.success(`Imported ${successCount} of ${toCreate.length} students.`)
-    } catch {
-      toast.error('Import failed')
+      toast.success(`Successfully imported ${successCount} of ${toCreate.length} students.`)
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error(`Import failed: ${err.message || 'Unknown error'}`)
     } finally {
       setImportLoading(false)
-      if (document.getElementById(fileInputRefId) as any) (document.getElementById(fileInputRefId) as any).value = ''
+      const input = document.getElementById(fileInputRefId) as HTMLInputElement;
+      if (input) input.value = '';
     }
   }
 
@@ -501,13 +620,12 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
   return (
     <div className="pb-20">
 
-      {/* 1. Header & Stats */}
+      <AccessDeniedDialog open={showAccessDenied} onOpenChange={setShowAccessDenied} />
+
       <HeaderStats stats={stats} />
 
-      {/* 2. Control Bar (Unified Command Center) */}
       <div className="bg-white dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-900 p-3 sm:p-4 rounded-[2rem] shadow-sm mb-8 flex flex-col xl:flex-row gap-4 items-center justify-between transition-all">
 
-        {/* Search & Intelligence Group */}
         <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
           <div className="relative group/search w-full md:w-[400px]">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within/search:text-neutral-900 dark:group-focus-within/search:text-white transition-colors">
@@ -516,7 +634,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Query Repository (Name, GR, CNIC...)"
+              placeholder="Search Student (Name, GR, CNIC...)"
               className="w-full pl-12 pr-6 py-3 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-2xl focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-all text-[13px] font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400"
             />
           </div>
@@ -527,14 +645,13 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
               onChange={(e) => setKlass(e.target.value)}
               className="w-full px-5 py-3 pr-10 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-2xl focus:outline-none focus:border-neutral-900 dark:focus:border-white text-[13px] font-bold text-neutral-600 dark:text-neutral-400 appearance-none cursor-pointer transition-all uppercase tracking-widest"
             >
-              <option value="All">All Tiers</option>
+              <option value="All">All Classes</option>
               {fetchedClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
             </select>
             <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-neutral-400 group-focus-within/select:rotate-180 transition-transform pointer-events-none" />
           </div>
         </div>
 
-        {/* Global Operations Group */}
         <div className="flex flex-wrap items-center gap-2.5 justify-center sm:justify-end w-full xl:w-auto">
           <div className="flex items-center gap-1 bg-neutral-50 dark:bg-neutral-900/50 p-1.5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
             <button
@@ -563,57 +680,96 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { setDeleteClassSelected('1'); setShowDeleteByClassConfirm(true) }}
-              className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 hover:text-white bg-amber-500/5 hover:bg-amber-500 rounded-xl transition-all border border-amber-500/10"
+              onClick={() => {
+                if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+                setDeleteClassSelected('1');
+                setShowDeleteByClassConfirm(true)
+              }}
+              className="px-4 py-2.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 hover:text-white bg-amber-500/5 hover:bg-amber-500 rounded-xl transition-all border border-amber-500/10"
             >
-              Purge
+              <span>Clear Class</span>
+              {!isSuperAdmin && <Lock size={10} className="mb-0.5" />}
             </button>
             <button
-              onClick={() => setShowDeleteAllConfirm(true)}
-              className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 hover:text-white bg-rose-500/5 hover:bg-rose-500 rounded-xl transition-all border border-rose-500/10"
+              onClick={() => {
+                if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+                setShowDeleteAllConfirm(true)
+              }}
+              className="px-4 py-2.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 hover:text-white bg-rose-500/5 hover:bg-rose-500 rounded-xl transition-all border border-rose-500/10"
             >
-              Wipe
+              <span>Delete All</span>
+              {!isSuperAdmin && <Lock size={10} className="mb-0.5" />}
             </button>
           </div>
 
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="group relative px-6 py-3 rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-black flex items-center gap-3 overflow-hidden shadow-2xl transition-all hover:scale-[1.02] active:scale-95"
-          >
-            <div className="absolute inset-x-0 bottom-0 h-[2px] bg-white dark:bg-neutral-900 opacity-20 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
-            <Plus size={18} strokeWidth={3} />
-            <span className="text-[12px] font-black uppercase tracking-[0.2em]">New Entry</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+                setShowPromotionModal(true)
+              }}
+              className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-3 shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-95 border border-blue-500/20"
+            >
+              <GraduationCap size={18} />
+              <span className="text-[12px] font-black uppercase tracking-[0.2em]">Promote</span>
+              {!isSuperAdmin && <Lock size={12} className="opacity-70" />}
+            </button>
+
+            <button
+              onClick={() => {
+                if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+                setShowAddModal(true)
+              }}
+              className="group relative px-6 py-3 rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-black flex items-center gap-3 overflow-hidden shadow-2xl transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <div className="absolute inset-x-0 bottom-0 h-[2px] bg-white dark:bg-neutral-900 opacity-20 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+              <Plus size={18} strokeWidth={3} />
+              <span className="text-[12px] font-black uppercase tracking-[0.2em]">New Entry</span>
+              {!isSuperAdmin && <Lock size={12} className="opacity-70" />}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 3. Operational Data (Data Views) */}
       <div className="space-y-8 min-h-[400px]">
         <StudentTable
           students={filteredStudents}
           loading={loading}
           onView={setClickedStudent}
-          onEdit={(s) => setEditingStudent(s)}
-          onDelete={setConfirmDeleteId}
+          onEdit={(s) => {
+            if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+            setEditingStudent(s)
+          }}
+          onDelete={(id) => {
+            if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+            setConfirmDeleteId(id)
+          }}
           deleteLoadingId={deleteLoadingId}
+          isSuperAdmin={isSuperAdmin}
         />
 
         <StudentGrid
           students={filteredStudents}
           loading={loading}
           onView={setClickedStudent}
-          onEdit={(s) => setEditingStudent(s)}
-          onDelete={setConfirmDeleteId}
+          onEdit={(s) => {
+            if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+            setEditingStudent(s)
+          }}
+          onDelete={(id) => {
+            if (!isSuperAdmin) { setShowAccessDenied(true); return; }
+            setConfirmDeleteId(id)
+          }}
           deleteLoadingId={deleteLoadingId}
+          isSuperAdmin={isSuperAdmin}
         />
       </div>
 
-      {/* 4. Persistence Controls (Pagination) */}
       <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 px-4 py-6 border-t border-neutral-100 dark:border-neutral-900">
         <div className="flex flex-col gap-1 text-center sm:text-left">
-          <p className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.2em]">Registry Footprint</p>
+          <p className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.2em]">Total Students</p>
           <p className="text-[12px] text-neutral-400 font-medium">
-            Projecting <span className="text-neutral-900 dark:text-white font-bold">{students.length}</span> of <span className="text-neutral-900 dark:text-white font-bold">{totalCount}</span> identified records
+            Showing <span className="text-neutral-900 dark:text-white font-bold">{students.length}</span> of <span className="text-neutral-900 dark:text-white font-bold">{totalCount}</span> student records
           </p>
         </div>
 
@@ -628,7 +784,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
 
           <div className="px-6 py-1.5 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 shadow-sm">
             <span className="text-[12px] font-black text-neutral-900 dark:text-white uppercase tracking-widest">
-              Stage {currentPage}
+              Page {currentPage}
             </span>
           </div>
 
@@ -643,10 +799,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       </div>
 
 
-
-      {/* --- MODALS --- */}
-
-      {/* Add / Edit Form - Enterprise Full-Screen Drawer */}
       <Drawer
         isOpen={showAddModal || !!editingStudent}
         onClose={() => { setShowAddModal(false); setEditingStudent(null); }}
@@ -663,7 +815,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </DrawerContent>
       </Drawer>
 
-      {/* View Details - Enterprise Drawer */}
       <Drawer
         isOpen={!!clickedStudent}
         onClose={() => setClickedStudent(null)}
@@ -678,7 +829,6 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         </DrawerContent>
       </Drawer>
 
-      {/* Delete Confirmations (Simplifed inline for now to save files, can extract if needed) */}
       {confirmDeleteId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] backdrop-blur-sm p-4" onClick={() => setConfirmDeleteId(null)}>
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -739,6 +889,15 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         variant="warning"
         loading={bulkActionLoading}
       />
+
+      {showPromotionModal && (
+        <StudentPromotion
+          onClose={() => setShowPromotionModal(false)}
+          onSuccess={async () => {
+            await refreshStudents();
+          }}
+        />
+      )}
 
 
     </div>

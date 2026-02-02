@@ -82,7 +82,7 @@ const AdminLoginForm = ({ onLoginSuccess }: AdminLoginFormProps) => {
             )}
 
             <div className="space-y-2">
-                <label className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.1em] ml-1">Work Email</label>
+                <label className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.1em] ml-1">Email</label>
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-neutral-400 group-focus-within:text-indigo-600 transition-colors">
                         <Mail size={18} />
@@ -100,7 +100,7 @@ const AdminLoginForm = ({ onLoginSuccess }: AdminLoginFormProps) => {
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between ml-1">
-                    <label className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.1em]">Security Password</label>
+                    <label className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.1em]">Password</label>
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
@@ -151,7 +151,7 @@ const AdminLoginForm = ({ onLoginSuccess }: AdminLoginFormProps) => {
                     </>
                 ) : (
                     <>
-                        <span>Sign in to Dashboard</span>
+                        <span>Login to Dashboard</span>
                         <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                     </>
                 )}

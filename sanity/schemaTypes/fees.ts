@@ -13,6 +13,12 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: 'session',
+      title: 'Academic Session',
+      type: 'string',
+      initialValue: '2024-2025',
+    }),
+    defineField({
       name: 'className',
       title: 'Class',
       type: 'string',
@@ -23,7 +29,7 @@ export default defineType({
       title: 'Month',
       type: 'string',
       options: {
-        list: ['January','February','March','April','May','June','July','August','September','October','November','December']
+        list: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
       },
       validation: (Rule) => Rule.required(),
     }),

@@ -1,9 +1,22 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Anta, Outfit } from "next/font/google";
 import "./globals.css";
 import { Provider } from "@/components/ui/provider";
 import AppDownloadPromo from "@/components/AppDownloadPromo/AppDownloadPromo";
 import GoogleAnalytics from "@/components/SEO/GoogleAnalytics";
+import LordIconInitializer from "@/components/LordIconInitializer";
+
+const anta = Anta({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-anta",
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+});
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -98,6 +111,9 @@ export const metadata: Metadata = {
 
 import { Toaster } from "@/components/ui/sonner";
 
+import { AuthProvider } from "@/context/AuthContext";
+import { MobileNavProvider } from "@/contexts/MobileNavContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -106,15 +122,21 @@ export default function RootLayout({
   return (
     <html lang="en">
       <GoogleAnalytics ga_id="G-75E96W9EMG" />
+      <LordIconInitializer />
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${anta.variable} ${outfit.variable} antialiased`}
       >
         <Provider>
-          {children}
-          <AppDownloadPromo />
-          <Toaster position="top-right" richColors closeButton />
+          <AuthProvider>
+            <MobileNavProvider>
+              {children}
+              <AppDownloadPromo />
+              <Toaster position="top-right" richColors closeButton />
+            </MobileNavProvider>
+          </AuthProvider>
         </Provider>
       </body>
     </html>
   );
 }
+

@@ -33,7 +33,7 @@ const adminAgent = new Agent({
 export async function POST(req: NextRequest) {
     try {
         // Parse the request body
-        const { message } = await req.json();
+        const { message, session } = await req.json();
 
         if (!message) {
             return NextResponse.json(
@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
                 { status: 400 }
             );
         }
-        const userMessage = message;
+
+        // Inject session context into the message
+        const sessionContext = session ? `\n[Context: Current Academic Session is ${session}]` : '';
+        const userMessage = message + sessionContext;
 
         // Run the agent with the user's message
         const result = await run(adminAgent, userMessage);

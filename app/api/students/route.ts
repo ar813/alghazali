@@ -60,13 +60,21 @@ export async function DELETE(request: Request) {
   const all = url.searchParams.get('all') === 'true'
   const className = url.searchParams.get('class')?.trim()
   const force = url.searchParams.get('force') === 'true'
+  const session = url.searchParams.get('session')?.trim()
+
+  // Session Filter Logic
+  const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
 
   // If bulk delete is requested, delete all students via GROQ query
   if (all) {
-    console.log('API DELETE /api/students (bulk delete all)')
+    if (!session) {
+      return NextResponse.json({ ok: false, error: 'Session is required for bulk delete' }, { status: 400 })
+    }
+    console.log('API DELETE /api/students (bulk delete all)', session)
     try {
-      // Collect all student IDs
-      const ids: string[] = await serverClient.fetch('*[_type == "student"]._id')
+      // Collect all student IDs in the session
+      const query = `*[_type == "student" && ${sessionFilter}]._id`
+      const ids: string[] = await serverClient.fetch(query, { session })
       const deletable: string[] = []
       const blocked: Array<{ id: string; references: Array<{ _id: string; _type: string }> }> = []
 
@@ -92,13 +100,19 @@ export async function DELETE(request: Request) {
 
   // Delete by class (safe bulk by specific class only)
   if (className) {
-    console.log('API DELETE /api/students (by class):', className)
+    if (!session) {
+      return NextResponse.json({ ok: false, error: 'Session is required for delete by class' }, { status: 400 })
+    }
+    console.log('API DELETE /api/students (by class):', className, session)
     try {
       // Guard against accidental wildcards
       if (className.toLowerCase() === 'all') {
         return NextResponse.json({ ok: false, error: 'Invalid class value' }, { status: 400 })
       }
-      const ids: string[] = await serverClient.fetch('*[_type == "student" && admissionFor == $cls]._id', { cls: className })
+
+      const query = `*[_type == "student" && admissionFor == $cls && ${sessionFilter}]._id`
+      const ids: string[] = await serverClient.fetch(query, { cls: className, session })
+
       const deletedIds: string[] = []
       const blocked: Array<{ id: string; references: Array<{ _id: string; _type: string }> }> = []
 

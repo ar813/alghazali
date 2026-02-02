@@ -6,6 +6,7 @@ export default defineType({
   type: 'document',
   fields: [
     defineField({ name: 'title', title: 'Title', type: 'string', validation: r => r.required() }),
+    defineField({ name: 'session', title: 'Academic Session', type: 'string', initialValue: '2024-2025' }),
     defineField({ name: 'subject', title: 'Subject', type: 'string', validation: r => r.required() }),
     defineField({ name: 'examKey', title: 'Exam Key', type: 'string', validation: r => r.required() }),
     defineField({ name: 'createdAt', title: 'Created At', type: 'datetime', initialValue: () => new Date().toISOString() }),
@@ -15,11 +16,13 @@ export default defineType({
       name: 'targetType',
       title: 'Target Type',
       type: 'string',
-      options: { list: [
-        { title: 'All School', value: 'all' },
-        { title: 'Class', value: 'class' },
-        { title: 'Student', value: 'student' },
-      ]},
+      options: {
+        list: [
+          { title: 'All School', value: 'all' },
+          { title: 'Class', value: 'class' },
+          { title: 'Student', value: 'student' },
+        ]
+      },
       validation: r => r.required()
     }),
     defineField({ name: 'className', title: 'Class Name', type: 'string' }),
@@ -38,11 +41,13 @@ export default defineType({
             name: 'difficulty',
             title: 'Difficulty',
             type: 'string',
-            options: { list: [
-              { title: 'Easy', value: 'easy' },
-              { title: 'Medium', value: 'medium' },
-              { title: 'Hard', value: 'hard' },
-            ]},
+            options: {
+              list: [
+                { title: 'Easy', value: 'easy' },
+                { title: 'Medium', value: 'medium' },
+                { title: 'Hard', value: 'hard' },
+              ]
+            },
             initialValue: 'easy'
           }),
         ]
