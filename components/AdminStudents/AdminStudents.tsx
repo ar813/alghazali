@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { RotateCw, Upload, Download, Search, Plus, ChevronRight, Lock, GraduationCap } from 'lucide-react'
-import { motion } from 'framer-motion'
+// import { motion } from 'framer-motion'
 
 import { client } from "@/sanity/lib/client";
 import { getPaginatedStudentsQuery, getStudentsCountQuery, getAllClassesQuery, getStudentStatsQuery } from "@/sanity/lib/queries";
@@ -148,8 +148,8 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         setStudents(data.map(normalizeStudent));
         setTotalCount(count);
         setStats(statsData);
-      } catch (err) {
-        console.error(err)
+      } catch (_err) {
+        console.error(_err)
       } finally {
         setLoading(false);
         onLoadingChange?.(false)
@@ -472,7 +472,7 @@ const AdminStudents = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
         link.download = `students_export_${new Date().toISOString().split('T')[0]}.xlsx`
         link.click()
       }
-    } catch (_error: any) {
+    } catch {
       toast.dismiss()
       toast.error('Export failed')
     }

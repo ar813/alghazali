@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useCallback, useEffect, useState, useMemo } from 'react'
-import { Calendar, Plus, Save, Trash2, Upload, Download, Search, Info, FileSpreadsheet, Loader2, X, AlertTriangle, ListFilter } from 'lucide-react'
+import React, { useEffect, useState, useMemo } from 'react'
+import { Calendar, Plus, Save, Trash2, Upload, Download, Search, FileSpreadsheet, Loader2, AlertTriangle, ListFilter } from 'lucide-react'
 import { toast } from "sonner";
 import ScheduleCard from './ScheduleCard';
 import { useSession } from '@/context/SessionContext';
@@ -62,8 +62,8 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
     try {
       const ExcelJS = await import('exceljs')
       return (ExcelJS as any).default || (ExcelJS as any)
-    } catch (e) {
-      console.error('ExcelJS could not be loaded:', e);
+    } catch (_e) {
+      console.error('ExcelJS could not be loaded:', _e);
       throw new Error('ExcelJS could not be loaded. Please ensure it is installed.')
     }
   }
@@ -93,8 +93,8 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       saveAs(blob, `schedules_${new Date().toISOString().slice(0, 10)}.xlsx`)
       toast.success('Schedules exported')
-    } catch (e: any) {
-      toast.error(`Export failed: ${e?.message || 'Unknown error'}`)
+    } catch (_e: any) {
+      toast.error(`Export failed: ${_e?.message || 'Unknown error'}`)
     }
   }
 
@@ -117,7 +117,7 @@ const AdminSchedule = ({ onLoadingChange }: { onLoadingChange?: (loading: boolea
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       saveAs(blob, 'schedule_template.xlsx')
       toast.success('Template downloaded')
-    } catch (e: any) {
+    } catch {
       toast.error('Failed to download template')
     }
   }

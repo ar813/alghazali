@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: true, message: 'No students found to transfer', count: 0 });
         }
 
-        const result = await transaction.commit();
+        await transaction.commit();
 
         return NextResponse.json({
             ok: true,

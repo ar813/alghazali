@@ -150,7 +150,7 @@ const ResultsHeader = ({
     );
 };
 
-const StatCard = ({ label, value, icon: Icon, trend, color }: any) => {
+const StatCard = ({ label, value, icon: Icon, color }: any) => {
     const colors: Record<string, string> = {
         blue: "bg-blue-50 text-blue-600 border-blue-100",
         amber: "bg-amber-50 text-amber-600 border-amber-100",

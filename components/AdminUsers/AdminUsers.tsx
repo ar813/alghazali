@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
-import { Trash2, Shield, ShieldCheck, UserCog, Search, Plus, X, AlertCircle, Edit3, Loader2, Mail, Calendar, RefreshCw, Clock } from "lucide-react";
+import { Trash2, Shield, UserCog, Search, Plus, X, AlertCircle, Edit3, Loader2, Mail, RefreshCw, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +77,7 @@ const AdminUsers = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [onLoadingChange]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -23,7 +23,6 @@ export default function IslamicDate({ className = "", variant = 'nav' }: Islamic
     useEffect(() => {
         const fetchDate = async () => {
             try {
-                const today = new Date().toISOString().split('T')[0];
                 const cached = localStorage.getItem('hijri_date_cache');
                 const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
 

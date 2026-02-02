@@ -124,8 +124,8 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
       const buffer = await wb.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       saveAs(blob, `fees_${new Date().toISOString().split('T')[0]}.xlsx`)
-    } catch (error: any) {
-      console.error('Export error:', error)
+    } catch (_error: any) {
+      console.error('Export error:', _error)
       toast.error('Failed to export')
     }
   }
@@ -177,7 +177,7 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
       }
       await loadFees()
       toast.success(`Import complete`)
-    } catch (error) {
+    } catch {
       toast.error('Import failed')
     } finally {
       setImportLoading(false)

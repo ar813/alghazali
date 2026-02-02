@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { User, BookOpen, Phone, FileText, Camera, Upload, Check, ChevronRight, Hash, Mail, MapPin, X } from 'lucide-react';
+import { User, BookOpen, Phone, FileText, Camera, Check, ChevronRight, Hash, Mail, MapPin, X } from 'lucide-react';
 import Image from 'next/image';
 import ImageCropper from '@/components/ImageCropper/ImageCropper';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,7 +15,7 @@ const FieldLabel = ({ children, icon: Icon }: { children: React.ReactNode, icon?
     </label>
 );
 
-const TextInput = ({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon?: any }) => (
+const TextInput = ({ ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon?: any }) => (
     <div className="relative">
         <input
             {...props}
@@ -24,7 +24,7 @@ const TextInput = ({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInput
     </div>
 );
 
-const SelectInput = ({ children, icon: Icon, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { icon?: any }) => (
+const SelectInput = ({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { icon?: any }) => (
     <div className="relative">
         <select
             {...props}

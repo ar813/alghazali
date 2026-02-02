@@ -224,7 +224,7 @@ const AdminCards = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
 
       await loadStudents();
       toast.success(`Dates updated for ${targets.length} students`);
-    } catch (e) {
+    } catch (_e) {
       toast.error("Failed to save dates");
     } finally {
       setSavingDates(false);

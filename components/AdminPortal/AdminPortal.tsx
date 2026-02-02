@@ -33,28 +33,7 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange, childLoading }: { isB
     // Get mobile nav context for unified navigation
     const { setPortalNavConfig, clearPortalNav } = useMobileNav();
 
-    // Effect to handle access denied for non-super admins trying to access restricted tabs
-    useEffect(() => {
-        if (activeTab === 'users' && !isSuperAdmin && !authLoading) {
-            setShowAccessDenied(true);
-            setActiveTab('dashboard'); // Redirect back to safe tab
-        }
-    }, [activeTab, isSuperAdmin, authLoading]); // eslint-disable-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
-
-
-    // Loading state
-    if (authLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                </div>
-            </div>
-        );
-    }
-
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Sidebar items definition
     const sidebarItems = useMemo(() => {
         const baseItems = [
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -77,7 +56,15 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange, childLoading }: { isB
         return [...baseItems, ...conditionalItems];
     }, [isSuperAdmin]);
 
-    // Register sidebar items with mobile nav context for unified navigation
+    // Effect to handle access denied for non-super admins
+    useEffect(() => {
+        if (activeTab === 'users' && !isSuperAdmin && !authLoading) {
+            setShowAccessDenied(true);
+            setActiveTab('dashboard');
+        }
+    }, [activeTab, isSuperAdmin, authLoading]);
+
+    // Register sidebar items with mobile nav context
     useEffect(() => {
         setPortalNavConfig({
             title: 'Admin Panel',
@@ -89,14 +76,12 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange, childLoading }: { isB
             }
         });
 
-        // Cleanup on unmount
         return () => {
             clearPortalNav();
         };
-    }, [sidebarItems, activeTab, setPortalNavConfig, clearPortalNav]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [sidebarItems, activeTab, setPortalNavConfig, clearPortalNav]);
 
-    // Sync tab with URL hash (#dashboard/#students/#schedule/#reports)
-
+    // Sync tab with URL hash
     useEffect(() => {
         const applyHash = () => {
             const hash = (typeof window !== 'undefined' && window.location.hash.replace('#', '')) as typeof activeTab | ''
@@ -108,12 +93,23 @@ const AdminPortal = ({ isBlurred = false, onLoadingChange, childLoading }: { isB
         const onHash = () => applyHash()
         window.addEventListener('hashchange', onHash)
         return () => window.removeEventListener('hashchange', onHash)
-    }, [sidebarItems, setActiveTab]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [sidebarItems, setActiveTab])
 
-    // Notify parent to show loader whenever tab changes (until child reports done)
+    // Notify parent to show loader whenever tab changes
     useEffect(() => {
         onLoadingChange?.(true)
-    }, [activeTab, onLoadingChange]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [activeTab, onLoadingChange]);
+
+    // Loading state
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`${isBlurred ? 'pointer-events-none select-none' : ''} `}>

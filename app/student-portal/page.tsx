@@ -5,7 +5,7 @@ import { CalendarCheck, GraduationCap, LayoutDashboard, Megaphone, User, LogOut,
 import { client } from "@/sanity/lib/client";
 import { getAllStudentsQuery, getScheduleByClassQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation';
 
 import NavBar from '@/components/NavBar/NavBar';
 import StudentDashboard from '@/components/StudentDashboard/StudentDashboard';
@@ -32,8 +32,7 @@ export default function StylishStudentPortal() {
   const [filtered, setFiltered] = useState<Student[]>([])
   const [matchedSchedule, setMatchedSchedule] = useState<ScheduleDay[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [scheduleLoading, setScheduleLoading] = useState(false)
-  const [studentsLoaded, setStudentsLoaded] = useState(false)
+  // removed unused states
   const sessionDuration = 30 * 60 * 1000; // 30 minutes
 
   useEffect(() => {
@@ -41,9 +40,8 @@ export default function StylishStudentPortal() {
       try {
         const data = await client.fetch(getAllStudentsQuery);
         setStudents(data);
-        setStudentsLoaded(true)
       } catch {
-        setStudentsLoaded(true) // prevent infinite blocking
+        // handle error
       }
     };
 
@@ -114,11 +112,10 @@ export default function StylishStudentPortal() {
       return
     }
     let mounted = true
-    setScheduleLoading(true)
     client.fetch(getScheduleByClassQuery(studentClass))
       .then((sch: { days?: ScheduleDay[] } | null) => { if (!mounted) return; if (sch && sch.days) setMatchedSchedule(sch.days); else setMatchedSchedule(null) })
       .catch(() => { if (!mounted) return; setMatchedSchedule(null) })
-      .finally(() => { if (!mounted) return; setScheduleLoading(false) })
+      .finally(() => { if (!mounted) return; })
     return () => { mounted = false }
   }, [filtered])
 

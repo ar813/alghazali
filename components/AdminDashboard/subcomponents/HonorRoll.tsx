@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import NextImage from 'next/image';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Trophy, Award, User, Star } from 'lucide-react';
@@ -131,7 +132,7 @@ const HonorRoll = () => {
                         <div key={i} className="bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/10 rounded-2xl p-4 transition-all duration-300 flex items-center gap-4 group/item cursor-default">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center border-2 border-white/30 shadow-lg overflow-hidden flex-shrink-0">
                                 {student.photoUrl ? (
-                                    <img src={student.photoUrl} alt={student.fullName} className="w-full h-full object-cover" />
+                                    <NextImage src={student.photoUrl} alt={student.fullName} width={48} height={48} className="w-full h-full object-cover" />
                                 ) : (
                                     <User size={20} className="text-white" />
                                 )}

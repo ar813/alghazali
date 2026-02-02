@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Plus, Save, Loader2, Target, Book, Key, Clock, ListChecks, Download, Upload } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import QuestionItem from './QuestionItem';
 import { toast } from 'sonner';
 
@@ -20,7 +19,6 @@ const QuizForm = ({ students, classOptions, onSubmit, saving, genId }: QuizFormP
         className: '', studentId: '', durationMinutes: 30, questionLimit: 10,
         questions: [{ _key: genId(), question: '', options: ['', '', '', ''], correctIndex: 0, difficulty: 'easy' }]
     });
-    const [studentQuickFilter, setStudentQuickFilter] = useState('');
 
     const addQuestion = () => setForm(f => ({
         ...f,

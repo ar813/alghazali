@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Edit2, Trash2, Check, X, Loader2, Calendar, User, Hash, Banknote } from 'lucide-react';
+import { Edit2, Trash2, Check, X, Calendar, User, Hash, Banknote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FeeTableProps {
@@ -10,8 +10,8 @@ interface FeeTableProps {
     onEdit: (fee: any) => void;
     onDelete: (id: string) => void;
     onUpdateStatus: (id: string, status: any) => void;
-    deletingId: string | null;
     onViewDetail: (fee: any) => void;
+    deletingId?: string | null;
 }
 
 const FeeTable = ({
@@ -20,11 +20,10 @@ const FeeTable = ({
     onEdit,
     onDelete,
     onUpdateStatus,
-    deletingId,
     onViewDetail
 }: FeeTableProps) => {
 
-    const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null);
+    // removed unused confirmDeleteId
 
     if (loading) {
         return (

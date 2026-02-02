@@ -49,8 +49,8 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
                 if (!selectedSession) return;
                 const students = await client.fetch<Student[]>(getAllStudentsQuery, { session: selectedSession });
                 setAllStudents(students);
-            } catch (error) {
-                console.error("❌ Error fetching all students from Sanity:", error);
+            } catch (_error) {
+                console.error("❌ Error fetching all students from Sanity:", _error);
             }
         };
         fetchAllStudents();
@@ -289,7 +289,7 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
                     const headerRow = worksheet.addRow(allHeaders);
 
                     // Style Header
-                    headerRow.eachCell((cell, colNumber) => {
+                    headerRow.eachCell((cell, _colNumber) => {
                         cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
                         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
                         cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };

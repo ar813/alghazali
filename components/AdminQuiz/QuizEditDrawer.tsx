@@ -17,7 +17,7 @@ interface QuizEditDrawerProps {
     genId: () => string;
 }
 
-const QuizEditDrawer = ({ quiz, onClose, onSaved, students, classOptions, genId }: QuizEditDrawerProps) => {
+const QuizEditDrawer = ({ quiz, onClose, onSaved, students, genId }: QuizEditDrawerProps) => {
     const [form, setForm] = useState({
         ...quiz,
         studentId: quiz.student?._id || '',
@@ -83,7 +83,7 @@ const QuizEditDrawer = ({ quiz, onClose, onSaved, students, classOptions, genId 
                     _updatedAt: new Date().toISOString()
                 });
             }
-        } catch (e) {
+        } catch {
             toast.error('Failed to update quiz');
         } finally { setSaving(false); }
     };

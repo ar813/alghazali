@@ -10,6 +10,7 @@ import {
 import { LogOut, LayoutDashboard, CalendarClock, Smartphone, UserCog } from "lucide-react";
 import { User as FirebaseUser } from "firebase/auth";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import LogoutConfirmationDialog from "../Auth/LogoutConfirmationDialog";
@@ -48,9 +49,11 @@ export function AdminDropdown({ user, role, logout }: AdminDropdownProps) {
                             "hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors duration-200"
                         )}>
                             {user.photoURL ? (
-                                <img
+                                <Image
                                     src={user.photoURL}
                                     alt="Profile"
+                                    width={36}
+                                    height={36}
                                     className="h-full w-full object-cover"
                                 />
                             ) : (

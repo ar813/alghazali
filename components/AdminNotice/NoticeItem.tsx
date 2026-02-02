@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Edit2, Trash2, Calendar, Megaphone, User, Users, Info, ChevronRight, Loader2 } from 'lucide-react';
+import { Edit2, Trash2, Calendar, User, Users, Info, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NoticeItemProps {

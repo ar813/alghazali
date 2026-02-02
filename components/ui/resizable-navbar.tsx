@@ -350,7 +350,13 @@ export const MobileNavMenu = ({
                                             className="relative h-10 w-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700 cursor-pointer group"
                                         >
                                             {userInfo.image ? (
-                                                <img src={userInfo.image} alt={userInfo.name || ''} className="h-full w-full object-cover rounded-full" />
+                                                <Image
+                                                    src={userInfo.image}
+                                                    alt={userInfo.name || ''}
+                                                    width={40}
+                                                    height={40}
+                                                    className="h-full w-full object-cover rounded-full"
+                                                />
                                             ) : (
                                                 <IconUser size={20} className="text-neutral-500" />
                                             )}
