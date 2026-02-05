@@ -375,6 +375,18 @@ export const MobileNavMenu = ({
                                         </div>
                                     </div>
                                     <div className="space-y-2">
+                                        {userInfo.role === "super_admin" && (
+                                            <a
+                                                href="/admin/users"
+                                                onClick={onClose}
+                                                className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors text-left"
+                                            >
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-800">
+                                                    <IconUser size={18} />
+                                                </div>
+                                                <span>Manage Users</span>
+                                            </a>
+                                        )}
                                         <button
                                             onClick={userInfo.onLogout}
                                             className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"

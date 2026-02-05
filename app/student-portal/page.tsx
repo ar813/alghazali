@@ -1,37 +1,48 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react'
-import { CalendarCheck, GraduationCap, LayoutDashboard, Megaphone, User, LogOut, QrCode } from 'lucide-react';
+import { Toaster } from "@/components/ui/sonner"
+import { toast } from "sonner"
+import { CalendarCheck, LayoutDashboard, Megaphone, User, LogOut, CreditCard, BrainCircuit, Trophy } from 'lucide-react';
 import { client } from "@/sanity/lib/client";
-import { getScheduleByClassQuery } from "@/sanity/lib/queries";
 import type { Student } from '@/types/student';
-// import { useRouter } from 'next/navigation';
 
 import NavBar from '@/components/NavBar/NavBar';
 import StudentDashboard from '@/components/StudentDashboard/StudentDashboard';
 import StudentProfile from '@/components/StudentProfile/StudentProfile';
 import StudentSchedule from '@/components/StudentSchedule/StudentSchedule';
 import StudentNotices from '@/components/StudentNotices/StudentNotices';
-import StudentCard from '@/components/StudentCard/StudentCard';
 import StudentFees from '@/components/StudentFees/StudentFees';
 import StudentQuizzes from '@/components/StudentQuizzes/StudentQuizzes';
 import StudentResults from '@/components/StudentResults/StudentResults';
 import Sidebar from '@/components/Sidebar/Sidebar';
+import PremiumLoader from '@/components/ui/PremiumLoader';
 
 import AuthLayout from '@/components/Auth/AuthLayout';
 import StudentLoginForm from '@/components/Auth/StudentLoginForm';
 import { useMobileNav } from '@/contexts/MobileNavContext';
 
+const SESSION_DURATION = 60 * 60 * 1000; // 1 hour
+
+// Identity Helpers
+const onlyDigits = (s: string) => (s || '').replace(/\D+/g, '').slice(0, 13);
+const formatCnic = (s: string) => {
+  const d = onlyDigits(s);
+  const p1 = d.slice(0, 5);
+  const p2 = d.slice(5, 12);
+  const p3 = d.slice(12, 13);
+  if (d.length <= 5) return p1;
+  if (d.length <= 12) return `${p1}-${p2}`;
+  return `${p1}-${p2}-${p3}`;
+};
+
 export default function StylishStudentPortal() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [sessionData, setSessionData] = useState<{ bFormOrCnic: string; grNumber: string } | null>(null)
-
-  // ***************************************************************************************
   type ScheduleDay = { day: string; periods?: { subject: string; time: string }[] }
   const [filtered, setFiltered] = useState<Student[]>([])
   const [matchedSchedule, setMatchedSchedule] = useState<ScheduleDay[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const sessionDuration = 30 * 60 * 1000; // 30 minutes
 
   // Handle Session and Data Fetching
   useEffect(() => {
@@ -46,43 +57,68 @@ export default function StylishStudentPortal() {
         const { timestamp, bFormOrCnic, grNumber } = JSON.parse(session);
         const now = Date.now();
 
-        if (now - timestamp < sessionDuration) {
+        if (now - timestamp < SESSION_DURATION) {
           setSessionData({ bFormOrCnic, grNumber });
 
-          // Fetch only this specific student
-          const target = (bFormOrCnic || '').replace(/\D+/g, '').slice(0, 13);
-          const query = `*[_type == "student" && (cnicOrBform == $identity || fatherCnic == $identity || guardianCnic == $identity) && grNumber == $grNumber][0]{
+          // Fetch only this specific student - Robust Match (Dashed vs Plain)
+          const cleanIdentity = onlyDigits(bFormOrCnic);
+          const formattedIdentity = formatCnic(bFormOrCnic);
+          const cleanGrNumber = grNumber.trim();
+
+          const studentQuery = `*[_type == "student" && (
+            cnicOrBform == $plainIdentity || cnicOrBform == $formattedIdentity ||
+            fatherCnic == $plainIdentity || fatherCnic == $formattedIdentity ||
+            guardianCnic == $plainIdentity || guardianCnic == $formattedIdentity
+          ) && grNumber == $grNumber]{
             _id,
             fullName,
-            admissionFor,
-            grNumber,
-            gender,
-            cnicOrBform,
-            fatherCnic,
-            guardianCnic,
             fatherName,
+            fatherCnic,
             dob,
             rollNumber,
+            grNumber,
+            gender,
+            admissionFor,
             nationality,
-            address,
+            medicalCondition,
+            cnicOrBform,
+            email,
             phoneNumber,
             whatsappNumber,
+            address,
+            formerEducation,
+            previousInstitute,
+            lastExamPercentage,
             guardianName,
-            guardianRelation,
             guardianContact,
+            guardianCnic,
+            guardianRelation,
             issueDate,
             expiryDate,
+            session,
             "photoUrl": photo.asset->url
-          }`;
+          }[0]`;
 
-          const student = await client.fetch(query, {
-            identity: target,
-            grNumber: grNumber
+          const student = await client.fetch(studentQuery, {
+            plainIdentity: cleanIdentity,
+            formattedIdentity: formattedIdentity,
+            grNumber: cleanGrNumber
           });
 
           if (student) {
             setFiltered([student]);
-            try { localStorage.setItem('studentId', String(student._id)) } catch { }
+            try {
+              localStorage.setItem('studentId', String(student._id));
+              // Ensure session in localStorage is up to date
+              const updatedSession = {
+                timestamp,
+                bFormOrCnic,
+                grNumber,
+                _id: student._id,
+                session: student.session
+              };
+              localStorage.setItem('studentSession', JSON.stringify(updatedSession));
+            } catch { }
           } else {
             // Invalid session data
             localStorage.removeItem('studentSession');
@@ -110,7 +146,8 @@ export default function StylishStudentPortal() {
       return
     }
     let mounted = true
-    client.fetch(getScheduleByClassQuery(studentClass))
+    const getScheduleByClassQuery = () => `*[_type == "schedule" && className == $className][0]`;
+    client.fetch(getScheduleByClassQuery(), { className: studentClass })
       .then((sch: { days?: ScheduleDay[] } | null) => { if (!mounted) return; if (sch && sch.days) setMatchedSchedule(sch.days); else setMatchedSchedule(null) })
       .catch(() => { if (!mounted) return; setMatchedSchedule(null) })
       .finally(() => { if (!mounted) return; })
@@ -121,11 +158,10 @@ export default function StylishStudentPortal() {
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'Profile', label: 'Profile', icon: User },
     { id: 'Schedule', label: 'Schedule', icon: CalendarCheck },
-    { id: 'Fees', label: 'Fees', icon: GraduationCap },
-    { id: 'ID Card', label: 'ID Card', icon: QrCode },
+    { id: 'Fees', label: 'Fees', icon: CreditCard },
     { id: 'Notices', label: 'Notices', icon: Megaphone },
-    { id: 'Quiz', label: 'Quiz', icon: GraduationCap },
-    { id: 'Quiz Result', label: 'Quiz Result', icon: GraduationCap },
+    { id: 'Quiz', label: 'Quiz', icon: BrainCircuit },
+    { id: 'Quiz Result', label: 'Quiz Result', icon: Trophy },
   ], []);
 
   // Get mobile nav context for unified navigation
@@ -149,14 +185,11 @@ export default function StylishStudentPortal() {
     };
   }, [sidebarItems, activeTab, setPortalNavConfig, clearPortalNav]);
 
-  // Loading State
+  // Loading State - Premium Vercel Style
   if (isLoading || (sessionData && filtered.length === 0)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Securely loading portal...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
+        <PremiumLoader text="Securely loading your portal..." />
       </div>
     )
   }
@@ -172,15 +205,16 @@ export default function StylishStudentPortal() {
         <StudentLoginForm onLoginSuccess={(student) => {
           setFiltered([student]);
         }} />
+        <Toaster position="bottom-right" richColors closeButton />
       </AuthLayout>
     )
   }
 
-  // Authenticated State (Portal UI)
+  // Authenticated State (Portal UI) - Vercel Theme
   return (
-    <div>
+    <div className="bg-white dark:bg-neutral-950 min-h-screen">
       <NavBar />
-      <div className="min-h-screen flex bg-white transition-all duration-300">
+      <div className="min-h-screen flex transition-all duration-300">
 
         <Sidebar
           items={sidebarItems}
@@ -189,25 +223,29 @@ export default function StylishStudentPortal() {
             setActiveTab(id);
             if (typeof window !== 'undefined') window.location.hash = id;
           }}
+          isStudent={true}
         />
 
-        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 mt-20 md:mt-0">
+        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 sm:py-8 mt-24 md:mt-24">
           <div className="max-w-7xl mx-auto pb-20 md:pb-8">
+            {/* Premium Page Header - Vercel Style */}
             <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-2xl sm:text-3xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-1 capitalize">
+                <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-[0.15em] mb-2">Student Portal</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white tracking-tight capitalize">
                   {activeTab}
                 </h2>
-                <div className="h-1 w-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                <div className="h-1 w-10 bg-neutral-900 dark:bg-white rounded-full mt-3"></div>
               </div>
               {activeTab === 'Dashboard' && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
+                      toast.info("Logging out...");
                       try { localStorage.removeItem('studentSession'); } catch { }
-                      window.location.href = '/student-portal';
+                      setTimeout(() => window.location.href = '/student-portal', 800);
                     }}
-                    className="px-4 py-2 rounded-lg bg-white text-red-600 hover:bg-red-50 border border-red-100 transition-colors shadow-sm text-sm font-medium inline-flex items-center gap-2"
+                    className="px-4 py-2.5 rounded-xl bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:text-red-600 dark:hover:text-red-400 border border-neutral-200 dark:border-neutral-800 hover:border-red-200 dark:hover:border-red-800 transition-all duration-300 text-sm font-medium inline-flex items-center gap-2 shadow-sm hover:shadow-md"
                   >
                     <LogOut size={16} />
                     <span>Logout</span>
@@ -223,13 +261,13 @@ export default function StylishStudentPortal() {
               {activeTab === 'Notices' && <StudentNotices studentId={String(filtered[0]!._id)} className={String(filtered[0]!.admissionFor || '')} />}
               {activeTab === 'Quiz' && <StudentQuizzes studentId={String(filtered[0]!._id)} className={String(filtered[0]!.admissionFor || '')} />}
               {activeTab === 'Quiz Result' && <StudentResults studentId={String(filtered[0]!._id)} />}
-              {activeTab === 'Fees' && <StudentFees studentId={String(filtered[0]!._id)} />}
-              {activeTab === 'ID Card' && <StudentCard student={filtered[0]} />}
+              {activeTab === 'Fees' && <StudentFees studentId={String(filtered[0]!._id)} session={filtered[0]?.session} />}
             </div>
 
           </div>
         </main>
       </div>
+      <Toaster position="bottom-right" richColors closeButton />
     </div>
   );
 }

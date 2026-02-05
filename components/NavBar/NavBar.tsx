@@ -111,10 +111,17 @@ export default function NavBar() {
         <MobileNav>
           <MobileNavHeader>
             <NavbarLogo />
-            <MobileNavToggle
-              isOpen={isMobileMenuOpen}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            />
+            <div className="flex items-center gap-3">
+              {user && !loading && (
+                <div className="flex items-center">
+                  <AdminDropdown user={user} role={role} logout={logout} />
+                </div>
+              )}
+              <MobileNavToggle
+                isOpen={isMobileMenuOpen}
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              />
+            </div>
           </MobileNavHeader>
 
           <MobileNavMenu
@@ -125,6 +132,7 @@ export default function NavBar() {
               name: user.displayName,
               email: user.email,
               image: user.photoURL,
+              role: role as string,
               onLogout: () => {
                 logout();
                 closeMobileMenu();

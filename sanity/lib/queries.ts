@@ -27,8 +27,8 @@ const studentFields = `
   "photoUrl": photo.asset->url
 `
 
-// Session logic: Check session match OR if searching for default session (2024-2025), include docs with no session.
-const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+// Session logic: Check session match OR if searching for default session (2025-2026), include docs with no session.
+const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
 
 export const getAllStudentsQuery = `*[_type == "student" && ${sessionFilter}]{${studentFields}}`
 

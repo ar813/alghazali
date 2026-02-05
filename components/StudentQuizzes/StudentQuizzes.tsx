@@ -1,8 +1,9 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { PlayCircle, CheckCircle2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { PlayCircle, CheckCircle2, BookOpen, RefreshCw } from 'lucide-react'
+import { toast } from "sonner"
 
 type Quiz = {
   _id: string
@@ -19,12 +20,14 @@ type Quiz = {
 type Result = { _id: string; score: number; quiz?: { _id: string }; student?: { _id: string } }
 
 const StudentQuizzes = ({ studentId, className }: { studentId: string; className?: string }) => {
+  const router = useRouter()
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<Record<string, Result | null>>({})
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (isManual = false) => {
     setLoading(true)
+    if (isManual) toast.loading("Fetching latest quizzes...", { id: "refresh-quizzes" });
     try {
       const params = new URLSearchParams()
       if (studentId) params.set('studentId', studentId)
@@ -45,7 +48,12 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
           }
           setResults(map)
         }
+        if (isManual) toast.success("Quizzes updated", { id: "refresh-quizzes" });
+      } else {
+        if (isManual) toast.error("Failed to load quizzes", { id: "refresh-quizzes" });
       }
+    } catch {
+      if (isManual) toast.error("Network error loading quizzes", { id: "refresh-quizzes" });
     } finally { setLoading(false) }
   }, [studentId, className])
 
@@ -113,51 +121,99 @@ const StudentQuizzes = ({ studentId, className }: { studentId: string; className
   }, [quizzes, studentId])
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-800">Available Quizzes</h3>
-          <button onClick={load} className="px-3 py-1.5 border rounded text-sm">Refresh</button>
-        </div>
-        {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="p-4 rounded-xl border bg-gray-50 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3 mt-2"></div>
-              </div>
-            ))}
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header - Vercel Style */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+            <BookOpen size={18} className="text-blue-600 dark:text-blue-400" />
           </div>
-        ) : quizzes.length === 0 ? (
-          <div className="text-sm text-gray-500">No quizzes available.</div>
-        ) : (
-          <div className="space-y-3">
-            {randomized.map(q => (
-              <div key={q._id} className="p-4 rounded-xl border bg-white/70">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="font-semibold text-gray-800 truncate max-w-[16rem]">{q.title}</div>
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">{q.subject}</span>
-                      {results[q._id] && (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 text-xs"><CheckCircle2 size={14} /> Submitted</span>
+          <div>
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">Available Quizzes</h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">{quizzes.length} quiz{quizzes.length !== 1 ? 'zes' : ''} available</p>
+          </div>
+        </div>
+        <button
+          onClick={() => load(true)}
+          disabled={loading}
+          className="px-3.5 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-md transition-all duration-200 inline-flex items-center gap-2 disabled:opacity-50"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          Refresh
+        </button>
+      </div>
+
+      {/* Loading State */}
+      {loading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 animate-pulse">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-1/3" />
+                  <div className="h-3 bg-neutral-100 dark:bg-neutral-800 rounded w-2/3" />
+                </div>
+                <div className="w-20 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : quizzes.length === 0 ? (
+        /* Empty State */
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+            <BookOpen size={28} className="text-neutral-400" />
+          </div>
+          <p className="text-neutral-600 dark:text-neutral-400 text-sm">No quizzes available.</p>
+        </div>
+      ) : (
+        /* Quizzes List */
+        <div className="space-y-4">
+          {randomized.map(q => {
+            const completed = !!results[q._id]
+            return (
+              <div
+                key={q._id}
+                className={`bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 hover:shadow-lg hover:border-neutral-300 dark:hover:border-neutral-700 transition-all duration-300 ${completed ? 'border-l-4 border-l-emerald-500 dark:border-l-emerald-400' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <h4 className="font-bold text-neutral-900 dark:text-white text-base truncate max-w-[18rem]">{q.title}</h4>
+                      <span className="px-2 py-0.5 text-[10px] rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 font-bold uppercase tracking-wider">{q.subject}</span>
+                      {completed && (
+                        <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                          <CheckCircle2 size={14} />
+                          Submitted
+                        </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">{new Date((q as any).createdAt || (q as any)._createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: true })}</div>
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400">{new Date((q as Quiz).createdAt || (q as Quiz)._createdAt || '').toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: true })}</div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {results[q._id] ? (
-                      <span className="text-xs text-emerald-700">Completed</span>
+                  <div className="flex-shrink-0">
+                    {completed ? (
+                      <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-100 dark:border-emerald-800">Completed</span>
                     ) : (
-                      <Link href={`/quiz/${q._id}`} className="px-3 py-1.5 bg-blue-600 text-white rounded inline-flex items-center gap-2 text-sm"><PlayCircle size={16} /> Start</Link>
+                      <button
+                        onClick={() => {
+                          const btn = document.getElementById(`start-btn-${q._id}`)
+                          if (btn) btn.innerHTML = '<span class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span> Starting...'
+                          router.push(`/quiz/${q._id}`)
+                        }}
+                        id={`start-btn-${q._id}`}
+                        className="px-4 py-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl inline-flex items-center gap-2 text-sm font-semibold hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors shadow-sm hover:shadow-md min-w-[120px] justify-center"
+                      >
+                        <PlayCircle size={16} />
+                        Start Quiz
+                      </button>
                     )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

@@ -37,7 +37,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const DEFAULT_SESSION = "2024-2025";
+        const DEFAULT_SESSION = "2025-2026";
 
         const initializeSessions = async () => {
             try {
@@ -118,7 +118,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
 
     // Expose refresh function for manual calls
     const refreshSessions = async () => {
-        const DEFAULT_SESSION = "2024-2025";
+        const DEFAULT_SESSION = "2025-2026";
         try {
             const res = await fetch('/api/sessions/list', { cache: 'no-store' });
             const data = await res.json();

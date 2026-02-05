@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const session = searchParams.get('session')
 
     // Session Logic for Quiz Results: Filter by the SESSION OF THE QUIZ
-    const quizSessionFilter = `($session == null || quiz->session == $session || (!defined(quiz->session) && $session == "2024-2025"))`
+    const quizSessionFilter = `($session == null || quiz->session == $session || (!defined(quiz->session) && $session == "2025-2026"))`
 
     const params: Record<string, any> = { limit, session }
     let query = `*[_type == "quizResult" && ${quizSessionFilter}] | order(coalesce(submittedAt, _createdAt) desc) [0...$limit]{
@@ -74,17 +74,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'quizId, studentId and answers[] are required' }, { status: 400 })
     }
 
-    // Prevent duplicate submissions for same quiz and student
-    const existing = await serverClient.fetch(`*[_type=="quizResult" && quiz._ref == $quizId && student._ref == $studentId][0]{ _id }`, { quizId, studentId })
-    if (existing?._id) {
+    // Check for existing result (could be in-progress)
+    const existing = await serverClient.fetch(`*[_type=="quizResult" && quiz._ref == $quizId && student._ref == $studentId][0]{ _id, status }`, { quizId, studentId })
+
+    if (existing?.status === 'completed') {
       return NextResponse.json({ ok: false, error: 'You have already submitted this quiz.' }, { status: 409 })
     }
 
     // Fetch quiz to compute score
     const quiz = await serverClient.fetch(`*[_type=="quiz" && _id == $id][0]{ questions[]{ correctIndex } }`, { id: quizId }) as { questions?: { correctIndex: number }[] } | null
     const correct = (quiz?.questions || []).map(q => q.correctIndex)
-    // Use questionOrder mapping if provided to align randomized order with original question indices
     const order: number[] | null = Array.isArray(questionOrder) ? questionOrder.map((x: any) => Number(x)) : null
+
     let score = 0
     let totalAnswered = 0
     const len = Math.min(answers.length, order ? order.length : correct.length)
@@ -98,23 +99,43 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // fetch student base info to denormalize
     const student = await serverClient.fetch(`*[_type=="student" && _id == $id][0]{ fullName, grNumber, rollNumber, admissionFor, email }`, { id: studentId })
 
-    const doc = await serverClient.create({
-      _type: 'quizResult',
-      quiz: { _type: 'reference', _ref: quizId },
-      student: { _type: 'reference', _ref: studentId },
-      answers,
-      score,
-      submittedAt: new Date().toISOString(),
-      studentName: student?.fullName || undefined,
-      studentGrNumber: student?.grNumber || undefined,
-      studentRollNumber: student?.rollNumber || undefined,
-      className: student?.admissionFor || undefined,
-      studentEmail: student?.email || undefined,
-      questionOrder: order || undefined,
-    })
+    let resultDoc;
+    if (existing?._id) {
+      // Update existing in-progress document
+      resultDoc = await serverClient
+        .patch(existing._id)
+        .set({
+          status: 'completed',
+          answers,
+          score,
+          submittedAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          questionOrder: order || undefined
+        })
+        .commit()
+    } else {
+      // Create new completed document (fallback for cases where init wasn't called)
+      resultDoc = await serverClient.create({
+        _type: 'quizResult',
+        quiz: { _type: 'reference', _ref: quizId },
+        student: { _type: 'reference', _ref: studentId },
+        status: 'completed',
+        answers,
+        score,
+        submittedAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        studentName: student?.fullName || undefined,
+        studentGrNumber: student?.grNumber || undefined,
+        studentRollNumber: student?.rollNumber || undefined,
+        className: student?.admissionFor || undefined,
+        studentEmail: student?.email || undefined,
+        questionOrder: order || undefined,
+      })
+    }
+
+    return NextResponse.json({ ok: true, id: resultDoc._id, score, total: totalAnswered })
 
     return NextResponse.json({ ok: true, id: doc._id, score, total: totalAnswered })
   } catch (err: any) {

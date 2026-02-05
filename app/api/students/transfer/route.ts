@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
             // Fetch students from source session (handling legacy undefined session)
             const query = `*[_type == "student" && 
-                (session == $source || (!defined(session) && $source == "2024-2025")) && 
+                (session == $source || (!defined(session) && $source == "2025-2026")) && 
                 admissionFor == $cls
             ]{
                 _id, _type, fullName, fatherName, fatherCnic, dob, rollNumber, grNumber, 

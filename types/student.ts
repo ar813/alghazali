@@ -25,4 +25,5 @@ export type Student = {
     photoUrl?: string
     issueDate?: string
     expiryDate?: string
+    session?: string
 }

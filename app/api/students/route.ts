@@ -63,7 +63,7 @@ export async function DELETE(request: Request) {
   const session = url.searchParams.get('session')?.trim()
 
   // Session Filter Logic
-  const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+  const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
 
   // If bulk delete is requested, delete all students via GROQ query
   if (all) {

@@ -16,16 +16,13 @@ import {
     LayoutGrid,
     List as ListIcon,
     LogOut,
-    User as UserIcon,
     AlertCircle,
     CheckCircle2,
     X,
     Code,
     Copy,
     Database,
-    LayoutDashboard,
     CalendarClock,
-    Smartphone,
     UserCog
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -164,7 +161,7 @@ export default function SessionGrid() {
             await renameSession(sessionToRename, newName.trim());
             toast.success("Renamed successfully");
             setRenameDialogOpen(false);
-        } catch (_error) {
+        } catch {
             toast.error("Failed to rename");
         } finally {
             setIsProcessing(false);
@@ -178,7 +175,7 @@ export default function SessionGrid() {
             await deleteSession(sessionToDelete);
             toast.success("Deleted successfully");
             setDeleteAlertOpen(false);
-        } catch (_error) {
+        } catch {
             toast.error("Failed to delete");
         } finally {
             setIsProcessing(false);
@@ -200,7 +197,7 @@ export default function SessionGrid() {
             return;
         }
 
-        if (session === "2024-2025") {
+        if (session === "2025-2026") {
             toast.error("Protected Session: Cannot delete Master Data");
             return;
         }
@@ -215,7 +212,7 @@ export default function SessionGrid() {
             await logout();
             router.refresh();
             toast.success("Logged out successfully");
-        } catch (_error) {
+        } catch {
             toast.error("Failed to logout");
         }
     };
@@ -355,6 +352,15 @@ export default function SessionGrid() {
                                         <Loader2 size={15} className="text-neutral-500" />
                                         <span className="text-sm">Refresh List</span>
                                     </DropdownMenuItem>
+
+                                    {isSuperAdmin && (
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/admin/users" className="gap-2.5 py-2 cursor-pointer focus:bg-neutral-100 dark:focus:bg-neutral-800">
+                                                <UserCog size={15} className="text-neutral-500" />
+                                                <span className="text-sm font-medium">Manage Users</span>
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    )}
                                 </DropdownMenuGroup>
 
                                 <DropdownMenuSeparator className="my-1" />
@@ -468,7 +474,7 @@ export default function SessionGrid() {
                 ) : (
                     <div className={viewMode === 'grid' ? "grid grid-cols-2 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4" : "flex flex-col gap-2"}>
                         {filteredSessions.map((session, index) => {
-                            const isMasterSession = session === "2024-2025";
+                            const isMasterSession = session === "2025-2026";
                             return (
                                 <motion.div
                                     key={session}

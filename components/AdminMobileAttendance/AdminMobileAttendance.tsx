@@ -37,7 +37,6 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
     const [selectedDate, setSelectedDate] = useState<string>('');
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [statusFilter, setStatusFilter] = useState<'all' | 'present' | 'leave' | 'absent'>('all');
-    const [holidays, setHolidays] = useState<Record<string, string>>({});
 
     // Dummy classes for filter - can be dynamic if needed
     const classOptions = ['All', 'KG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'SSCI', 'SSCII'];
@@ -56,42 +55,6 @@ const AdminMobileAttendance = ({ onLoadingChange }: { onLoadingChange?: (loading
         fetchAllStudents();
     }, [selectedSession]);
 
-    // Fetch Holidays
-    useEffect(() => {
-        const fetchHolidays = () => {
-            try {
-                const q = query(collection(db, 'holidays'));
-                const unsubscribe = onSnapshot(q, (snapshot) => {
-                    const h: Record<string, string> = {};
-                    snapshot.forEach((doc) => {
-                        const data = doc.data();
-                        let dateKey = '';
-                        if (data.date) {
-                            if (typeof data.date === 'string') {
-                                dateKey = data.date;
-                            } else if (data.date?.toDate) {
-                                // Handle Firestore Timestamp
-                                const d = data.date.toDate();
-                                const yyyy = d.getFullYear();
-                                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                                const dd = String(d.getDate()).padStart(2, '0');
-                                dateKey = `${yyyy}-${mm}-${dd}`;
-                            }
-                        }
-                        if (dateKey && data.title) {
-                            h[dateKey] = data.title;
-                        }
-                    });
-                    setHolidays(h);
-                });
-                return unsubscribe;
-            } catch (e) {
-                console.error("Error fetching holidays:", e);
-            }
-        };
-        const unsub = fetchHolidays();
-        return () => { if (unsub) unsub(); };
-    }, []);
 
     const [viewMode, setViewMode] = useState<'daily' | 'monthly' | 'custom'>('daily');
     const [selectedMonth, setSelectedMonth] = useState<string>('');

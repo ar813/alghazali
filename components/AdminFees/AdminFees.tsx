@@ -8,7 +8,7 @@ import type { FeeStatus } from '@/types/fees'
 import { toast } from "sonner";
 import FeeToolbar from './FeeToolbar';
 import FeeTable from './FeeTable';
-import FeeModal from './FeeModal';
+import FeeDrawer from './FeeDrawer';
 import FeeDetails from './FeeDetails';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -37,6 +37,7 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   const [detailFee, setDetailFee] = useState<any | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [importLoading, setImportLoading] = useState(false)
 
   // Load students
@@ -187,19 +188,30 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
   }
 
   const deleteFee = async (id: string) => {
-    setDeletingId(id)
-    try {
-      const token = await user?.getIdToken();
-      const res = await fetch(`/api/fees?id=${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const json = await res.json()
-      if (json?.ok) { await loadFees(); toast.success('Deleted') }
-    } finally { setDeletingId(null) }
+    toast("Delete Fee Record?", {
+      description: "This action cannot be undone.",
+      action: {
+        label: "Confirm Delete",
+        onClick: async () => {
+          setDeletingId(id)
+          try {
+            const token = await user?.getIdToken();
+            const res = await fetch(`/api/fees?id=${id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const json = await res.json()
+            if (json?.ok) { await loadFees(); toast.success('Fee record deleted successfully') }
+          } catch {
+            toast.error('Failed to delete fee record')
+          } finally { setDeletingId(null) }
+        },
+      },
+    })
   }
 
   const markStatus = async (id: string, status: FeeStatus) => {
+    setUpdatingStatusId(id)
     try {
       const token = await user?.getIdToken();
       const res = await fetch('/api/fees', {
@@ -210,6 +222,7 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
       const json = await res.json()
       if (json?.ok) { await loadFees(); toast.success('Status Updated') }
     } catch { toast.error('Update failed') }
+    finally { setUpdatingStatusId(null) }
   }
 
   const handleSubmitFee = async (formData: any) => {
@@ -267,11 +280,12 @@ const AdminFees = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) =
           onDelete={deleteFee}
           onUpdateStatus={markStatus}
           deletingId={deletingId}
+          updatingStatusId={updatingStatusId}
           onViewDetail={setDetailFee}
         />
       </div>
 
-      <FeeModal
+      <FeeDrawer
         isOpen={showModal} onClose={() => setShowModal(false)}
         onSubmit={handleSubmitFee} initialData={editingFee}
         students={students} MONTHS={MONTHS} submitting={submitting}
