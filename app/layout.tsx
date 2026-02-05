@@ -11,6 +11,7 @@ const anta = Anta({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-anta",
+  adjustFontFallback: false,
 });
 
 const outfit = Outfit({
