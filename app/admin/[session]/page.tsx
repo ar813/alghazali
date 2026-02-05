@@ -8,7 +8,6 @@ import TopLoader from '@/components/TopLoader/TopLoader';
 import { useAuth } from '@/hooks/use-auth';
 import AuthLayout from '@/components/Auth/AuthLayout';
 import AdminLoginForm from '@/components/Auth/AdminLoginForm';
-import { useRouter } from 'next/navigation';
 
 const SessionPage = ({ params }: { params: { session: string } }) => {
     // Decoding param just in case
@@ -25,7 +24,6 @@ const SessionContent = ({ sessionName }: { sessionName: string }) => {
     const { setSelectedSession, selectedSession } = useSession();
     const { user, loading } = useAuth();
     const [childLoading, setChildLoading] = useState(true);
-    const router = useRouter();
 
     // Force the session context to match the URL
     useEffect(() => {

@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     const session = searchParams.get('session')
 
     // Session Logic
-    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
 
     if (id) {
       const data = await serverClient.fetch(`*[_type=="quiz" && _id == $id][0]{
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       questions: questions.map((q: any) => ({ question: q.question, options: q.options, correctIndex: q.correctIndex, difficulty: q.difficulty || 'easy' })),
       durationMinutes: typeof durationMinutes === 'number' ? durationMinutes : undefined,
       questionLimit,
-      session: session || '2024-2025' // Default to current session if not provided
+      session: session || '2025-2026' // Default to current session if not provided
     }
     if (targetType === 'student') doc.student = { _type: 'reference', _ref: studentId }
 

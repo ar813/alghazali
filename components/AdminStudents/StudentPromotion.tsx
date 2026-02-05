@@ -49,8 +49,8 @@ const StudentPromotion = ({ onClose, onSuccess }: StudentPromotionProps) => {
     useEffect(() => {
         if (sourceSession) {
             setIsLoadingClasses(true);
-            // Robust query handling undefined sessions for legacy data (2024-2025 default)
-            const query = `*[_type == "student" && (session == $session || (!defined(session) && $session == "2024-2025"))] { admissionFor }`;
+            // Robust query handling undefined sessions for legacy data (2025-2026 default)
+            const query = `*[_type == "student" && (session == $session || (!defined(session) && $session == "2025-2026"))] { admissionFor }`;
 
             client.fetch(query, { session: sourceSession }).then((data: any[]) => {
                 // Aggregate counts

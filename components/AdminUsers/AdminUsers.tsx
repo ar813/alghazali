@@ -455,206 +455,212 @@ const AdminUsers = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean) 
                         ))
                     )}
                 </div>
-            </div>
+            </div >
 
             {/* --- DIALOGS (Moved outside main div to avoid transformation clipping) --- */}
 
             {/* Add User Dialog */}
-            {showAddDialog && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-8 sm:items-center sm:pt-0 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
-                        <div className="p-5 sm:p-6 border-b border-neutral-100 flex items-center justify-between shrink-0">
-                            <div>
-                                <h3 className="text-lg font-semibold text-neutral-900">Add User</h3>
-                                <p className="text-xs text-neutral-500">Create a new admin account.</p>
+            {
+                showAddDialog && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-8 sm:items-center sm:pt-0 p-4 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
+                            <div className="p-5 sm:p-6 border-b border-neutral-100 flex items-center justify-between shrink-0">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-neutral-900">Add User</h3>
+                                    <p className="text-xs text-neutral-500">Create a new admin account.</p>
+                                </div>
+                                <button onClick={() => setShowAddDialog(false)} className="text-neutral-400 hover:text-neutral-600 p-2 rounded-lg hover:bg-neutral-50 transition-colors">
+                                    <X size={20} />
+                                </button>
                             </div>
-                            <button onClick={() => setShowAddDialog(false)} className="text-neutral-400 hover:text-neutral-600 p-2 rounded-lg hover:bg-neutral-50 transition-colors">
-                                <X size={20} />
-                            </button>
+
+                            <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6">
+                                <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3 text-sm text-amber-800">
+                                    <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
+                                    <p>Account creation is permanent. Please use correct details.</p>
+                                </div>
+
+                                <form id="add-user-form" onSubmit={handleAddUser} className="space-y-5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Full Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={displayName}
+                                                onChange={(e) => setDisplayName(e.target.value)}
+                                                className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
+                                                placeholder="Arsalan Ahmed"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Access Role</label>
+                                            <select
+                                                value={role}
+                                                onChange={(e) => setRole(e.target.value as any)}
+                                                className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 cursor-pointer appearance-none"
+                                            >
+                                                <option value="admin">Regular Admin</option>
+                                                <option value="super_admin">Super Admin</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Email Address</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
+                                            placeholder="admin@alghazali.edu"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Password</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            minLength={6}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
+                                            placeholder="At least 6 characters"
+                                        />
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div className="p-5 border-t border-neutral-100 bg-neutral-50/50 shrink-0">
+                                <button
+                                    form="add-user-form"
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                                >
+                                    {isSubmitting ? <><Loader2 className="animate-spin" size={18} /><span>Adding User...</span></> : "Create Account"}
+                                </button>
+                            </div>
                         </div>
+                    </div>
+                )
+            }
 
-                        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6">
-                            <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3 text-sm text-amber-800">
-                                <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
-                                <p>Account creation is permanent. Please use correct details.</p>
+            {/* Edit User Dialog */}
+            {
+                showEditDialog && editingUser && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-8 sm:items-center sm:pt-0 p-4 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
+                            <div className="p-5 sm:p-6 border-b border-neutral-100 flex items-center justify-between shrink-0">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-neutral-900">Update Profile</h3>
+                                    <p className="text-xs text-neutral-500">Modifying details for {editingUser.displayName || "Admin"}</p>
+                                </div>
+                                <button onClick={() => setShowEditDialog(false)} className="text-neutral-400 hover:text-neutral-600 p-2 rounded-lg hover:bg-neutral-50 transition-colors">
+                                    <X size={20} />
+                                </button>
                             </div>
 
-                            <form id="add-user-form" onSubmit={handleAddUser} className="space-y-5">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6">
+                                <form id="edit-user-form" onSubmit={handleUpdateUser} className="space-y-5">
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Full Name</label>
                                         <input
                                             type="text"
                                             required
-                                            value={displayName}
-                                            onChange={(e) => setDisplayName(e.target.value)}
+                                            value={editDisplayName}
+                                            onChange={(e) => setEditDisplayName(e.target.value)}
                                             className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
-                                            placeholder="Arsalan Ahmed"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Access Role</label>
+                                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Email</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={editEmail}
+                                            onChange={(e) => setEditEmail(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">New Password (Empty to keep)</label>
+                                        <input
+                                            type="password"
+                                            minLength={6}
+                                            value={editPassword}
+                                            onChange={(e) => setEditPassword(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
+                                            placeholder="Must be 6+ chars"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Account Role</label>
                                         <select
-                                            value={role}
-                                            onChange={(e) => setRole(e.target.value as any)}
-                                            className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 cursor-pointer appearance-none"
+                                            value={editRole}
+                                            onChange={(e) => setEditRole(e.target.value as any)}
+                                            disabled={editingUser.uid === currentUserUid}
+                                            className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 appearance-none disabled:bg-neutral-100 disabled:text-neutral-400"
                                         >
                                             <option value="admin">Regular Admin</option>
                                             <option value="super_admin">Super Admin</option>
                                         </select>
+                                        {editingUser.uid === currentUserUid && <p className="text-[10px] text-amber-600 font-medium ml-1">You cannot demote your own account for safety.</p>}
                                     </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Email Address</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
-                                        placeholder="admin@alghazali.edu"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        minLength={6}
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
-                                        placeholder="At least 6 characters"
-                                    />
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className="p-5 border-t border-neutral-100 bg-neutral-50/50 shrink-0">
-                            <button
-                                form="add-user-form"
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
-                            >
-                                {isSubmitting ? <><Loader2 className="animate-spin" size={18} /><span>Adding User...</span></> : "Create Account"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Edit User Dialog */}
-            {showEditDialog && editingUser && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-start justify-center pt-8 sm:items-center sm:pt-0 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
-                        <div className="p-5 sm:p-6 border-b border-neutral-100 flex items-center justify-between shrink-0">
-                            <div>
-                                <h3 className="text-lg font-semibold text-neutral-900">Update Profile</h3>
-                                <p className="text-xs text-neutral-500">Modifying details for {editingUser.displayName || "Admin"}</p>
+                                </form>
                             </div>
-                            <button onClick={() => setShowEditDialog(false)} className="text-neutral-400 hover:text-neutral-600 p-2 rounded-lg hover:bg-neutral-50 transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
 
-                        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6">
-                            <form id="edit-user-form" onSubmit={handleUpdateUser} className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Full Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={editDisplayName}
-                                        onChange={(e) => setEditDisplayName(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Email</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={editEmail}
-                                        onChange={(e) => setEditEmail(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">New Password (Empty to keep)</label>
-                                    <input
-                                        type="password"
-                                        minLength={6}
-                                        value={editPassword}
-                                        onChange={(e) => setEditPassword(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors"
-                                        placeholder="Must be 6+ chars"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Account Role</label>
-                                    <select
-                                        value={editRole}
-                                        onChange={(e) => setEditRole(e.target.value as any)}
-                                        disabled={editingUser.uid === currentUserUid}
-                                        className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm outline-none focus:border-indigo-500 appearance-none disabled:bg-neutral-100 disabled:text-neutral-400"
-                                    >
-                                        <option value="admin">Regular Admin</option>
-                                        <option value="super_admin">Super Admin</option>
-                                    </select>
-                                    {editingUser.uid === currentUserUid && <p className="text-[10px] text-amber-600 font-medium ml-1">You cannot demote your own account for safety.</p>}
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className="p-5 border-t border-neutral-100 bg-neutral-50/50 shrink-0">
-                            <button
-                                form="edit-user-form"
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
-                            >
-                                {isSubmitting ? <><Loader2 className="animate-spin" size={18} /><span>Saving Changes...</span></> : "Save Changes"}
-                            </button>
+                            <div className="p-5 border-t border-neutral-100 bg-neutral-50/50 shrink-0">
+                                <button
+                                    form="edit-user-form"
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                                >
+                                    {isSubmitting ? <><Loader2 className="animate-spin" size={18} /><span>Saving Changes...</span></> : "Save Changes"}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Delete Confirmation */}
-            {showDeleteDialog && userToDelete && (
-                <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-300">
-                        <div className="p-8 text-center space-y-6">
-                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
-                                <Trash2 className="h-8 w-8 text-red-600" />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-xl font-bold text-neutral-900">Delete Permanently?</h3>
-                                <p className="text-sm text-neutral-500">
-                                    This will erase <span className="font-semibold text-neutral-900">{userToDelete.displayName || userToDelete.email}</span>. This action is irreversible.
-                                </p>
-                            </div>
-                            <div className="flex flex-col gap-2.5 pt-2">
-                                <button
-                                    onClick={confirmDelete}
-                                    disabled={isSubmitting}
-                                    className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-all shadow-red-600/10 active:scale-95 disabled:opacity-70 flex items-center justify-center"
-                                >
-                                    {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : "Delete User"}
-                                </button>
-                                <button
-                                    onClick={() => { setShowDeleteDialog(false); setUserToDelete(null); }}
-                                    disabled={isSubmitting}
-                                    className="w-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium py-3 rounded-xl transition-all"
-                                >
-                                    Cancel
-                                </button>
+            {
+                showDeleteDialog && userToDelete && (
+                    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-300">
+                            <div className="p-8 text-center space-y-6">
+                                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
+                                    <Trash2 className="h-8 w-8 text-red-600" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-bold text-neutral-900">Delete Permanently?</h3>
+                                    <p className="text-sm text-neutral-500">
+                                        This will erase <span className="font-semibold text-neutral-900">{userToDelete.displayName || userToDelete.email}</span>. This action is irreversible.
+                                    </p>
+                                </div>
+                                <div className="flex flex-col gap-2.5 pt-2">
+                                    <button
+                                        onClick={confirmDelete}
+                                        disabled={isSubmitting}
+                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-all shadow-red-600/10 active:scale-95 disabled:opacity-70 flex items-center justify-center"
+                                    >
+                                        {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : "Delete User"}
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowDeleteDialog(false); setUserToDelete(null); }}
+                                        disabled={isSubmitting}
+                                        className="w-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium py-3 rounded-xl transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     );
 };

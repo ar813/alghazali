@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const session = searchParams.get('session')
 
     // Session Logic
-    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
 
     // If no filters are provided, return ALL notices for admin/overview screens
     const params: Record<string, any> = { limit, session }
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       targetType,
       className: className || undefined,
       createdAt: new Date().toISOString(),
-      session: session || '2024-2025'
+      session: session || '2025-2026'
     }
     if (typeof isEvent === 'boolean') doc.isEvent = isEvent
     if (typeof isHeadline === 'boolean') doc.isHeadline = isHeadline
@@ -110,8 +110,8 @@ export async function POST(req: NextRequest) {
       // Collect recipients based on target
       let recipients: string[] = []
       // Use sessionFilter for finding recipients too!
-      const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
-      const params = { className, id: studentId, session: session || '2024-2025' }
+      const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
+      const params = { className, id: studentId, session: session || '2025-2026' }
 
       if (targetType === 'all') {
         const emails = await serverClient.fetch(`*[_type == "student" && defined(email) && ${sessionFilter}]{ email }`, params)
@@ -216,7 +216,7 @@ export async function DELETE(req: NextRequest) {
       if (!session) {
         return NextResponse.json({ ok: false, error: 'Session is required for bulk delete' }, { status: 400 })
       }
-      const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+      const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
       await serverClient.delete({ query: `*[_type == "notice" && ${sessionFilter}]`, params: { session } } as any)
       return NextResponse.json({ ok: true, deleted: 'all' })
     } else if (id) {

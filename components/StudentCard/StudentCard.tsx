@@ -11,8 +11,8 @@ function intToRoman(value?: string) {
   if (!value) return "";
   const num = parseInt(String(value), 10);
   if (isNaN(num)) return String(value);
-  const val = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
-  const syms = ["M","CM","D","CD","C","XC","L","XL","X","IX","V","IV","I"];
+  const val = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+  const syms = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
   let i = 0; let roman = ""; let n = num;
   while (n > 0) { while (n >= val[i]) { roman += syms[i]; n -= val[i]; } i++; }
   return roman;
@@ -30,7 +30,7 @@ function getQrSrc(s: Student, issue: string, expiry: string, size = 80) {
 
 export default function StudentCard({ student }: { student: Student }) {
   // Always show both sides in portal view
-  const [side] = useState<'front'|'back'|'both'>('both');
+  const [side] = useState<'front' | 'back' | 'both'>('both');
   // Use admin-configured dates (read-only here)
   const [issue, setIssue] = useState<string>("");
   const [expiry, setExpiry] = useState<string>("");
@@ -47,7 +47,7 @@ export default function StudentCard({ student }: { student: Student }) {
         const e = localStorage.getItem('admin_card_expiry') || '';
         if (!sanityIssue) setIssue(i);
         if (!sanityExpiry) setExpiry(e);
-      } catch {}
+      } catch { }
     }
   }, [student]);
 
@@ -68,14 +68,14 @@ export default function StudentCard({ student }: { student: Student }) {
     const w = img.naturalWidth || img.width; const h = img.naturalHeight || img.height;
     const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d'); if (!ctx) return '';
-    ctx.clearRect(0,0,w,h);
+    ctx.clearRect(0, 0, w, h);
     ctx.drawImage(img, 0, 0, w, h);
     try {
       const imageData = ctx.getImageData(0, 0, w, h);
       const d = imageData.data;
       for (let i = 0; i < d.length; i += 4) {
-        const r = d[i], g = d[i+1], b = d[i+2];
-        if (r > 240 && g > 240 && b > 240) d[i+3] = 0;
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        if (r > 240 && g > 240 && b > 240) d[i + 3] = 0;
       }
       ctx.putImageData(imageData, 0, 0);
       return canvas.toDataURL('image/png');
@@ -128,14 +128,9 @@ export default function StudentCard({ student }: { student: Student }) {
         }
       }}
     >
-      <style jsx global>{`
-        /* Hide content during printing from Student Portal */
-        @media print { body * { display: none !important; } }
-      `}</style>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 justify-center place-items-center mt-20">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 justify-center place-items-center">
         {(side === 'front' || side === 'both') && (
-          <div className="w-[189px] h-[321px] bg-white rounded-xl shadow relative overflow-hidden border mx-auto">
+          <div className="w-[189px] h-[321px] bg-white rounded-xl shadow relative overflow-hidden mx-auto">
             <div className="absolute inset-0">
               <NextImage
                 src={frontBg}
@@ -184,7 +179,7 @@ export default function StudentCard({ student }: { student: Student }) {
           </div>
         )}
         {(side === 'back' || side === 'both') && (
-          <div className="w-[189px] h-[321px] bg-white rounded-xl shadow relative overflow-hidden border mx-auto">
+          <div className="w-[189px] h-[321px] bg-white rounded-xl shadow relative overflow-hidden mx-auto">
             <div className="absolute inset-0">
               <NextImage
                 src={backBg}

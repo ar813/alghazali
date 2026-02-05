@@ -106,6 +106,14 @@ export function AdminDropdown({ user, role, logout }: AdminDropdownProps) {
                                 <span className="text-sm">Get Mobile App</span>
                             </Link>
                         </DropdownMenuItem>
+                        {role === "super_admin" && (
+                            <DropdownMenuItem asChild>
+                                <Link href="/admin/users" className="gap-2.5 py-2 cursor-pointer focus:bg-neutral-100 dark:focus:bg-neutral-800">
+                                    <UserCog size={15} className="text-neutral-500" />
+                                    <span className="text-sm font-medium">Manage Users</span>
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator className="my-1" />

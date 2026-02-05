@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const session = searchParams.get('session')
 
-    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
 
     // Fetch schedules for filtered session
     const data = await client.fetch(
@@ -38,10 +38,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     // Session should be passed in body for POST
     const session = body.session
-    // We'll treat null session as '2024-2025' for backward compat in logic if needed, but optimally we force it?
+    // We'll treat null session as '2025-2026' for backward compat in logic if needed, but optimally we force it?
     // Let's use same filter logic for lookup
 
-    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
 
     // Handle delete action via POST (fallback)
     if (body.action === 'delete') {
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
       const doc = {
         _type: 'schedule',
         className,
-        session: session || '2024-2025',
+        session: session || '2025-2026',
         days: [
           {
             day,
@@ -163,7 +163,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'className and day are required' }, { status: 400 })
     }
 
-    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
 
     // Find existing schedule for class AND session
     const existing = await client.fetch(

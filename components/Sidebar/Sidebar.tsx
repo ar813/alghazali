@@ -21,9 +21,10 @@ interface SidebarProps {
   activeTab: string;
   onTabChange: (id: string) => void;
   loading?: boolean;
+  isStudent?: boolean;
 }
 
-const Sidebar = ({ items, activeTab, onTabChange, loading }: SidebarProps) => {
+const Sidebar = ({ items, activeTab, onTabChange, loading, isStudent }: SidebarProps) => {
   const [open, setOpen] = useState(false);
   // const [user, setUser] = useState<{ email: string | null; displayName: string | null; photoURL: string | null } | null>(null);
   const { user, logout } = useAuth();
@@ -32,6 +33,11 @@ const Sidebar = ({ items, activeTab, onTabChange, loading }: SidebarProps) => {
   // useEffect removed as we use global auth context
 
   const handleLogout = async () => {
+    if (isStudent) {
+      try { localStorage.removeItem('studentSession'); } catch { }
+      window.location.href = '/student-portal';
+      return;
+    }
     await logout();
     window.location.href = '/admin';
   };
@@ -139,7 +145,8 @@ const Sidebar = ({ items, activeTab, onTabChange, loading }: SidebarProps) => {
 
         {/* User Section at Bottom - Minimal */}
         <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 pb-4 px-3 bg-white dark:bg-neutral-950">
-          {user && (
+          {/* User Section at Bottom - Minimal (Hidden for students) */}
+          {!isStudent && user && (
             <div className="flex items-center gap-3 mb-2 group/user cursor-pointer p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">
               <div className="relative">
                 {user.photoURL ? (

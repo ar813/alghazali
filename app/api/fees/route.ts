@@ -30,12 +30,13 @@ export async function GET(req: NextRequest) {
       session: searchParams.get('session') || undefined
     }
 
-    // Build GROQ filter
-    // Session Logic: Match session OR default to 2024-2025 if null
-    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+    // Default session to 'null' for Sanity if undefined
+    const sessionParam = filters.session || null;
 
+    // Build GROQ filter
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
     const where: string[] = ['_type == "fee"', sessionFilter]
-    const params: Record<string, any> = { session: filters.session }
+    const params: Record<string, any> = { session: sessionParam }
 
     if (filters.studentId) { where.push('student._ref == $studentId'); params.studentId = filters.studentId }
     if (filters.className) { where.push('className == $className'); params.className = filters.className }
@@ -43,7 +44,6 @@ export async function GET(req: NextRequest) {
     if (typeof filters.year === 'number' && !Number.isNaN(filters.year)) { where.push('year == $year'); params.year = filters.year }
     if (filters.status) { where.push('status == $status'); params.status = filters.status }
     if (filters.q) {
-      // Search over receiptNumber, bookNumber, notes, student rollNumber, student grNumber
       where.push(`(
         (defined(receiptNumber) && receiptNumber match $q) ||
         (defined(bookNumber) && bookNumber match $q) ||
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       params.q = `${filters.q}*`
     }
 
-    const query = `*[$where] | order(year desc, month desc) [0...$limit]{
+    const query = `*[_type == "fee" && ${where.slice(1).join(' && ')}] | order(year desc, month desc) [0...$limit]{
       _id,
       month,
       year,
@@ -69,11 +69,11 @@ export async function GET(req: NextRequest) {
       session,
       student->{ _id, fullName, grNumber, rollNumber, admissionFor }
     }`
-      .replace('$where', where.join(' && '))
 
     const data = await serverClient.fetch(query, { ...params, limit: filters.limit })
     return NextResponse.json({ ok: true, data })
   } catch (err: any) {
+    console.error('Fees fetch error:', err)
     return NextResponse.json({ ok: false, error: err?.message || 'Failed to fetch fees' }, { status: 500 })
   }
 }
@@ -103,14 +103,13 @@ export async function POST(req: NextRequest) {
     // Simplifying: If session is passed, we filter by it. existing check:
 
     // Construct query for existing check
-    const existingQuery = `*[_type == "fee" && student._ref == $studentId && season == $session` // oops typo in thought
     // Actually, session awareness in upsert is tricky if old data has no session.
     // If we are creating new fee WITH session, we should check for existing fee WITH SAME session. (or no session if default)
     // But `AdminFees` now sends `session`.
     // So we match exact session.
 
-    // If session is not provided (should be required now?), default to '2024-2025'?
-    const targetSession = session || '2024-2025'; // Fallback
+    // If session is not provided (should be required now?), default to '2025-2026'?
+    const targetSession = session || '2025-2026'; // Fallback
 
     const existing = await serverClient.fetch(
       effectiveFeeType === 'admission'

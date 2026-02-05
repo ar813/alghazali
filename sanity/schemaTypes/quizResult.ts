@@ -14,8 +14,16 @@ export default defineType({
     defineField({ name: 'className', title: 'Class', type: 'string' }),
     defineField({ name: 'studentEmail', title: 'Email', type: 'string' }),
     defineField({ name: 'answers', title: 'Answers (selected index per question)', type: 'array', of: [{ type: 'number' }], validation: r => r.min(1) }),
+    defineField({
+      name: 'status',
+      title: 'Status',
+      type: 'string',
+      options: { list: ['in-progress', 'completed'] },
+      initialValue: 'in-progress'
+    }),
     defineField({ name: 'score', title: 'Score', type: 'number', validation: r => r.min(0) }),
-    defineField({ name: 'submittedAt', title: 'Submitted At', type: 'datetime', initialValue: () => new Date().toISOString() }),
+    defineField({ name: 'submittedAt', title: 'Submitted At', type: 'datetime' }),
+    defineField({ name: 'lastUpdated', title: 'Last Updated', type: 'datetime', initialValue: () => new Date().toISOString() }),
     defineField({ name: 'questionOrder', title: 'Question order mapping (student index -> original index)', type: 'array', of: [{ type: 'number' }] }),
   ],
 })

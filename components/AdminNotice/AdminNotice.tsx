@@ -71,7 +71,7 @@ const AdminNotice = ({ onLoadingChange }: { onLoadingChange?: (loading: boolean)
       } else {
         toast.error(json?.error || 'Failed to publish notice')
       }
-    } catch (_e) {
+    } catch {
       toast.error('Network error. Check your connection.')
     } finally { setSaving(false) }
   }

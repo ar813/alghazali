@@ -6,14 +6,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const session = searchParams.get('session')
 
-    // Session logic: Check session match OR if searching for default session (2024-2025), include docs with no session.
+    // Session logic: Check session match OR if searching for default session (2025-2026), include docs with no session.
     // For queries where we pass $session
-    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2024-2025"))`
+    const sessionFilter = `($session == null || session == $session || (!defined(session) && $session == "2025-2026"))`
 
     // For joining quiz logic: session could be on quiz or result? Ideally on quiz.
     // Quiz Result query: quiz->session == $session
-    // But backward compat: (!defined(quiz->session) && $session == "2024-2025")
-    const quizSessionFilter = `($session == null || quiz->session == $session || (!defined(quiz->session) && $session == "2024-2025"))`
+    // But backward compat: (!defined(quiz->session) && $session == "2025-2026")
+    const quizSessionFilter = `($session == null || quiz->session == $session || (!defined(quiz->session) && $session == "2025-2026"))`
 
     const params = { session }
 

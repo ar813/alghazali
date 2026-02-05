@@ -6,7 +6,7 @@ export default defineType({
   type: 'document',
   fields: [
     defineField({ name: 'title', title: 'Title', type: 'string', validation: r => r.required() }),
-    defineField({ name: 'session', title: 'Academic Session', type: 'string', initialValue: '2024-2025' }),
+    defineField({ name: 'session', title: 'Academic Session', type: 'string', initialValue: '2025-2026' }),
     defineField({ name: 'subject', title: 'Subject', type: 'string', validation: r => r.required() }),
     defineField({ name: 'examKey', title: 'Exam Key', type: 'string', validation: r => r.required() }),
     defineField({ name: 'createdAt', title: 'Created At', type: 'datetime', initialValue: () => new Date().toISOString() }),

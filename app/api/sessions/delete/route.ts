@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
         }
 
         // PROTECT MASTER SESSION
-        if (session === "2024-2025") {
-            return NextResponse.json({ ok: false, error: 'Master session "2024-2025" cannot be deleted.' }, { status: 403 });
+        if (session === "2025-2026") {
+            return NextResponse.json({ ok: false, error: 'Master session "2025-2026" cannot be deleted.' }, { status: 403 });
         }
 
         console.log(`[Session Delete] Starting deletion for session: ${session}`);

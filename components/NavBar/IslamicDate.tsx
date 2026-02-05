@@ -23,30 +23,43 @@ export default function IslamicDate({ className = "", variant = 'nav' }: Islamic
     useEffect(() => {
         const fetchDate = async () => {
             try {
-                const cached = localStorage.getItem('hijri_date_cache');
-                const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
+                const now = new Date();
+                const hours = now.getHours();
+                const minutes = now.getMinutes();
 
-                if (cached) {
-                    const parsed = JSON.parse(cached);
-                    const now = Date.now();
-                    // Check if cache is valid (within 6 hours)
-                    if (parsed.timestamp && (now - parsed.timestamp < CACHE_DURATION)) {
-                        setHijri(parsed.data);
-                        setLoading(false);
-                        return;
-                    }
+                // Islamic day starts at sunset. Approximating sunset at 18:15.
+                const isAfterSunset = (hours > 18) || (hours === 18 && minutes >= 15);
+
+                const calculationDate = new Date(now);
+                if (isAfterSunset) {
+                    calculationDate.setDate(now.getDate() + 1);
                 }
 
-                const day = new Date().getDate();
-                const month = new Date().getMonth() + 1;
-                const year = new Date().getFullYear();
+                const day = calculationDate.getDate();
+                const month = calculationDate.getMonth() + 1;
+                const year = calculationDate.getFullYear();
+
+
+                // Cache key includes the -1 adjustment for Pakistan sighting
+                const cacheKey = `hijri_date_${day}_${month}_${year}_pk`;
+                const cached = localStorage.getItem(cacheKey);
+
+                if (cached) {
+                    setHijri(JSON.parse(cached));
+                    setLoading(false);
+                    return;
+                }
 
                 const res = await fetch(`https://api.aladhan.com/v1/gToH?date=${day}-${month}-${year}`);
                 const json = await res.json();
 
                 if (json.status === "OK" && json.data.hijri) {
+                    // Manual adjustment: API returns 1 day ahead of Pakistan sighting
+                    const apiDay = parseInt(json.data.hijri.day, 10);
+                    const adjustedDay = apiDay - 1;
+
                     const data: HijriDate = {
-                        day: json.data.hijri.day,
+                        day: adjustedDay.toString(),
                         month: {
                             en: json.data.hijri.month.en,
                             ar: json.data.hijri.month.ar
@@ -54,10 +67,7 @@ export default function IslamicDate({ className = "", variant = 'nav' }: Islamic
                         year: json.data.hijri.year
                     };
                     setHijri(data);
-                    localStorage.setItem('hijri_date_cache', JSON.stringify({
-                        timestamp: Date.now(),
-                        data: data
-                    }));
+                    localStorage.setItem(cacheKey, JSON.stringify(data));
                 }
             } catch (error) {
                 console.error('Islamic date error:', error);

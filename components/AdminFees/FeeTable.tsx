@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Edit2, Trash2, Check, X, Calendar, User, Hash, Banknote } from 'lucide-react';
+import { Edit2, Trash2, Check, X, Calendar, User, Hash, Banknote, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FeeTableProps {
@@ -12,6 +12,7 @@ interface FeeTableProps {
     onUpdateStatus: (id: string, status: any) => void;
     onViewDetail: (fee: any) => void;
     deletingId?: string | null;
+    updatingStatusId?: string | null;
 }
 
 const FeeTable = ({
@@ -20,7 +21,9 @@ const FeeTable = ({
     onEdit,
     onDelete,
     onUpdateStatus,
-    onViewDetail
+    onViewDetail,
+    deletingId,
+    updatingStatusId
 }: FeeTableProps) => {
 
     // removed unused confirmDeleteId
@@ -103,14 +106,26 @@ const FeeTable = ({
                                 </td>
                                 <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-end gap-1">
-                                        <button onClick={() => onUpdateStatus(fee._id, fee.status === 'paid' ? 'unpaid' : 'paid')} className="p-1.5 text-zinc-400 hover:text-zinc-900">
-                                            {fee.status === 'paid' ? <X size={16} /> : <Check size={16} />}
+                                        <button
+                                            onClick={() => onUpdateStatus(fee._id, fee.status === 'paid' ? 'unpaid' : 'paid')}
+                                            disabled={updatingStatusId === fee._id}
+                                            className="p-1.5 text-zinc-400 hover:text-zinc-900 disabled:opacity-50"
+                                        >
+                                            {updatingStatusId === fee._id ? (
+                                                <Loader2 size={16} className="animate-spin" />
+                                            ) : (
+                                                fee.status === 'paid' ? <X size={16} /> : <Check size={16} />
+                                            )}
                                         </button>
                                         <button onClick={() => onEdit(fee)} className="p-1.5 text-zinc-400 hover:text-blue-600">
                                             <Edit2 size={16} />
                                         </button>
-                                        <button onClick={() => onDelete(fee._id)} className="p-1.5 text-zinc-400 hover:text-red-600">
-                                            <Trash2 size={16} />
+                                        <button
+                                            onClick={() => onDelete(fee._id)}
+                                            disabled={deletingId === fee._id}
+                                            className="p-1.5 text-zinc-400 hover:text-red-600 disabled:opacity-50"
+                                        >
+                                            {deletingId === fee._id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                         </button>
                                     </div>
                                 </td>
@@ -178,18 +193,27 @@ const FeeTable = ({
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => onUpdateStatus(fee._id, fee.status === 'paid' ? 'unpaid' : 'paid')}
+                                    disabled={updatingStatusId === fee._id}
                                     className={cn(
-                                        "p-2 rounded-lg transition-all",
+                                        "p-2 rounded-lg transition-all disabled:opacity-50",
                                         fee.status === 'paid' ? "text-red-500 hover:bg-red-50" : "text-green-600 hover:bg-green-50"
                                     )}
                                 >
-                                    {fee.status === 'paid' ? <X size={18} /> : <Check size={18} />}
+                                    {updatingStatusId === fee._id ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                    ) : (
+                                        fee.status === 'paid' ? <X size={18} /> : <Check size={18} />
+                                    )}
                                 </button>
                                 <button onClick={() => onEdit(fee)} className="p-2 text-zinc-500 hover:bg-zinc-100 rounded-lg transition-all">
                                     <Edit2 size={18} />
                                 </button>
-                                <button onClick={() => onDelete(fee._id)} className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
-                                    <Trash2 size={18} />
+                                <button
+                                    onClick={() => onDelete(fee._id)}
+                                    disabled={deletingId === fee._id}
+                                    className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-50"
+                                >
+                                    {deletingId === fee._id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                                 </button>
                             </div>
                         </div>

@@ -6,7 +6,7 @@ export default defineType({
   type: 'document',
   fields: [
     defineField({ name: 'examTitle', title: 'Exam Title', type: 'string', validation: r => r.required() }),
-    defineField({ name: 'session', title: 'Academic Session', type: 'string', initialValue: '2024-2025' }),
+    defineField({ name: 'session', title: 'Academic Session', type: 'string', initialValue: '2025-2026' }),
     defineField({ name: 'className', title: 'Class', type: 'string', validation: r => r.required() }),
     defineField({ name: 'subjects', title: 'Subjects', type: 'array', of: [{ type: 'string' }], validation: r => r.min(1) }),
     defineField({ name: 'maxMarksPerSubject', title: 'Max Marks (per subject)', type: 'number' }),
