@@ -136,8 +136,6 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, id: resultDoc._id, score, total: totalAnswered })
-
-    return NextResponse.json({ ok: true, id: doc._id, score, total: totalAnswered })
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || 'Failed to submit result' }, { status: 500 })
   }
